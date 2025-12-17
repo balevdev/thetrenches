@@ -1,0 +1,666 @@
+---
+import BrandBookLayout from '../../layouts/BrandBookLayout.astro';
+---
+
+<BrandBookLayout
+  title="Brand Book"
+  description="The Trenches design system and brand guidelines"
+>
+  <div class="brand-overview">
+    <header class="brand-header">
+      <div class="brand-header__badge">Design System</div>
+      <h1 class="brand-header__title">The <em>Trenches</em></h1>
+      <p class="brand-header__tagline">Practical engineering insights from the frontlines</p>
+    </header>
+
+    <section class="brand-section">
+      <div class="section-header">
+        <span class="section-header__label">Core Values</span>
+        <h2>Brand Identity</h2>
+      </div>
+      <p class="section-intro">
+        The Trenches is a technical blog focused on data engineering, infrastructure economics,
+        and system design. The brand voice is candid, data-driven, pragmatic, and technically rigorous.
+      </p>
+
+      <div class="brand-values">
+        <div class="brand-value">
+          <div class="brand-value__icon">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 20h9"></path>
+              <path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"></path>
+            </svg>
+          </div>
+          <h3>Candid</h3>
+          <p>Direct, honest analysis without corporate fluff. We call things as we see them.</p>
+        </div>
+        <div class="brand-value">
+          <div class="brand-value__icon brand-value__icon--cool">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" x2="12" y1="20" y2="10"></line>
+              <line x1="18" x2="18" y1="20" y2="4"></line>
+              <line x1="6" x2="6" y1="20" y2="16"></line>
+            </svg>
+          </div>
+          <h3>Data-Driven</h3>
+          <p>Every claim backed by evidence. Real numbers, real case studies, real results.</p>
+        </div>
+        <div class="brand-value">
+          <div class="brand-value__icon brand-value__icon--violet">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <h3>Pragmatic</h3>
+          <p>Solutions that work in the real world. No ivory tower architectures.</p>
+        </div>
+        <div class="brand-value">
+          <div class="brand-value__icon brand-value__icon--rose">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="11" cy="11" r="8"></circle>
+              <path d="m21 21-4.3-4.3"></path>
+            </svg>
+          </div>
+          <h3>Rigorous</h3>
+          <p>Deep technical analysis. We go beyond the surface to understand why.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="brand-section">
+      <div class="section-header">
+        <span class="section-header__label">Philosophy</span>
+        <h2>Design Principles</h2>
+      </div>
+
+      <div class="design-principles">
+        <div class="design-principle">
+          <div class="design-principle__header">
+            <span class="design-principle__number">01</span>
+            <h3>Dark by Default</h3>
+          </div>
+          <p>
+            A sophisticated dark theme as the primary experience, respecting engineers' preference
+            for low-light interfaces. Light theme available for accessibility and preference.
+          </p>
+          <div class="design-principle__visual design-principle__visual--dark">
+            <div class="theme-preview theme-preview--dark"></div>
+            <div class="theme-preview theme-preview--light"></div>
+          </div>
+        </div>
+
+        <div class="design-principle">
+          <div class="design-principle__header">
+            <span class="design-principle__number">02</span>
+            <h3>Typography First</h3>
+          </div>
+          <p>
+            Elegant serif for headlines (Playfair Display, Fraunces) paired with readable
+            sans-serif for body (Inter) and precise monospace for code (JetBrains Mono).
+          </p>
+          <div class="design-principle__visual design-principle__visual--type">
+            <span class="type-demo type-demo--display">Aa</span>
+            <span class="type-demo type-demo--body">Aa</span>
+            <span class="type-demo type-demo--mono">Aa</span>
+          </div>
+        </div>
+
+        <div class="design-principle">
+          <div class="design-principle__header">
+            <span class="design-principle__number">03</span>
+            <h3>Purposeful Color</h3>
+          </div>
+          <p>
+            Colors serve meaning. Orange for primary actions and emphasis, secondary accents
+            for visual variety, and semantic colors for clear status communication.
+          </p>
+          <div class="design-principle__visual design-principle__visual--color">
+            <span class="color-dot color-dot--primary"></span>
+            <span class="color-dot color-dot--cool"></span>
+            <span class="color-dot color-dot--violet"></span>
+            <span class="color-dot color-dot--rose"></span>
+          </div>
+        </div>
+
+        <div class="design-principle">
+          <div class="design-principle__header">
+            <span class="design-principle__number">04</span>
+            <h3>Generous Space</h3>
+          </div>
+          <p>
+            Breathing room for complex technical content. Wide margins, proper line height,
+            and clear visual hierarchy to aid comprehension.
+          </p>
+          <div class="design-principle__visual design-principle__visual--space">
+            <div class="space-demo">
+              <div class="space-line"></div>
+              <div class="space-line"></div>
+              <div class="space-line"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="brand-section">
+      <div class="section-header">
+        <span class="section-header__label">At a Glance</span>
+        <h2>Quick Reference</h2>
+      </div>
+
+      <div class="quick-ref">
+        <div class="quick-ref__item">
+          <h4>Display Font</h4>
+          <span class="quick-ref__value" style="font-family: var(--font-display)">Playfair Display</span>
+        </div>
+        <div class="quick-ref__item">
+          <h4>Body Font</h4>
+          <span class="quick-ref__value" style="font-family: var(--font-body)">Inter</span>
+        </div>
+        <div class="quick-ref__item">
+          <h4>Code Font</h4>
+          <span class="quick-ref__value" style="font-family: var(--font-mono)">JetBrains Mono</span>
+        </div>
+        <div class="quick-ref__item">
+          <h4>Primary Accent</h4>
+          <div class="quick-ref__color-row">
+            <span class="quick-ref__color" style="background-color: var(--accent-primary)"></span>
+            <code class="dark-value">#fb923c</code>
+            <code class="light-value">#ea580c</code>
+          </div>
+        </div>
+        <div class="quick-ref__item">
+          <h4>Background</h4>
+          <div class="quick-ref__color-row">
+            <span class="quick-ref__color" style="background-color: var(--bg-primary); border: 1px solid var(--border-medium)"></span>
+            <code class="dark-value">#09090b</code>
+            <code class="light-value">#ffffff</code>
+          </div>
+        </div>
+        <div class="quick-ref__item">
+          <h4>Content Width</h4>
+          <span class="quick-ref__value">680px</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="brand-section">
+      <div class="section-header">
+        <span class="section-header__label">Documentation</span>
+        <h2>Explore the System</h2>
+      </div>
+      <div class="explore-links">
+        <a href="/brand/colors" class="explore-link">
+          <span class="explore-link__icon explore-link__icon--colors">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="13.5" cy="6.5" r="2.5"></circle>
+              <circle cx="17.5" cy="10.5" r="2.5"></circle>
+              <circle cx="8.5" cy="7.5" r="2.5"></circle>
+              <circle cx="6.5" cy="12.5" r="2.5"></circle>
+              <path d="M12 22v-6"></path>
+              <path d="M12 13a4 4 0 0 0-4 4v1a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2v-1a4 4 0 0 0-4-4Z"></path>
+            </svg>
+          </span>
+          <div class="explore-link__content">
+            <span class="explore-link__label">Colors</span>
+            <span class="explore-link__description">Complete color palette and usage guidelines for both themes</span>
+          </div>
+          <span class="explore-link__arrow" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </span>
+        </a>
+
+        <a href="/brand/typography" class="explore-link">
+          <span class="explore-link__icon explore-link__icon--typography">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="4 7 4 4 20 4 20 7"></polyline>
+              <line x1="9" x2="15" y1="20" y2="20"></line>
+              <line x1="12" x2="12" y1="4" y2="20"></line>
+            </svg>
+          </span>
+          <div class="explore-link__content">
+            <span class="explore-link__label">Typography</span>
+            <span class="explore-link__description">Font families, type scale, and usage examples</span>
+          </div>
+          <span class="explore-link__arrow" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </span>
+        </a>
+
+        <a href="/brand/components" class="explore-link">
+          <span class="explore-link__icon explore-link__icon--components">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="7" height="7" x="3" y="3" rx="1"></rect>
+              <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+              <rect width="7" height="7" x="14" y="14" rx="1"></rect>
+              <rect width="7" height="7" x="3" y="14" rx="1"></rect>
+            </svg>
+          </span>
+          <div class="explore-link__content">
+            <span class="explore-link__label">Components</span>
+            <span class="explore-link__description">UI components, patterns, and interactive examples</span>
+          </div>
+          <span class="explore-link__arrow" aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </span>
+        </a>
+      </div>
+    </section>
+  </div>
+</BrandBookLayout>
+
+<style>
+  .brand-overview {
+    max-width: var(--wide-width);
+  }
+
+  /* Header */
+  .brand-header {
+    margin-bottom: var(--space-16);
+    padding-bottom: var(--space-12);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .brand-header__badge {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    background-color: var(--accent-primary-muted);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-4);
+  }
+
+  .brand-header__title {
+    font-family: var(--font-display);
+    font-size: var(--text-6xl);
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-none);
+    margin: 0 0 var(--space-4);
+  }
+
+  .brand-header__title em {
+    font-style: italic;
+    color: var(--accent-primary);
+  }
+
+  .brand-header__tagline {
+    font-size: var(--text-xl);
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* Section Headers */
+  .section-header {
+    margin-bottom: var(--space-4);
+  }
+
+  .section-header__label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .section-header h2 {
+    margin: 0;
+  }
+
+  .section-intro {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-8);
+    max-width: 680px;
+  }
+
+  .brand-section {
+    margin-bottom: var(--space-16);
+  }
+
+  /* Brand Values */
+  .brand-values {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
+    gap: var(--space-5);
+  }
+
+  .brand-value {
+    padding: var(--space-6);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    transition: all var(--transition-smooth);
+  }
+
+  .brand-value:hover {
+    border-color: var(--border-strong);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .brand-value__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    background-color: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+  }
+
+  .brand-value__icon--cool {
+    background-color: var(--accent-cool-muted);
+    color: var(--accent-cool);
+  }
+
+  .brand-value__icon--violet {
+    background-color: var(--accent-violet-muted);
+    color: var(--accent-violet);
+  }
+
+  .brand-value__icon--rose {
+    background-color: var(--accent-rose-muted);
+    color: var(--accent-rose);
+  }
+
+  .brand-value h3 {
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-semibold);
+    margin: 0 0 var(--space-2);
+    color: var(--accent-primary);
+  }
+
+  .brand-value p {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  /* Design Principles */
+  .design-principles {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--space-5);
+  }
+
+  .design-principle {
+    padding: var(--space-6);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    transition: all var(--transition-smooth);
+  }
+
+  .design-principle:hover {
+    border-color: var(--border-strong);
+  }
+
+  .design-principle__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    margin-bottom: var(--space-3);
+  }
+
+  .design-principle__number {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-bold);
+    color: var(--accent-primary);
+    background-color: var(--accent-primary-muted);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  .design-principle h3 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .design-principle p {
+    font-size: var(--text-sm);
+    line-height: var(--leading-relaxed);
+    margin: 0 0 var(--space-4);
+    color: var(--text-secondary);
+  }
+
+  .design-principle__visual {
+    display: flex;
+    gap: var(--space-3);
+    padding: var(--space-3);
+    background-color: var(--bg-secondary);
+    border-radius: var(--radius-md);
+  }
+
+  /* Theme Preview */
+  .theme-preview {
+    width: 48px;
+    height: 32px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--border-medium);
+  }
+
+  .theme-preview--dark {
+    background-color: #09090b;
+  }
+
+  .theme-preview--light {
+    background-color: #ffffff;
+  }
+
+  /* Type Demo */
+  .type-demo {
+    font-size: var(--text-2xl);
+    color: var(--text-primary);
+  }
+
+  .type-demo--display {
+    font-family: var(--font-display);
+  }
+
+  .type-demo--body {
+    font-family: var(--font-body);
+  }
+
+  .type-demo--mono {
+    font-family: var(--font-mono);
+  }
+
+  /* Color Dots */
+  .color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-full);
+  }
+
+  .color-dot--primary { background-color: var(--accent-primary); }
+  .color-dot--cool { background-color: var(--accent-cool); }
+  .color-dot--violet { background-color: var(--accent-violet); }
+  .color-dot--rose { background-color: var(--accent-rose); }
+
+  /* Space Demo */
+  .space-demo {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+    width: 100%;
+  }
+
+  .space-line {
+    height: 8px;
+    background-color: var(--border-strong);
+    border-radius: var(--radius-sm);
+  }
+
+  .space-line:nth-child(1) { width: 100%; }
+  .space-line:nth-child(2) { width: 75%; }
+  .space-line:nth-child(3) { width: 50%; }
+
+  /* Quick Reference */
+  .quick-ref {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr));
+    gap: var(--space-4);
+  }
+
+  .quick-ref__item {
+    padding: var(--space-4);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+  }
+
+  .quick-ref__item h4 {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--text-tertiary);
+    margin: 0 0 var(--space-2);
+  }
+
+  .quick-ref__value {
+    font-size: var(--text-lg);
+    color: var(--text-primary);
+  }
+
+  .quick-ref__color-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+  }
+
+  .quick-ref__color {
+    display: inline-block;
+    width: 24px;
+    height: 24px;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+  }
+
+  .quick-ref__item code {
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+  }
+
+  /* Theme-aware code display */
+  .dark-value {
+    display: inline-block;
+    background-color: #09090b;
+    color: #f4f4f5;
+    border: 1px solid var(--border-medium);
+  }
+
+  .light-value {
+    display: inline-block;
+    background-color: #ffffff;
+    color: #0f172a;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  /* Explore Links */
+  .explore-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-3);
+  }
+
+  .explore-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    text-decoration: none;
+    transition: all var(--transition-smooth);
+  }
+
+  .explore-link:hover {
+    border-color: var(--accent-primary);
+    background-color: var(--bg-elevated);
+  }
+
+  .explore-link:hover .explore-link__arrow {
+    transform: translateX(4px);
+    color: var(--accent-primary);
+  }
+
+  .explore-link__icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background-color: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+  }
+
+  .explore-link__icon--typography {
+    background-color: var(--accent-cool-muted);
+    color: var(--accent-cool);
+  }
+
+  .explore-link__icon--components {
+    background-color: var(--accent-violet-muted);
+    color: var(--accent-violet);
+  }
+
+  .explore-link__content {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .explore-link__label {
+    display: block;
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin-bottom: var(--space-1);
+  }
+
+  .explore-link__description {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    line-height: var(--leading-snug);
+  }
+
+  .explore-link__arrow {
+    color: var(--text-tertiary);
+    transition: all var(--transition-fast);
+    flex-shrink: 0;
+  }
+
+  @media (max-width: 768px) {
+    .brand-header__title {
+      font-size: var(--text-4xl);
+    }
+  }
+</style>

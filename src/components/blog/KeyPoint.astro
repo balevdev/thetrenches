@@ -1,0 +1,73 @@
+---
+interface Props {
+  title?: string;
+  accent?: 'primary' | 'violet' | 'rose' | 'success';
+}
+
+const { title, accent = 'primary' } = Astro.props;
+---
+
+<aside class:list={['key-point', `key-point--${accent}`]}>
+  {title && <span class="key-point__title">{title}</span>}
+  <div class="key-point__content">
+    <slot />
+  </div>
+</aside>
+
+<style>
+  .key-point {
+    position: relative;
+    padding: var(--space-4) var(--space-5);
+    margin: var(--space-6) 0;
+    background: linear-gradient(
+      135deg,
+      var(--accent-primary-muted) 0%,
+      transparent 70%
+    );
+    border-radius: var(--radius-lg);
+    border-left: 3px solid var(--accent-primary);
+  }
+
+  .key-point--violet {
+    background: linear-gradient(135deg, var(--accent-violet-muted) 0%, transparent 70%);
+    border-left-color: var(--accent-violet);
+  }
+
+  .key-point--rose {
+    background: linear-gradient(135deg, var(--accent-rose-muted) 0%, transparent 70%);
+    border-left-color: var(--accent-rose);
+  }
+
+  .key-point--success {
+    background: linear-gradient(135deg, var(--color-success-muted) 0%, transparent 70%);
+    border-left-color: var(--color-success);
+  }
+
+  .key-point__title {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .key-point--violet .key-point__title { color: var(--accent-violet); }
+  .key-point--rose .key-point__title { color: var(--accent-rose); }
+  .key-point--success .key-point__title { color: var(--color-success); }
+
+  .key-point__content {
+    font-family: var(--font-headline);
+    font-size: var(--text-base);
+    font-style: italic;
+    line-height: var(--leading-relaxed);
+    color: var(--text-primary);
+  }
+
+  .key-point__content :global(p) {
+    margin-bottom: 0;
+    color: var(--text-primary);
+  }
+</style>

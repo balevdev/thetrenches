@@ -1,16 +1,494 @@
 ---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Header from '../components/layout/Header.astro';
+import Footer from '../components/layout/Footer.astro';
+import ArticleCard from '../components/blog/ArticleCard.astro';
+import { getCollection } from 'astro:content';
 
+const posts = (await getCollection('blog', ({ data }) => {
+  return data.draft !== true;
+})).sort((a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf());
+
+const latestPosts = posts.slice(0, 6);
 ---
 
-<html lang="en">
-	<head>
-		<meta charset="utf-8" />
-		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-		<meta name="viewport" content="width=device-width" />
-		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
-	</head>
-	<body>
-		<h1>Astro</h1>
-	</body>
-</html>
+<BaseLayout
+  title="Home"
+  description="Practical engineering insights from the frontlines. Deep dives into data architecture, infrastructure economics, and system design."
+>
+  <Header slot="header" />
+
+  <div class="home">
+    <!-- Hero Section -->
+    <section class="hero">
+      <div class="hero__content">
+        <a href="https://www.hundredsunited.com" target="_blank" rel="noopener noreferrer" class="hero__sponsor">
+          Presented by <strong>Hundreds United</strong>
+        </a>
+        <h1 class="hero__title">
+          The <em>Trenches</em>
+        </h1>
+        <p class="hero__subtitle">
+          Practical engineering insights from the frontlines. Deep dives into data architecture,
+          infrastructure economics, and system design.
+        </p>
+        <div class="hero__cta">
+          <a href="/blog" class="btn btn--primary">Browse Articles</a>
+          <a href="/brand" class="btn btn--secondary">Brand Book</a>
+        </div>
+      </div>
+
+      <div class="hero__decoration" aria-hidden="true">
+        <div class="hero__grid"></div>
+        <div class="hero__glow"></div>
+        <div class="hero__lightning hero__lightning--1"></div>
+        <div class="hero__lightning hero__lightning--2"></div>
+        <div class="hero__lightning hero__lightning--3"></div>
+        <div class="hero__pulse"></div>
+      </div>
+    </section>
+
+    <!-- Latest Articles -->
+    {latestPosts.length > 0 && (
+      <section class="section">
+        <div class="section__header">
+          <h2>Latest Articles</h2>
+          <a href="/blog" class="section__link">
+            View all
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M5 12h14"></path>
+              <path d="m12 5 7 7-7 7"></path>
+            </svg>
+          </a>
+        </div>
+
+        <div class="article-grid">
+          {latestPosts.map(post => (
+            <ArticleCard
+              title={post.data.title}
+              description={post.data.description}
+              href={`/blog/${post.slug}`}
+              pubDate={post.data.pubDate}
+              category={post.data.category}
+              readTime={post.data.readTime}
+              tags={post.data.tags}
+              heroImage={post.data.heroImage}
+            />
+          ))}
+        </div>
+      </section>
+    )}
+
+    <!-- Topics Section -->
+    <section class="section">
+      <div class="section__header">
+        <h2>Topics</h2>
+      </div>
+
+      <div class="topics-grid">
+        <div class="topic-card">
+          <div class="topic-card__icon" style="background-color: var(--accent-primary-muted); color: var(--accent-primary);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect width="7" height="7" x="14" y="3" rx="1"></rect>
+              <path d="M10 21V8a1 1 0 0 0-1-1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-5a1 1 0 0 0-1-1H3"></path>
+            </svg>
+          </div>
+          <h3 class="topic-card__title">Data Architecture</h3>
+          <p class="topic-card__description">
+            Streaming vs batch processing, modern data stacks, and architectural patterns.
+          </p>
+        </div>
+
+        <div class="topic-card">
+          <div class="topic-card__icon" style="background-color: var(--accent-cool-muted); color: var(--accent-cool);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <line x1="12" x2="12" y1="20" y2="10"></line>
+              <line x1="18" x2="18" y1="20" y2="4"></line>
+              <line x1="6" x2="6" y1="20" y2="16"></line>
+            </svg>
+          </div>
+          <h3 class="topic-card__title">Infrastructure Economics</h3>
+          <p class="topic-card__description">
+            Cost analysis, vendor comparisons, and build-vs-buy decisions.
+          </p>
+        </div>
+
+        <div class="topic-card">
+          <div class="topic-card__icon" style="background-color: var(--accent-violet-muted); color: var(--accent-violet);">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path>
+              <circle cx="12" cy="12" r="3"></circle>
+            </svg>
+          </div>
+          <h3 class="topic-card__title">System Design</h3>
+          <p class="topic-card__description">
+            Practical patterns, operational complexity, and real-world trade-offs.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- About Section -->
+    <section class="section">
+      <div class="about">
+        <div class="about__content">
+          <h2>About</h2>
+          <p>
+            I'm Boyan Balev, a software engineer focused on data infrastructure and distributed systems.
+            This blog shares practical insights from building and operating data platforms at scale.
+          </p>
+          <p>
+            Every article comes from real experience in the trenches - no ivory tower architectures,
+            just patterns that work in production.
+          </p>
+          <div class="about__links">
+            <a href="https://www.linkedin.com/in/boyan-balev/" target="_blank" rel="noopener noreferrer" class="btn btn--ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z"></path>
+                <rect width="4" height="12" x="2" y="9"></rect>
+                <circle cx="4" cy="4" r="2"></circle>
+              </svg>
+              LinkedIn
+              <span class="visually-hidden">(opens in new tab)</span>
+            </a>
+            <a href="/rss.xml" class="btn btn--ghost">
+              <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 11a9 9 0 0 1 9 9"></path>
+                <path d="M4 4a16 16 0 0 1 16 16"></path>
+                <circle cx="5" cy="19" r="1"></circle>
+              </svg>
+              RSS Feed
+            </a>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <Footer slot="footer" />
+</BaseLayout>
+
+<style>
+  .home {
+    max-width: var(--max-width);
+    margin: 0 auto;
+  }
+
+  /* Hero */
+  .hero {
+    position: relative;
+    padding: var(--space-24) var(--container-padding) var(--space-24);
+    text-align: center;
+    overflow: hidden;
+  }
+
+  @media (min-width: 768px) {
+    .hero {
+      padding-top: 8rem;
+    }
+  }
+
+  .hero__content {
+    position: relative;
+    z-index: 1;
+    max-width: 720px;
+    margin: 0 auto;
+  }
+
+  .hero__sponsor {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    text-decoration: none;
+    padding: var(--space-2) var(--space-4);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-6);
+    transition: all var(--transition-fast);
+  }
+
+  .hero__sponsor:hover {
+    color: var(--text-secondary);
+    border-color: var(--border-medium);
+  }
+
+  .hero__sponsor strong {
+    color: var(--text-secondary);
+    font-weight: var(--font-weight-semibold);
+  }
+
+  .hero__sponsor:hover strong {
+    color: var(--accent-primary);
+  }
+
+  .hero__label {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    margin-bottom: var(--space-4);
+  }
+
+  .hero__title {
+    font-family: var(--font-display);
+    font-size: clamp(var(--text-4xl), 10vw, var(--text-7xl));
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-none);
+    margin: 0 0 var(--space-6);
+  }
+
+  .hero__title em {
+    font-style: italic;
+    color: var(--accent-primary);
+  }
+
+  .hero__subtitle {
+    font-size: var(--text-xl);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0 0 var(--space-8);
+  }
+
+  .hero__cta {
+    display: flex;
+    gap: var(--space-4);
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .hero__decoration {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+
+  .hero__grid {
+    position: absolute;
+    inset: 0;
+    background-image:
+      linear-gradient(var(--border-subtle) 1px, transparent 1px),
+      linear-gradient(90deg, var(--border-subtle) 1px, transparent 1px);
+    background-size: 60px 60px;
+    mask-image: radial-gradient(ellipse at center, black 20%, transparent 70%);
+    opacity: 0.5;
+  }
+
+  .hero__glow {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 600px;
+    height: 400px;
+    background: radial-gradient(ellipse, var(--accent-primary-glow), transparent 70%);
+    opacity: 0.6;
+  }
+
+  /* Lightning traces */
+  .hero__lightning {
+    position: absolute;
+    background: linear-gradient(90deg, transparent, var(--accent-primary), transparent);
+    opacity: 0;
+    filter: blur(1px);
+  }
+
+  .hero__lightning--1 {
+    top: 30%;
+    left: 0;
+    width: 200px;
+    height: 1px;
+    animation: lightning-h 4s ease-in-out infinite;
+    animation-delay: 0s;
+  }
+
+  .hero__lightning--2 {
+    top: 0;
+    right: 35%;
+    width: 1px;
+    height: 150px;
+    background: linear-gradient(180deg, transparent, var(--accent-primary), transparent);
+    animation: lightning-v 5s ease-in-out infinite;
+    animation-delay: 1.5s;
+  }
+
+  .hero__lightning--3 {
+    bottom: 25%;
+    right: 10%;
+    width: 180px;
+    height: 1px;
+    animation: lightning-h 4.5s ease-in-out infinite;
+    animation-delay: 2.5s;
+  }
+
+  .hero__pulse {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 4px;
+    height: 4px;
+    background: var(--accent-primary);
+    border-radius: 50%;
+    box-shadow: 0 0 20px 8px var(--accent-primary-glow),
+                0 0 40px 16px rgba(251, 146, 60, 0.1);
+    animation: pulse-glow 3s ease-in-out infinite;
+  }
+
+  @keyframes lightning-h {
+    0%, 100% {
+      opacity: 0;
+      transform: translateX(-100px) scaleX(0.5);
+    }
+    10% {
+      opacity: 0.8;
+    }
+    50% {
+      opacity: 0.4;
+      transform: translateX(calc(100vw - 200px)) scaleX(1.5);
+    }
+    51% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes lightning-v {
+    0%, 100% {
+      opacity: 0;
+      transform: translateY(-50px) scaleY(0.5);
+    }
+    10% {
+      opacity: 0.7;
+    }
+    50% {
+      opacity: 0.3;
+      transform: translateY(400px) scaleY(1.2);
+    }
+    51% {
+      opacity: 0;
+    }
+  }
+
+  @keyframes pulse-glow {
+    0%, 100% {
+      opacity: 0.3;
+      transform: translate(-50%, -50%) scale(1);
+    }
+    50% {
+      opacity: 0.8;
+      transform: translate(-50%, -50%) scale(1.5);
+    }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .hero__lightning,
+    .hero__pulse {
+      animation: none;
+      opacity: 0;
+    }
+  }
+
+  /* Sections */
+  .section {
+    padding: var(--space-16) var(--container-padding);
+  }
+
+  .section--alt {
+    background-color: var(--bg-secondary);
+  }
+
+  .section__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-4);
+    margin-bottom: var(--space-8);
+    flex-wrap: wrap;
+  }
+
+  .section__header h2 {
+    margin: 0;
+  }
+
+  .section__link {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-1);
+    font-size: var(--text-sm);
+    color: var(--accent-primary);
+    text-decoration: none;
+    transition: gap var(--transition-fast);
+  }
+
+  .section__link:hover {
+    gap: var(--space-2);
+  }
+
+  /* Topics Grid */
+  .topics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
+    gap: var(--space-6);
+  }
+
+  .topic-card {
+    padding: var(--space-6);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    transition: all var(--transition-smooth);
+  }
+
+  .topic-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .topic-card__icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+  }
+
+  .topic-card__title {
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-semibold);
+    margin: 0 0 var(--space-2);
+  }
+
+  .topic-card__description {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  /* About */
+  .about {
+    max-width: var(--content-width);
+    margin: 0 auto;
+  }
+
+  .about__content h2 {
+    margin-top: 0;
+  }
+
+  .about__links {
+    display: flex;
+    gap: var(--space-3);
+    flex-wrap: wrap;
+    margin-top: var(--space-6);
+  }
+
+  .about__links .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2);
+  }
+</style>

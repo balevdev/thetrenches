@@ -1,0 +1,232 @@
+/* ============================================
+   Design Tokens - The Trenches Brand System
+   ============================================
+
+   A minimal, purpose-driven token system.
+   KISS: Only tokens that are actually used.
+   ============================================ */
+
+:root {
+  /* Typography - Font Stacks */
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-headline: 'Fraunces', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+  /* Typography - Weights (only what we use) */
+  --font-weight-normal: 400;
+  --font-weight-medium: 500;
+  --font-weight-semibold: 600;
+  --font-weight-bold: 700;
+
+  /* Typography - Scale */
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-base: 1rem;
+  --text-lg: 1.125rem;
+  --text-xl: 1.25rem;
+  --text-2xl: 1.5rem;
+  --text-3xl: 1.875rem;
+  --text-4xl: 2.25rem;
+  --text-5xl: 3rem;
+  --text-6xl: 3.75rem;
+  --text-7xl: 4.5rem;
+
+  /* Typography - Line Heights */
+  --leading-none: 1;
+  --leading-tight: 1.25;
+  --leading-snug: 1.375;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.625;
+  --leading-loose: 1.75;
+
+  /* Typography - Letter Spacing */
+  --tracking-tight: -0.025em;
+  --tracking-wide: 0.025em;
+  --tracking-widest: 0.1em;
+
+  /* Spacing - 4px base scale */
+  --space-1: 0.25rem;
+  --space-2: 0.5rem;
+  --space-3: 0.75rem;
+  --space-4: 1rem;
+  --space-5: 1.25rem;
+  --space-6: 1.5rem;
+  --space-8: 2rem;
+  --space-10: 2.5rem;
+  --space-12: 3rem;
+  --space-16: 4rem;
+  --space-20: 5rem;
+  --space-24: 6rem;
+
+  /* Layout */
+  --content-width: 680px;
+  --wide-width: 920px;
+  --max-width: 1200px;
+  --header-height: 64px;
+
+  /* Responsive Container Padding */
+  --container-padding: var(--space-6);
+
+  /* Breakpoints (for reference - use in media queries)
+   * --bp-sm: 640px   - Mobile landscape
+   * --bp-md: 768px   - Tablet
+   * --bp-lg: 1024px  - Desktop
+   * --bp-xl: 1280px  - Wide desktop
+   */
+
+  /* Border Radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s ease;
+  --transition-base: 0.25s ease;
+  --transition-smooth: 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Z-Index */
+  --z-sticky: 200;
+  --z-fixed: 300;
+  --z-tooltip: 600;
+}
+
+/* ============================================
+   Dark Theme (Default)
+   ============================================ */
+:root {
+  /* Surfaces */
+  --bg-primary: #09090b;
+  --bg-secondary: #0f0f12;
+  --bg-tertiary: #16161a;
+  --bg-card: #0f1113;
+  --bg-elevated: #1a1a1f;
+  --bg-code: #0d0d10;
+
+  /* Text Hierarchy */
+  --text-primary: #f4f4f5;
+  --text-secondary: rgba(244, 244, 245, 0.72);
+  --text-tertiary: rgba(244, 244, 245, 0.60); /* Improved from 0.52 for WCAG AA contrast */
+  --text-muted: rgba(244, 244, 245, 0.36);
+
+  /* Brand - Primary (Warm Orange) */
+  --accent-primary: #fb923c;
+  --accent-primary-hover: #f97316;
+  --accent-primary-muted: rgba(251, 146, 60, 0.15);
+  --accent-primary-glow: rgba(251, 146, 60, 0.1);
+
+  /* Brand - Secondary (Cool Blue) */
+  --accent-cool: #60a5fa;
+  --accent-cool-hover: #3b82f6;
+  --accent-cool-muted: rgba(96, 165, 250, 0.15);
+
+  /* Accent - Violet */
+  --accent-violet: #a78bfa;
+  --accent-violet-muted: rgba(167, 139, 250, 0.15);
+  --accent-violet-bg: rgba(167, 139, 250, 0.08);
+
+  /* Accent - Rose */
+  --accent-rose: #f472b6;
+  --accent-rose-muted: rgba(244, 114, 182, 0.15);
+  --accent-rose-bg: rgba(244, 114, 182, 0.08);
+
+  /* Semantic - Feedback */
+  --color-success: #4ade80;
+  --color-success-muted: rgba(74, 222, 128, 0.15);
+  --color-warning: #fbbf24;
+  --color-warning-muted: rgba(251, 191, 36, 0.15);
+  --color-error: #f87171;
+  --color-error-muted: rgba(248, 113, 113, 0.15);
+  --color-info: #60a5fa;
+  --color-info-muted: rgba(96, 165, 250, 0.15);
+
+  /* Borders */
+  --border-subtle: rgba(255, 255, 255, 0.05);
+  --border-medium: rgba(255, 255, 255, 0.09);
+  --border-strong: rgba(255, 255, 255, 0.14);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.4);
+  --shadow-glow: 0 0 24px var(--accent-primary-glow);
+}
+
+/* ============================================
+   Light Theme
+   ============================================ */
+[data-theme="light"] {
+  /* Surfaces */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f8fafc;
+  --bg-tertiary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-elevated: #ffffff;
+  --bg-code: #f4f4f5;
+
+  /* Text Hierarchy */
+  --text-primary: #0f172a;
+  --text-secondary: rgba(15, 23, 42, 0.75);
+  --text-tertiary: rgba(15, 23, 42, 0.62); /* Improved from 0.55 for WCAG AA contrast */
+  --text-muted: rgba(15, 23, 42, 0.35);
+
+  /* Brand - Primary (Warm Orange) */
+  --accent-primary: #ea580c;
+  --accent-primary-hover: #c2410c;
+  --accent-primary-muted: rgba(234, 88, 12, 0.1);
+  --accent-primary-glow: rgba(234, 88, 12, 0.06);
+
+  /* Brand - Secondary (Cool Blue) */
+  --accent-cool: #2563eb;
+  --accent-cool-hover: #1d4ed8;
+  --accent-cool-muted: rgba(37, 99, 235, 0.1);
+
+  /* Accent - Violet */
+  --accent-violet: #7c3aed;
+  --accent-violet-muted: rgba(124, 58, 237, 0.1);
+  --accent-violet-bg: rgba(124, 58, 237, 0.05);
+
+  /* Accent - Rose */
+  --accent-rose: #db2777;
+  --accent-rose-muted: rgba(219, 39, 119, 0.1);
+  --accent-rose-bg: rgba(219, 39, 119, 0.05);
+
+  /* Semantic - Feedback */
+  --color-success: #16a34a;
+  --color-success-muted: rgba(22, 163, 74, 0.1);
+  --color-warning: #d97706;
+  --color-warning-muted: rgba(217, 119, 6, 0.1);
+  --color-error: #dc2626;
+  --color-error-muted: rgba(220, 38, 38, 0.1);
+  --color-info: #2563eb;
+  --color-info-muted: rgba(37, 99, 235, 0.1);
+
+  /* Borders */
+  --border-subtle: rgba(0, 0, 0, 0.05);
+  --border-medium: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.15);
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-card: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-glow: 0 0 24px var(--accent-primary-glow);
+}
+
+/* ============================================
+   Responsive Adjustments
+   ============================================ */
+@media (max-width: 768px) {
+  :root {
+    --container-padding: var(--space-4);
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --text-4xl: 2rem;
+    --text-5xl: 2.5rem;
+    --text-6xl: 3rem;
+    --text-7xl: 3.5rem;
+  }
+}

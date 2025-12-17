@@ -1,0 +1,514 @@
+---
+import BrandBookLayout from '../../layouts/BrandBookLayout.astro';
+import ColorSwatch from '../../components/brand/ColorSwatch.astro';
+---
+
+<BrandBookLayout
+  title="Colors"
+  description="The Trenches color system and palette"
+>
+  <div class="colors-page">
+    <header class="page-header">
+      <div class="page-header__label">Design Tokens</div>
+      <h1>Color System</h1>
+      <p class="lead">
+        A sophisticated dark-first color palette that supports both dark and light themes
+        while maintaining excellent contrast and accessibility.
+      </p>
+    </header>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Surfaces</span>
+        <h2>Background Colors</h2>
+      </div>
+      <p>Layered backgrounds create depth and visual hierarchy.</p>
+
+      <div class="color-grid">
+        <ColorSwatch
+          name="Primary"
+          variable="--bg-primary"
+          darkHex="#09090b"
+          lightHex="#ffffff"
+          description="Main page background"
+        />
+        <ColorSwatch
+          name="Secondary"
+          variable="--bg-secondary"
+          darkHex="#0f0f12"
+          lightHex="#f8fafc"
+          description="Alternate sections"
+        />
+        <ColorSwatch
+          name="Tertiary"
+          variable="--bg-tertiary"
+          darkHex="#16161a"
+          lightHex="#f1f5f9"
+          description="Elevated elements"
+        />
+        <ColorSwatch
+          name="Card"
+          variable="--bg-card"
+          darkHex="#0f1113"
+          lightHex="#ffffff"
+          description="Card backgrounds"
+        />
+      </div>
+    </section>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Typography</span>
+        <h2>Text Colors</h2>
+      </div>
+      <p>Hierarchical text colors for optimal readability.</p>
+
+      <div class="color-grid">
+        <ColorSwatch
+          name="Primary Text"
+          variable="--text-primary"
+          darkHex="#f4f4f5"
+          lightHex="#0f172a"
+          description="Headlines, important text"
+        />
+        <ColorSwatch
+          name="Secondary Text"
+          variable="--text-secondary"
+          darkHex="rgba(244,244,245,0.72)"
+          lightHex="rgba(15,23,42,0.75)"
+          description="Body text"
+        />
+        <ColorSwatch
+          name="Tertiary Text"
+          variable="--text-tertiary"
+          darkHex="rgba(244,244,245,0.52)"
+          lightHex="rgba(15,23,42,0.55)"
+          description="Captions, meta"
+        />
+        <ColorSwatch
+          name="Muted Text"
+          variable="--text-muted"
+          darkHex="rgba(244,244,245,0.36)"
+          lightHex="rgba(15,23,42,0.35)"
+          description="Disabled, hints"
+        />
+      </div>
+    </section>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Brand</span>
+        <h2>Accent Colors</h2>
+      </div>
+      <p>Primary and secondary accents for emphasis and interaction.</p>
+
+      <div class="color-grid">
+        <ColorSwatch
+          name="Primary Accent"
+          variable="--accent-primary"
+          darkHex="#fb923c"
+          lightHex="#ea580c"
+          description="Links, CTAs, highlights"
+        />
+        <ColorSwatch
+          name="Cool Accent"
+          variable="--accent-cool"
+          darkHex="#60a5fa"
+          lightHex="#2563eb"
+          description="Secondary emphasis"
+        />
+        <ColorSwatch
+          name="Violet"
+          variable="--accent-violet"
+          darkHex="#a78bfa"
+          lightHex="#7c3aed"
+          description="Secondary accent"
+        />
+        <ColorSwatch
+          name="Rose"
+          variable="--accent-rose"
+          darkHex="#f472b6"
+          lightHex="#db2777"
+          description="Tertiary accent"
+        />
+      </div>
+    </section>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Feedback</span>
+        <h2>Semantic Colors</h2>
+      </div>
+      <p>Status and feedback colors with consistent meaning.</p>
+
+      <div class="color-grid">
+        <ColorSwatch
+          name="Success"
+          variable="--color-success"
+          darkHex="#4ade80"
+          lightHex="#16a34a"
+          description="Positive outcomes, savings"
+        />
+        <ColorSwatch
+          name="Warning"
+          variable="--color-warning"
+          darkHex="#fbbf24"
+          lightHex="#d97706"
+          description="Caution, attention"
+        />
+        <ColorSwatch
+          name="Error"
+          variable="--color-error"
+          darkHex="#f87171"
+          lightHex="#dc2626"
+          description="Negative, expensive"
+        />
+        <ColorSwatch
+          name="Info"
+          variable="--color-info"
+          darkHex="#60a5fa"
+          lightHex="#2563eb"
+          description="Informational callouts"
+        />
+      </div>
+    </section>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Structure</span>
+        <h2>Border Colors</h2>
+      </div>
+      <p>Subtle borders for structure without distraction.</p>
+
+      <div class="color-grid color-grid--borders">
+        <div class="border-swatch">
+          <div class="border-swatch__preview border-swatch__preview--subtle"></div>
+          <div class="border-swatch__info">
+            <h4>Subtle</h4>
+            <code>--border-subtle</code>
+            <div class="border-swatch__values">
+              <span class="dark-label">Dark</span>
+              <span>rgba(255,255,255,0.05)</span>
+              <span class="light-label">Light</span>
+              <span>rgba(0,0,0,0.05)</span>
+            </div>
+          </div>
+        </div>
+        <div class="border-swatch">
+          <div class="border-swatch__preview border-swatch__preview--medium"></div>
+          <div class="border-swatch__info">
+            <h4>Medium</h4>
+            <code>--border-medium</code>
+            <div class="border-swatch__values">
+              <span class="dark-label">Dark</span>
+              <span>rgba(255,255,255,0.09)</span>
+              <span class="light-label">Light</span>
+              <span>rgba(0,0,0,0.1)</span>
+            </div>
+          </div>
+        </div>
+        <div class="border-swatch">
+          <div class="border-swatch__preview border-swatch__preview--strong"></div>
+          <div class="border-swatch__info">
+            <h4>Strong</h4>
+            <code>--border-strong</code>
+            <div class="border-swatch__values">
+              <span class="dark-label">Dark</span>
+              <span>rgba(255,255,255,0.14)</span>
+              <span class="light-label">Light</span>
+              <span>rgba(0,0,0,0.15)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="color-section">
+      <div class="section-header">
+        <span class="section-label">Themes</span>
+        <h2>Theme Comparison</h2>
+      </div>
+      <p>All colors adapt automatically when the theme is switched. Toggle the theme to see the changes in action.</p>
+
+      <div class="theme-comparison">
+        <div class="theme-card theme-card--dark">
+          <div class="theme-card__header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"></path>
+            </svg>
+            <h4>Dark Theme</h4>
+          </div>
+          <div class="theme-card__colors" role="list" aria-label="Dark theme color palette">
+            <span style="background: #09090b" role="listitem" aria-label="Background: #09090b"></span>
+            <span style="background: #f4f4f5" role="listitem" aria-label="Text: #f4f4f5"></span>
+            <span style="background: #fb923c" role="listitem" aria-label="Accent: #fb923c"></span>
+            <span style="background: #a78bfa" role="listitem" aria-label="Violet: #a78bfa"></span>
+            <span style="background: #f472b6" role="listitem" aria-label="Rose: #f472b6"></span>
+          </div>
+          <p>Default experience for engineers</p>
+        </div>
+        <div class="theme-card theme-card--light">
+          <div class="theme-card__header">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4"></circle>
+              <path d="M12 2v2"></path>
+              <path d="M12 20v2"></path>
+              <path d="m4.93 4.93 1.41 1.41"></path>
+              <path d="m17.66 17.66 1.41 1.41"></path>
+              <path d="M2 12h2"></path>
+              <path d="M20 12h2"></path>
+              <path d="m6.34 17.66-1.41 1.41"></path>
+              <path d="m19.07 4.93-1.41 1.41"></path>
+            </svg>
+            <h4>Light Theme</h4>
+          </div>
+          <div class="theme-card__colors" role="list" aria-label="Light theme color palette">
+            <span style="background: #ffffff" role="listitem" aria-label="Background: #ffffff"></span>
+            <span style="background: #0f172a" role="listitem" aria-label="Text: #0f172a"></span>
+            <span style="background: #ea580c" role="listitem" aria-label="Accent: #ea580c"></span>
+            <span style="background: #7c3aed" role="listitem" aria-label="Violet: #7c3aed"></span>
+            <span style="background: #db2777" role="listitem" aria-label="Rose: #db2777"></span>
+          </div>
+          <p>Accessibility & preference option</p>
+        </div>
+      </div>
+    </section>
+  </div>
+</BrandBookLayout>
+
+<style>
+  .colors-page {
+    max-width: var(--wide-width);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-12);
+  }
+
+  .page-header__label {
+    display: inline-block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    background-color: var(--accent-primary-muted);
+    padding: var(--space-1) var(--space-3);
+    border-radius: var(--radius-full);
+    margin-bottom: var(--space-4);
+  }
+
+  .page-header h1 {
+    margin-top: 0;
+  }
+
+  .color-section {
+    margin-bottom: var(--space-16);
+  }
+
+  .section-header {
+    margin-bottom: var(--space-2);
+  }
+
+  .section-label {
+    display: block;
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+    margin-bottom: var(--space-2);
+  }
+
+  .section-header h2 {
+    margin: 0;
+  }
+
+  .color-section > p {
+    color: var(--text-secondary);
+    margin-bottom: var(--space-6);
+  }
+
+  .color-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .color-grid--borders {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  @media (max-width: 640px) {
+    .color-grid--borders {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .border-swatch {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    transition: all var(--transition-smooth);
+  }
+
+  .border-swatch:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-card);
+  }
+
+  .border-swatch__preview {
+    height: 80px;
+    background-color: var(--bg-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .border-swatch__preview::after {
+    content: '';
+    width: 80%;
+    height: 2px;
+  }
+
+  .border-swatch__preview--subtle::after {
+    background-color: var(--border-subtle);
+  }
+
+  .border-swatch__preview--medium::after {
+    background-color: var(--border-medium);
+  }
+
+  .border-swatch__preview--strong::after {
+    background-color: var(--border-strong);
+  }
+
+  .border-swatch__info {
+    padding: var(--space-4);
+  }
+
+  .border-swatch__info h4 {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    margin: 0 0 var(--space-2);
+    color: var(--text-primary);
+  }
+
+  .border-swatch__info code {
+    font-size: var(--text-xs);
+    display: inline-block;
+    margin-bottom: var(--space-2);
+    background-color: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: none;
+  }
+
+  .border-swatch__values {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    gap: var(--space-1) var(--space-2);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    font-family: var(--font-mono);
+  }
+
+  .dark-label,
+  .light-label {
+    font-family: var(--font-body);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+  }
+
+  .dark-label {
+    color: var(--text-secondary);
+  }
+
+  .light-label {
+    color: var(--text-tertiary);
+  }
+
+  .theme-comparison {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+  }
+
+  .theme-card {
+    padding: var(--space-6);
+    border-radius: var(--radius-xl);
+    transition: all var(--transition-smooth);
+  }
+
+  .theme-card:hover {
+    transform: translateY(-2px);
+  }
+
+  .theme-card--dark {
+    background-color: #09090b;
+    border: 1px solid rgba(255,255,255,0.09);
+    color: #f4f4f5;
+  }
+
+  .theme-card--dark:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  }
+
+  .theme-card--light {
+    background-color: #ffffff;
+    border: 1px solid rgba(0,0,0,0.09);
+    color: #0f172a;
+  }
+
+  .theme-card--light:hover {
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+  }
+
+  .theme-card__header {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-5);
+  }
+
+  .theme-card__header svg {
+    opacity: 0.7;
+  }
+
+  .theme-card h4 {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+  }
+
+  .theme-card__colors {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .theme-card__colors span {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-md);
+    border: 1px solid rgba(128,128,128,0.2);
+    transition: transform var(--transition-fast);
+  }
+
+  .theme-card__colors span:hover {
+    transform: scale(1.1);
+  }
+
+  .theme-card p {
+    font-size: var(--text-sm);
+    opacity: 0.7;
+    margin: 0;
+    text-align: center;
+  }
+</style>

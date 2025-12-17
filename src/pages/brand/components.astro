@@ -1,0 +1,325 @@
+---
+import BrandBookLayout from '../../layouts/BrandBookLayout.astro';
+import Callout from '../../components/blog/Callout.astro';
+import Stat from '../../components/blog/Stat.astro';
+import StatGrid from '../../components/blog/StatGrid.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import TechStack from '../../components/blog/TechStack.astro';
+import Verdict from '../../components/blog/Verdict.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+---
+
+<BrandBookLayout
+  title="Components"
+  description="The Trenches UI component library"
+>
+  <div class="components-page">
+    <header class="page-header">
+      <h1>Component Gallery</h1>
+      <p class="lead">
+        A focused set of components for technical writing. Each component
+        follows KISS principles: minimal props, clear purpose, consistent styling.
+      </p>
+    </header>
+
+    <!-- Callouts -->
+    <section class="component-section">
+      <h2>Callouts</h2>
+      <p>Contextual messages for different purposes. Use sparingly.</p>
+
+      <div class="component-preview">
+        <div class="preview-content preview-content--stack">
+          <Callout type="info" title="Information">
+            Default callout for general notes and context.
+          </Callout>
+
+          <Callout type="warning" title="Warning">
+            Caution messages for important considerations.
+          </Callout>
+
+          <Callout type="success" title="Success">
+            Positive outcomes and recommended approaches.
+          </Callout>
+
+          <Callout type="insight" title="Key Insight">
+            Important takeaways and strategic guidance.
+          </Callout>
+
+          <Callout type="violet" title="Violet Callout">
+            Content with violet accent for visual distinction.
+          </Callout>
+
+          <Callout type="rose" title="Rose Callout">
+            Content with rose accent for visual distinction.
+          </Callout>
+        </div>
+      </div>
+    </section>
+
+    <!-- Stats -->
+    <section class="component-section">
+      <h2>Stats</h2>
+      <p>Display metrics prominently with visual hierarchy.</p>
+
+      <div class="component-preview">
+        <div class="preview-content">
+          <h4 class="preview-label">Single Stat</h4>
+          <div style="display: flex; gap: var(--space-8); flex-wrap: wrap; margin-bottom: var(--space-8);">
+            <Stat value="$6M" label="Annual Cost" accent="error" />
+            <Stat value="$1.8M" label="Alternative" accent="success" />
+            <Stat value="70%" label="Reduction" accent="primary" />
+          </div>
+
+          <h4 class="preview-label">Stat Grid</h4>
+          <StatGrid
+            columns={3}
+            stats={[
+              { value: "45 TB", label: "Data Volume", accent: "primary" },
+              { value: "$1.2M", label: "Annual Savings", accent: "success" },
+              { value: "4 mo", label: "Migration Time", accent: "violet" },
+            ]}
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Key Point -->
+    <section class="component-section">
+      <h2>Key Point</h2>
+      <p>Highlight important quotes or thesis statements.</p>
+
+      <div class="component-preview">
+        <div class="preview-content preview-content--stack">
+          <KeyPoint title="Core Thesis" accent="primary">
+            The most expensive infrastructure decision isn't choosing the wrong tool.
+            It's never asking whether you needed the tool at all.
+          </KeyPoint>
+
+          <KeyPoint title="Option A" accent="violet">
+            A violet-accented key point for highlighting important
+            concepts or alternative perspectives.
+          </KeyPoint>
+
+          <KeyPoint title="Option B" accent="rose">
+            A rose-accented key point for contrasting ideas
+            or complementary insights.
+          </KeyPoint>
+        </div>
+      </div>
+    </section>
+
+    <!-- Verdict -->
+    <section class="component-section">
+      <h2>Verdict</h2>
+      <p>Show which approach wins in a comparison.</p>
+
+      <div class="component-preview">
+        <div class="preview-content preview-content--stack">
+          <Verdict winner="violet" title="Simplicity Wins">
+            This approach wins due to simplicity, testability,
+            and ease of maintenance.
+          </Verdict>
+
+          <Verdict winner="rose" title="Performance Wins">
+            This approach excels here with superior real-time
+            response and lower latency.
+          </Verdict>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tech Stack -->
+    <section class="component-section">
+      <h2>Tech Stack</h2>
+      <p>Display technology stacks in a grid format.</p>
+
+      <div class="component-preview">
+        <div class="preview-content">
+          <TechStack
+            title="Open Source Stack"
+            accent="primary"
+            items={[
+              { category: "Query", name: "Trino", description: "Distributed SQL" },
+              { category: "Format", name: "Iceberg", description: "Table format" },
+              { category: "Orchestration", name: "Airflow", description: "Workflow" },
+              { category: "Streaming", name: "Kafka", description: "Event bus" },
+              { category: "Transform", name: "dbt", description: "SQL transforms" },
+              { category: "Catalog", name: "DataHub", description: "Metadata" },
+            ]}
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Comparison Table -->
+    <section class="component-section">
+      <h2>Comparison Table</h2>
+      <p>Side-by-side feature comparisons with themed columns.</p>
+
+      <div class="component-preview">
+        <div class="preview-content">
+          <ComparisonTable
+            headers={["Aspect", "Option A", "Option B"]}
+            rows={[
+              { feature: "Latency", colA: "Minutes to hours", colB: "Milliseconds" },
+              { feature: "Complexity", colA: "Lower", colB: "Higher" },
+              { feature: "Cost Model", colA: "Per-job", colB: "Always-on" },
+              { feature: "State", colA: "Stateless", colB: "Stateful" },
+            ]}
+          />
+        </div>
+      </div>
+    </section>
+
+    <!-- Buttons & Badges -->
+    <section class="component-section">
+      <h2>Buttons & Badges</h2>
+      <p>Action triggers and inline labels.</p>
+
+      <div class="component-preview">
+        <div class="preview-content preview-content--row">
+          <button class="btn btn--primary">Primary</button>
+          <button class="btn btn--secondary">Secondary</button>
+          <button class="btn btn--ghost">Ghost</button>
+        </div>
+        <div class="preview-divider"></div>
+        <div class="preview-content preview-content--row">
+          <span class="badge">Default</span>
+          <span class="badge badge--violet">Violet</span>
+          <span class="badge badge--rose">Rose</span>
+          <span class="badge badge--cool">Info</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="component-section">
+      <h2>Cards</h2>
+      <p>Container components for grouped content.</p>
+
+      <div class="component-preview">
+        <div class="preview-content">
+          <div class="card-grid">
+            <div class="card">
+              <div class="card__icon">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect width="7" height="7" x="3" y="3"></rect>
+                  <rect width="7" height="7" x="14" y="3"></rect>
+                  <rect width="7" height="7" x="14" y="14"></rect>
+                  <rect width="7" height="7" x="3" y="14"></rect>
+                </svg>
+              </div>
+              <h3 class="card__title">Default Card</h3>
+              <p class="card__description">Standard card with icon and description.</p>
+            </div>
+            <div class="card card--violet">
+              <h3 class="card__title">Violet Card</h3>
+              <p class="card__description">Violet accent for secondary content.</p>
+            </div>
+            <div class="card card--rose">
+              <h3 class="card__title">Rose Card</h3>
+              <p class="card__description">Rose accent for tertiary content.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Code Block -->
+    <section class="component-section">
+      <h2>Code Block</h2>
+      <p>Syntax-highlighted code with terminal styling.</p>
+
+      <div class="component-preview">
+        <div class="preview-content">
+          <div class="code-block">
+            <div class="code-block__header">
+              <div class="code-block__dots">
+                <span class="code-block__dot code-block__dot--red"></span>
+                <span class="code-block__dot code-block__dot--yellow"></span>
+                <span class="code-block__dot code-block__dot--green"></span>
+              </div>
+              <span class="code-block__language">SQL</span>
+            </div>
+            <pre><code><span style="color: var(--accent-violet)">SELECT</span>
+  date_trunc(<span style="color: var(--color-success)">'day'</span>, event_time) <span style="color: var(--accent-violet)">AS</span> day,
+  count(<span style="color: var(--accent-violet)">DISTINCT</span> user_id) <span style="color: var(--accent-violet)">AS</span> dau
+<span style="color: var(--accent-violet)">FROM</span> events
+<span style="color: var(--accent-violet)">GROUP BY</span> <span style="color: var(--accent-rose)">1</span>;</code></pre>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </div>
+</BrandBookLayout>
+
+<style>
+  .components-page {
+    max-width: var(--wide-width);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-12);
+  }
+
+  .page-header h1 {
+    margin-top: 0;
+  }
+
+  .component-section {
+    margin-bottom: var(--space-16);
+  }
+
+  .component-section h2 {
+    margin-top: 0;
+    margin-bottom: var(--space-2);
+  }
+
+  .component-section > p {
+    color: var(--text-tertiary);
+    margin-bottom: var(--space-6);
+  }
+
+  .component-preview {
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+  }
+
+  .preview-content {
+    padding: var(--space-6);
+    background: var(--bg-secondary);
+  }
+
+  .preview-content--row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+    align-items: center;
+  }
+
+  .preview-content--stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+  }
+
+  .preview-content--stack > :global(*) {
+    margin: 0;
+  }
+
+  .preview-divider {
+    height: 1px;
+    background: var(--border-subtle);
+  }
+
+  .preview-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--text-muted);
+    margin: 0 0 var(--space-4) 0;
+  }
+</style>

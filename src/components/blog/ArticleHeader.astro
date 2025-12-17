@@ -1,0 +1,223 @@
+---
+interface Props {
+  title: string;
+  subtitle?: string;
+  category: string;
+  pubDate: Date;
+  readTime: string;
+  heroImage?: string;
+  author?: {
+    name: string;
+    role: string;
+    avatar?: string;
+  };
+}
+
+const {
+  title,
+  subtitle,
+  category,
+  pubDate,
+  readTime,
+  heroImage,
+  author = {
+    name: 'Boyan Balev',
+    role: 'Software Engineer',
+    avatar: 'https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/boyan-avatar/public',
+  }
+} = Astro.props;
+
+const formattedDate = pubDate.toLocaleDateString('en-US', {
+  year: 'numeric',
+  month: 'long',
+  day: 'numeric',
+});
+---
+
+<header class:list={['article-header', { 'article-header--has-hero': heroImage }]}>
+  <div class="article-header__meta">
+    <span class="article-header__category">{category}</span>
+    <span class="article-header__separator">•</span>
+    <time class="article-header__date" datetime={pubDate.toISOString()}>
+      {formattedDate}
+    </time>
+  </div>
+
+  <h1 class="article-header__title" set:html={title} />
+
+  {subtitle && (
+    <p class="article-header__subtitle">{subtitle}</p>
+  )}
+
+  <div class="article-header__info">
+    <div class="author">
+      {author.avatar ? (
+        <img src={author.avatar} alt={author.name} class="author__avatar" />
+      ) : (
+        <div class="author__avatar author__avatar--placeholder"></div>
+      )}
+      <div class="author__info">
+        <span class="author__name">{author.name}</span>
+        <span class="author__role">{author.role}</span>
+      </div>
+    </div>
+
+    <div class="article-header__read-time">
+      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <polyline points="12 6 12 12 16 14"></polyline>
+      </svg>
+      {readTime}
+    </div>
+  </div>
+
+  {heroImage && (
+    <figure class="article-header__hero">
+      <div class="article-header__hero-wrapper">
+        <img src={heroImage} alt={title.replace(/<[^>]*>/g, '')} />
+      </div>
+    </figure>
+  )}
+</header>
+
+<style>
+  .article-header {
+    max-width: var(--content-width);
+    margin: 0 auto var(--space-12);
+    padding: var(--space-16) 0 var(--space-12);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .article-header--has-hero {
+    border-bottom: none;
+    padding-bottom: 0;
+    margin-bottom: var(--space-16);
+  }
+
+  .article-header__meta {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    margin-bottom: var(--space-4);
+  }
+
+  .article-header__category {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    font-weight: var(--font-weight-medium);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--accent-primary);
+  }
+
+  .article-header__separator {
+    color: var(--text-tertiary);
+  }
+
+  .article-header__date {
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+  }
+
+  .article-header__title {
+    font-family: var(--font-display);
+    font-size: clamp(var(--text-3xl), 8vw, var(--text-5xl));
+    font-weight: var(--font-weight-bold);
+    line-height: var(--leading-tight);
+    margin: 0 0 var(--space-4);
+    color: var(--text-primary);
+  }
+
+  .article-header__title :global(em) {
+    font-style: italic;
+    color: var(--accent-primary);
+  }
+
+  .article-header__subtitle {
+    font-size: var(--text-xl);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+    margin: 0 0 var(--space-8);
+  }
+
+  .article-header__info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-4);
+  }
+
+  .author {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+  }
+
+  .author__avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    object-fit: cover;
+    border: 2px solid var(--accent-primary);
+  }
+
+  .author__avatar--placeholder {
+    background: linear-gradient(135deg, var(--accent-primary), var(--accent-cool));
+  }
+
+  .author__info {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .author__name {
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    font-size: var(--text-sm);
+  }
+
+  .author__role {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+
+  .article-header__read-time {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+  }
+
+  .article-header__hero {
+    margin: var(--space-8) 0 0;
+  }
+
+  .article-header__hero-wrapper {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-medium);
+  }
+
+  .article-header__hero-wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 53, 0.03) 0%,
+      rgba(139, 92, 246, 0.03) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .article-header__hero-wrapper img {
+    display: block;
+    width: 100%;
+    height: auto;
+  }
+</style>

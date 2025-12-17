@@ -1,0 +1,186 @@
+---
+interface Props {
+  name: string;
+  fontFamily: string;
+  variable: string;
+  usage: string;
+  weights?: string[];
+  sample?: string;
+}
+
+const {
+  name,
+  fontFamily,
+  variable,
+  usage,
+  weights = ['400', '500', '600', '700'],
+  sample = 'The quick brown fox jumps over the lazy dog'
+} = Astro.props;
+---
+
+<div class="type-specimen">
+  <div class="type-specimen__header">
+    <h3 class="type-specimen__name">{name}</h3>
+    <code class="type-specimen__variable">{variable}</code>
+  </div>
+
+  <p class="type-specimen__sample" style={`font-family: var(${variable})`}>
+    {sample}
+  </p>
+
+  <div class="type-specimen__meta">
+    <div class="type-specimen__meta-item">
+      <span class="type-specimen__meta-label">Font Family</span>
+      <span class="type-specimen__meta-value">{fontFamily}</span>
+    </div>
+    <div class="type-specimen__meta-item">
+      <span class="type-specimen__meta-label">Usage</span>
+      <span class="type-specimen__meta-value">{usage}</span>
+    </div>
+  </div>
+
+  <div class="type-specimen__weights">
+    {weights.map(weight => (
+      <div class="type-specimen__weight">
+        <span class="type-specimen__weight-value" style={`font-family: var(${variable}); font-weight: ${weight}`}>
+          Aa
+        </span>
+        <span class="type-specimen__weight-label">{weight}</span>
+      </div>
+    ))}
+  </div>
+
+  <div class="type-specimen__scale">
+    <p class="type-specimen__scale-item type-specimen__scale-item--xs" style={`font-family: var(${variable})`}>
+      Text XS (0.75rem) - {sample.slice(0, 30)}...
+    </p>
+    <p class="type-specimen__scale-item type-specimen__scale-item--sm" style={`font-family: var(${variable})`}>
+      Text SM (0.875rem) - {sample.slice(0, 30)}...
+    </p>
+    <p class="type-specimen__scale-item type-specimen__scale-item--base" style={`font-family: var(${variable})`}>
+      Text Base (1rem) - {sample.slice(0, 30)}...
+    </p>
+    <p class="type-specimen__scale-item type-specimen__scale-item--lg" style={`font-family: var(${variable})`}>
+      Text LG (1.125rem) - {sample.slice(0, 25)}...
+    </p>
+    <p class="type-specimen__scale-item type-specimen__scale-item--xl" style={`font-family: var(${variable})`}>
+      Text XL (1.25rem) - {sample.slice(0, 20)}...
+    </p>
+  </div>
+</div>
+
+<style>
+  .type-specimen {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-xl);
+    padding: var(--space-8);
+    margin-bottom: var(--space-8);
+  }
+
+  .type-specimen__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    flex-wrap: wrap;
+  }
+
+  .type-specimen__name {
+    font-family: var(--font-body);
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-semibold);
+    margin: 0;
+    color: var(--text-primary);
+  }
+
+  .type-specimen__variable {
+    font-size: var(--text-xs);
+    background-color: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: none;
+  }
+
+  .type-specimen__sample {
+    font-size: var(--text-3xl);
+    line-height: var(--leading-snug);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .type-specimen__meta {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-4);
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .type-specimen__meta-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .type-specimen__meta-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-widest);
+    color: var(--text-tertiary);
+  }
+
+  .type-specimen__meta-value {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  .type-specimen__weights {
+    display: flex;
+    gap: var(--space-6);
+    flex-wrap: wrap;
+    margin-bottom: var(--space-6);
+    padding-bottom: var(--space-6);
+    border-bottom: 1px solid var(--border-subtle);
+  }
+
+  .type-specimen__weight {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-2);
+  }
+
+  .type-specimen__weight-value {
+    font-size: var(--text-4xl);
+    color: var(--text-primary);
+  }
+
+  .type-specimen__weight-label {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+
+  .type-specimen__scale {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+
+  .type-specimen__scale-item {
+    margin: 0;
+    color: var(--text-secondary);
+  }
+
+  .type-specimen__scale-item--xs { font-size: var(--text-xs); }
+  .type-specimen__scale-item--sm { font-size: var(--text-sm); }
+  .type-specimen__scale-item--base { font-size: var(--text-base); }
+  .type-specimen__scale-item--lg { font-size: var(--text-lg); }
+  .type-specimen__scale-item--xl { font-size: var(--text-xl); }
+</style>

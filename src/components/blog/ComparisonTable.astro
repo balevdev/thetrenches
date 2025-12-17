@@ -1,0 +1,93 @@
+---
+interface Props {
+  headers?: string[];
+  rows: Array<Record<string, string>>;
+}
+
+const { headers = ['Feature', 'Option A', 'Option B'], rows } = Astro.props;
+
+// Get column values dynamically - first key is 'feature', rest are data columns
+const getRowValues = (row: Record<string, string>) => {
+  const keys = Object.keys(row);
+  const feature = row.feature || row[keys[0]];
+  const colA = row.colA || row.batch || row[keys[1]];
+  const colB = row.colB || row.stream || row[keys[2]];
+  return { feature, colA, colB };
+};
+---
+
+<div class="table-wrap">
+  <table class="compare">
+    <thead>
+      <tr>
+        {headers.map((h, i) => (
+          <th class:list={[i === 1 && 'col-violet', i === 2 && 'col-rose']}>{h}</th>
+        ))}
+      </tr>
+    </thead>
+    <tbody>
+      {rows.map(row => {
+        const { feature, colA, colB } = getRowValues(row);
+        return (
+          <tr>
+            <td class="feature">{feature}</td>
+            <td>{colA}</td>
+            <td>{colB}</td>
+          </tr>
+        );
+      })}
+    </tbody>
+  </table>
+</div>
+
+<style>
+  .table-wrap {
+    overflow-x: auto;
+    margin: var(--space-6) 0;
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    background: var(--bg-card);
+  }
+
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: var(--text-sm);
+  }
+
+  th, td {
+    padding: var(--space-4);
+    text-align: left;
+    vertical-align: top;
+  }
+
+  th {
+    font-weight: var(--font-weight-semibold);
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border-strong);
+    white-space: nowrap;
+  }
+
+  .col-violet { color: var(--accent-violet); }
+  .col-rose { color: var(--accent-rose); }
+
+  td {
+    border-bottom: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+  }
+
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg-secondary); }
+
+  .feature {
+    font-weight: var(--font-weight-medium);
+    color: var(--text-primary);
+  }
+
+  @media (max-width: 640px) {
+    th, td {
+      padding: var(--space-3);
+      font-size: var(--text-xs);
+    }
+  }
+</style>

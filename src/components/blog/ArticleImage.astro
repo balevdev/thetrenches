@@ -1,0 +1,78 @@
+---
+interface Props {
+  src: string;
+  alt: string;
+  caption?: string;
+  wide?: boolean;
+}
+
+const { src, alt, caption, wide = false } = Astro.props;
+---
+
+<figure class:list={['article-image', { 'article-image--wide': wide }]}>
+  <div class="article-image__wrapper">
+    <img src={src} alt={alt} loading="lazy" />
+  </div>
+  {caption && (
+    <figcaption class="article-image__caption">{caption}</figcaption>
+  )}
+</figure>
+
+<style>
+  .article-image {
+    margin: var(--space-10) 0;
+  }
+
+  .article-image--wide {
+    max-width: var(--wide-width);
+    margin-left: 50%;
+    transform: translateX(-50%);
+    width: 100vw;
+    padding: 0 var(--space-6);
+  }
+
+  @media (min-width: 1100px) {
+    .article-image--wide {
+      width: auto;
+      padding: 0;
+      margin-left: calc(-1 * (var(--wide-width) - var(--content-width)) / 2);
+      transform: none;
+    }
+  }
+
+  .article-image__wrapper {
+    position: relative;
+    border-radius: var(--radius-xl);
+    overflow: hidden;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border-medium);
+  }
+
+  .article-image__wrapper::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(
+      135deg,
+      rgba(255, 107, 53, 0.05) 0%,
+      rgba(139, 92, 246, 0.05) 100%
+    );
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .article-image__wrapper img {
+    display: block;
+    width: 100%;
+    height: auto;
+    margin: 0;
+  }
+
+  .article-image__caption {
+    margin-top: var(--space-3);
+    font-size: var(--text-sm);
+    color: var(--text-tertiary);
+    text-align: center;
+    font-style: italic;
+  }
+</style>

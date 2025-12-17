@@ -1,0 +1,90 @@
+---
+interface Props {
+  variant?: 'default' | 'violet' | 'rose' | 'highlight';
+  title?: string;
+  icon?: string;
+}
+
+const { variant = 'default', title, icon } = Astro.props;
+
+const variantClass = variant !== 'default' ? `card--${variant}` : '';
+---
+
+<div class:list={['card', variantClass]}>
+  {icon && (
+    <div class="card__icon">
+      <Fragment set:html={icon} />
+    </div>
+  )}
+  {title && <h3 class="card__title">{title}</h3>}
+  <div class="card__content">
+    <slot />
+  </div>
+</div>
+
+<style>
+  .card {
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    padding: var(--space-6);
+    transition: transform var(--transition-smooth), box-shadow var(--transition-smooth);
+  }
+
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow-card);
+  }
+
+  .card--violet {
+    border-left: 3px solid var(--accent-violet);
+  }
+
+  .card--rose {
+    border-left: 3px solid var(--accent-rose);
+  }
+
+  .card--highlight {
+    background: linear-gradient(135deg, var(--bg-card), var(--bg-elevated));
+    border-color: var(--accent-primary);
+  }
+
+  .card__icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: var(--accent-primary-muted);
+    color: var(--accent-primary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-4);
+  }
+
+  .card--violet .card__icon {
+    background-color: var(--accent-violet-muted);
+    color: var(--accent-violet);
+  }
+
+  .card--rose .card__icon {
+    background-color: var(--accent-rose-muted);
+    color: var(--accent-rose);
+  }
+
+  .card__title {
+    font-family: var(--font-body);
+    font-size: var(--text-lg);
+    font-weight: var(--font-weight-semibold);
+    margin: 0 0 var(--space-2);
+    color: var(--text-primary);
+  }
+
+  .card__content {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+  }
+
+  .card__content :global(p:last-child) {
+    margin-bottom: 0;
+  }
+</style>

@@ -1,0 +1,110 @@
+---
+interface Props {
+  name: string;
+  variable: string;
+  darkHex: string;
+  lightHex?: string;
+  description?: string;
+}
+
+const { name, variable, darkHex, lightHex, description } = Astro.props;
+---
+
+<div class="color-swatch" role="group" aria-label={`${name} color swatch`}>
+  <div class="color-swatch__preview" style={`background-color: var(${variable})`} aria-hidden="true">
+    <div class="color-swatch__values">
+      <span class="color-swatch__hex color-swatch__hex--dark">{darkHex}</span>
+      {lightHex && <span class="color-swatch__hex color-swatch__hex--light">{lightHex}</span>}
+    </div>
+  </div>
+  <div class="color-swatch__info">
+    <h4 class="color-swatch__name">{name}</h4>
+    <code class="color-swatch__variable">{variable}</code>
+    {description && <p class="color-swatch__description">{description}</p>}
+    <p class="visually-hidden">
+      Dark theme: {darkHex}{lightHex && `, Light theme: ${lightHex}`}
+    </p>
+  </div>
+</div>
+
+<style>
+  .color-swatch {
+    display: flex;
+    flex-direction: column;
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    background-color: var(--bg-card);
+    transition: all var(--transition-smooth);
+  }
+
+  .color-swatch:hover {
+    border-color: var(--border-strong);
+    box-shadow: var(--shadow-card);
+  }
+
+  .color-swatch__preview {
+    aspect-ratio: 16 / 9;
+    display: flex;
+    align-items: flex-end;
+    justify-content: flex-end;
+    padding: var(--space-3);
+    min-height: 100px;
+  }
+
+  .color-swatch__values {
+    display: flex;
+    gap: var(--space-2);
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
+  .color-swatch__hex {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    backdrop-filter: blur(4px);
+  }
+
+  .color-swatch__hex--dark {
+    background-color: #09090b;
+    color: #f4f4f5;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+
+  .color-swatch__hex--light {
+    background-color: #ffffff;
+    color: #0f172a;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+  }
+
+  .color-swatch__info {
+    padding: var(--space-4);
+  }
+
+  .color-swatch__name {
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    color: var(--text-primary);
+    margin: 0 0 var(--space-2);
+  }
+
+  .color-swatch__variable {
+    font-size: var(--text-xs);
+    color: var(--accent-primary);
+    background-color: var(--accent-primary-muted);
+    padding: var(--space-1) var(--space-2);
+    border-radius: var(--radius-sm);
+    border: none;
+    display: inline-block;
+  }
+
+  .color-swatch__description {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    margin: var(--space-2) 0 0;
+    line-height: var(--leading-relaxed);
+  }
+</style>

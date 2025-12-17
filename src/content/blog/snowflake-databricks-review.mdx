@@ -1,0 +1,255 @@
+---
+title: "Snowflake & Databricks <em>Lost the Plot</em>"
+subtitle: "A Critical Look at Platform Economics"
+description: "Bleeding millions of dollars? These data platforms claim 70%+ net profit margins. That money comes from your budget. An honest analysis of pricing, vendor lock-in, and when open-source alternatives make more economic sense."
+pubDate: 2025-01-15
+category: "Economics"
+readTime: "12 min"
+tags: ["snowflake", "databricks", "infrastructure", "economics", "open-source"]
+accent: "blue"
+heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/databrickssnowflake/public"
+---
+
+import Callout from '../../components/blog/Callout.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import StatGrid from '../../components/blog/StatGrid.astro';
+import TechStack from '../../components/blog/TechStack.astro';
+
+Bleeding millions of dollars? These data platforms claim **70%+ net profit margins**. That money comes from your budget.
+
+## Part One: Let's Talk Numbers
+
+This analysis uses real procurement data, engineering blog posts, and conference talks where teams actually shared what they spend. Not vendor marketing, actual invoices.
+
+### Cost Comparison: Mid-Size Company
+
+**Enterprise Platform Approach:**
+
+| Category | Annual Cost |
+|----------|-------------|
+| Compute credits | $3.2M |
+| Storage tier | $1.4M |
+| Enterprise add-ons | $1.4M |
+| **Total** | **$6M** |
+
+**Pragmatic Alternative (Same Workloads):**
+
+| Category | Annual Cost |
+|----------|-------------|
+| Cloud compute (direct) | $950K |
+| Object storage | $350K |
+| Engineering time | $500K |
+| **Total** | **$1.8M** |
+
+### Five-Year Total Cost Analysis
+
+<StatGrid
+  columns={3}
+  stats={[
+    { value: "$30M", label: "Enterprise Platform", accent: "error" },
+    { value: "$9M", label: "Open Source + Cloud", accent: "savings" },
+    { value: "70%", label: "Potential Reduction", accent: "primary" },
+  ]}
+/>
+
+<KeyPoint title="Core Thesis" accent="primary">
+  The most expensive infrastructure decision isn't choosing the wrong tool. It's never asking whether you needed the tool at all.
+</KeyPoint>
+
+Vendor claims about "governance, security, and operational simplicity" justify premiums, but warrant scrutiny when pricing is 3x higher.
+
+## Part Two: Where Does the Money Go?
+
+### Architecture Comparison
+
+<ComparisonTable
+  headers={["Layer", "Vendor Platform", "Open Source Alternative"]}
+  rows={[
+    { feature: "Control Plane", batch: "Proprietary orchestration (non-transparent)", stream: "Kubernetes, Airflow, managed K8s" },
+    { feature: "Compute", batch: "Cloud VMs marked up 3-5x", stream: "Direct pricing with spot/reserved options" },
+    { feature: "Storage", batch: "Proprietary format + egress fees", stream: "Open formats (Parquet, Iceberg, Delta)" },
+  ]}
+/>
+
+### Compute Pricing Breakdown
+
+| Option | Hourly Cost |
+|--------|-------------|
+| AWS EC2 on-demand (r5.4xlarge) | $1.00/hr |
+| Same via platform credits | $3.20/hr |
+| EC2 with 1-year reserved | $0.64/hr |
+| EC2 spot instance (average) | $0.35/hr |
+| **Effective markup vs. spot** | **9.1x** |
+
+### The Lock-in Mechanism
+
+Proprietary storage formats and query engines create switching costs that **compound annually** as data accumulates, making migration progressively more expensive.
+
+<Callout type="insight" title="Historical Precedent">
+  Major companies (Airbnb, Netflix, Uber, LinkedIn) built data platforms using open source. Not due to budget constraints, but because cost analysis justified the approach.
+</Callout>
+
+### What Are "Enterprise Features" Really?
+
+- **SSO**: Cloud-provider native (free)
+- **Audit logging**: Buildable in one day
+- **Governance**: Open tools like DataHub
+- **Support**: Often just documentation access
+
+## Part Three: The Open-Source Alternative
+
+### Mature Tech Stack
+
+<TechStack
+  title="Open Source Data Stack (Apache 2.0)"
+  accent="primary"
+  items={[
+    { category: "Query", name: "Trino / DuckDB", description: "Netflix, Airbnb, Meta" },
+    { category: "Format", name: "Apache Iceberg", description: "Netflix, Apple, Adobe" },
+    { category: "Orchestration", name: "Airflow / Dagster", description: "Widespread adoption" },
+    { category: "Streaming", name: "Kafka / Redpanda", description: "LinkedIn, Uber, Stripe" },
+    { category: "Catalog", name: "DataHub", description: "LinkedIn, Lyft" },
+    { category: "Transform", name: "dbt", description: "Thousands of companies" },
+  ]}
+/>
+
+All tools are **Apache 2.0 licensed**: no vendor lock-in, no licensing surprises.
+
+## Real-World Case Studies
+
+### Case A: E-Commerce Company
+
+| Metric | Value |
+|--------|-------|
+| Industry | Retail |
+| Team size | ~500 people |
+| Data volume | 45 TB |
+| Migration | From Snowflake to Trino + Iceberg on S3 |
+| Timeline | 4 months |
+| Resources | Two senior engineers |
+| **Annual savings** | **$1.2M** |
+
+### Case B: FinTech Startup
+
+| Metric | Value |
+|--------|-------|
+| Industry | Financial services |
+| Team size | ~200 people |
+| Data volume | 12 TB |
+| Approach | GCS with Spark + Iceberg from inception |
+| Compliance | Met via open-source governance |
+| **Annual savings** | **$480K** |
+
+### Case C: SaaS Analytics Platform
+
+| Metric | Value |
+|--------|-------|
+| Industry | B2B Tech |
+| Team size | ~80 people |
+| Data volume | 8 TB |
+| Transition | From Databricks to DuckDB + Postgres (80% of queries), Spark for complex |
+| **Annual savings** | **$180K** |
+
+<Callout type="success" title="The Boring Stack Wins">
+  The SaaS company's "boring" stack handles 10M events/day with 3 engineers. Sometimes the best architecture is the simplest one.
+</Callout>
+
+### Benefits of Open Architecture
+
+- **Portability**: Data remains in open formats; component swapping requires no complete rewrite
+- **Cost Control**: Direct cloud provider pricing; flexibility with spot/reserved capacity
+- **Skill Transferability**: Industry-standard tools; no proprietary certification requirements
+
+## When Managed Platforms Make Sense
+
+### Small Teams with Simple Requirements
+
+For deployments under **5TB** with basic analytics and small teams, managed services may justify premium costs by reducing operational overhead. Priority should be product-market fit over infrastructure optimization.
+
+<Callout type="insight">
+  If you're a 5-person startup that just raised a seed round, Snowflake's free tier and zero-ops model is probably the right call. The economics change as you scale.
+</Callout>
+
+### Mid-Scale Operations (The Crossover Point)
+
+At **10-50TB** with 20+ data users, cost differentials become material. Hiring one or two dedicated data engineers often recoups platform savings within a year.
+
+### Hyperscale Challenges
+
+At **petabyte scale** with thousands of concurrent users and complex ML pipelines requiring dynamic resource allocation, platform vendors have invested billions solving these problems, potentially justifying costs.
+
+<Callout type="warning" title="The Middle Tier Trap">
+  Most organizations operate in the middle tier, deploying enterprise tooling for mid-scale problems and incurring "enterprise tax" without achieving enterprise-scale value.
+</Callout>
+
+## Three Questions Before Renewal
+
+### 1. Exit Strategy
+
+Can data be exported tomorrow? In what format? What is actual migration cost?
+
+### 2. Feature Utilization
+
+What percentage of available enterprise features does your organization actively use?
+
+### 3. Five-Year Projection
+
+How do costs compound with data growth? What could equivalent investment in internal capability achieve?
+
+## The Migration Playbook
+
+If you're considering a migration, here's the approach:
+
+### Phase 1: Assessment (2 weeks)
+- Inventory all workloads and data assets
+- Identify proprietary feature dependencies
+- Calculate true total cost of ownership
+
+### Phase 2: Proof of Concept (4 weeks)
+- Pick your highest-cost, lowest-complexity workload
+- Implement on open-source stack
+- Validate performance and correctness
+
+### Phase 3: Parallel Run (8 weeks)
+- Run both systems in parallel
+- Compare results, latency, and costs
+- Build confidence in the new stack
+
+### Phase 4: Migration (12+ weeks)
+- Migrate workloads in dependency order
+- Keep fallback capability during transition
+- Decommission legacy system
+
+## The Bottom Line
+
+Enterprise data platforms aren't bad. They're **overpriced for what most companies need**. The question isn't "Snowflake vs. open source" but rather:
+
+> **At your scale and with your team, does the convenience premium justify the cost?**
+
+For companies spending over $500K/year on data infrastructure, the answer increasingly is "no."
+
+<Callout type="warning" title="Make an Informed Decision">
+  Don't migrate just because you read this article. Run the numbers for your specific situation. The best infrastructure decision is an informed one.
+</Callout>
+
+## Closing Perspective
+
+This analysis is pro-informed-decision-making rather than anti-managed-platform. The critique targets unexamined adoption and treating vendor complexity as inevitable rather than a problem warranting evaluation.
+
+The data platform market has consolidated around vendors who captured the early cloud wave. But the open-source ecosystem has matured significantly:
+
+- **Iceberg** provides the table format without lock-in
+- **Trino** delivers Snowflake-class query performance
+- **Flink** handles streaming better than most proprietary alternatives
+- **dbt** has become the standard for transformations
+
+The tools exist. The economics favor migration for many organizations. The only question is whether you have the engineering capacity to make the switch.
+
+<Callout type="insight" title="Final Word">
+  The best infrastructure decisions come from teams that understand the trade-offs and decide they're acceptable for their specific context.
+</Callout>
+
+---
+
+*Based on aggregated data from public procurement records, engineering blog posts, conference presentations, and industry benchmarks. Your mileage will vary based on your requirements, team, and context.*

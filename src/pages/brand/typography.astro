@@ -1,0 +1,396 @@
+---
+import BrandBookLayout from '../../layouts/BrandBookLayout.astro';
+import TypeSpecimen from '../../components/brand/TypeSpecimen.astro';
+---
+
+<BrandBookLayout
+  title="Typography"
+  description="The Trenches typography system and type scale"
+>
+  <div class="typography-page">
+    <header class="page-header">
+      <h1>Typography</h1>
+      <p class="lead">
+        A carefully curated type system combining elegant serifs for display,
+        readable sans-serif for body, and precise monospace for code.
+      </p>
+    </header>
+
+    <section class="type-section">
+      <h2>Font Families</h2>
+
+      <TypeSpecimen
+        name="Playfair Display"
+        fontFamily="Playfair Display, Georgia, serif"
+        variable="--font-display"
+        usage="Hero titles, article titles, major headings"
+        weights={['400', '500', '600', '700']}
+        sample="Shift Left or Stay Right?"
+      />
+
+      <TypeSpecimen
+        name="Fraunces"
+        fontFamily="Fraunces, Georgia, serif"
+        variable="--font-headline"
+        usage="Section headings, emphasis, callout titles"
+        weights={['400', '500', '600', '700']}
+        sample="Snowflake & Databricks Lost the Plot"
+      />
+
+      <TypeSpecimen
+        name="Inter"
+        fontFamily="Inter, -apple-system, sans-serif"
+        variable="--font-body"
+        usage="Body text, UI elements, navigation"
+        weights={['400', '500', '600', '700']}
+        sample="Most production data platforms use both batch and streaming approaches."
+      />
+
+      <TypeSpecimen
+        name="JetBrains Mono"
+        fontFamily="JetBrains Mono, SF Mono, monospace"
+        variable="--font-mono"
+        usage="Code blocks, technical values, labels"
+        weights={['400', '500', '600']}
+        sample="SELECT * FROM events WHERE timestamp > NOW() - INTERVAL '1 hour'"
+      />
+    </section>
+
+    <section class="type-section">
+      <h2>Type Scale</h2>
+      <p>Consistent sizing based on a modular scale for visual harmony.</p>
+
+      <div class="type-scale">
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-xs</code>
+            <span>0.75rem (12px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-xs)">
+            Labels, captions, meta information
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-sm</code>
+            <span>0.875rem (14px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-sm)">
+            Small body text, secondary content
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-base</code>
+            <span>1rem (16px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-base)">
+            Default body text, optimal reading
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-lg</code>
+            <span>1.125rem (18px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-lg)">
+            Lead paragraphs, emphasis
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-xl</code>
+            <span>1.25rem (20px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-xl)">
+            Subheadings, card titles
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-2xl</code>
+            <span>1.5rem (24px)</span>
+          </span>
+          <span class="type-scale__sample" style="font-size: var(--text-2xl)">
+            Section subheadings
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-3xl</code>
+            <span>1.875rem (30px)</span>
+          </span>
+          <span class="type-scale__sample type-scale__sample--serif" style="font-size: var(--text-3xl)">
+            Section headings
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-4xl</code>
+            <span>2.25rem (36px)</span>
+          </span>
+          <span class="type-scale__sample type-scale__sample--serif" style="font-size: var(--text-4xl)">
+            Page titles
+          </span>
+        </div>
+
+        <div class="type-scale__item">
+          <span class="type-scale__label">
+            <code>--text-5xl</code>
+            <span>3rem (48px)</span>
+          </span>
+          <span class="type-scale__sample type-scale__sample--serif" style="font-size: var(--text-5xl)">
+            Hero headings
+          </span>
+        </div>
+      </div>
+    </section>
+
+    <section class="type-section">
+      <h2>Line Heights</h2>
+      <p>Optimized leading for different content types.</p>
+
+      <div class="line-heights">
+        <div class="line-height__item">
+          <code>--leading-tight</code>
+          <span class="line-height__value">1.25</span>
+          <p class="line-height__sample" style="line-height: var(--leading-tight)">
+            Headings and display text where tighter spacing improves visual impact.
+            Use for titles and hero sections.
+          </p>
+        </div>
+
+        <div class="line-height__item">
+          <code>--leading-normal</code>
+          <span class="line-height__value">1.5</span>
+          <p class="line-height__sample" style="line-height: var(--leading-normal)">
+            Standard line height for UI elements, shorter text blocks, and areas
+            where space is at a premium.
+          </p>
+        </div>
+
+        <div class="line-height__item">
+          <code>--leading-relaxed</code>
+          <span class="line-height__value">1.625</span>
+          <p class="line-height__sample" style="line-height: var(--leading-relaxed)">
+            Optimal for long-form reading. Body text in articles should use this
+            value for comfortable reading sessions.
+          </p>
+        </div>
+
+        <div class="line-height__item">
+          <code>--leading-loose</code>
+          <span class="line-height__value">1.75</span>
+          <p class="line-height__sample" style="line-height: var(--leading-loose)">
+            Extra breathing room for code blocks and technical content where
+            scanning and comprehension benefit from more space.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="type-section">
+      <h2>Usage Examples</h2>
+
+      <div class="usage-example">
+        <h4>Article Title</h4>
+        <h1 class="example-title">Shift Left or <em>Stay Right?</em></h1>
+        <code>font-family: --font-display; font-size: --text-5xl; em uses --accent-primary</code>
+      </div>
+
+      <div class="usage-example">
+        <h4>Section Heading</h4>
+        <h2 class="example-h2">The Philosophy of <em>Data Processing</em></h2>
+        <code>font-family: --font-headline (Fraunces); font-size: --text-3xl</code>
+      </div>
+
+      <div class="usage-example">
+        <h4>Body Text</h4>
+        <p class="example-body">
+          Most production data platforms use both batch and streaming approaches,
+          recognizing that each paradigm excels in different scenarios. The key
+          is understanding when to apply each approach.
+        </p>
+        <code>font-family: --font-body; font-size: --text-base; line-height: --leading-relaxed</code>
+      </div>
+
+      <div class="usage-example">
+        <h4>Code</h4>
+        <pre class="example-code">SELECT COUNT(*) as daily_users
+FROM events
+WHERE event_date = CURRENT_DATE</pre>
+        <code>font-family: --font-mono; font-size: --text-sm; line-height: --leading-loose</code>
+      </div>
+    </section>
+  </div>
+</BrandBookLayout>
+
+<style>
+  .typography-page {
+    max-width: var(--wide-width);
+  }
+
+  .page-header {
+    margin-bottom: var(--space-12);
+  }
+
+  .page-header h1 {
+    margin-top: 0;
+  }
+
+  .type-section {
+    margin-bottom: var(--space-16);
+  }
+
+  .type-section h2 {
+    margin-top: 0;
+  }
+
+  .type-scale {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+
+  .type-scale__item {
+    display: grid;
+    grid-template-columns: 200px 1fr;
+    gap: var(--space-4);
+    align-items: baseline;
+    padding: var(--space-4);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+  }
+
+  @media (max-width: 640px) {
+    .type-scale__item {
+      grid-template-columns: 1fr;
+    }
+  }
+
+  .type-scale__label {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-1);
+  }
+
+  .type-scale__label code {
+    font-size: var(--text-xs);
+  }
+
+  .type-scale__label span {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+
+  .type-scale__sample {
+    color: var(--text-primary);
+  }
+
+  .type-scale__sample--serif {
+    font-family: var(--font-display);
+  }
+
+  .line-heights {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-4);
+    margin-top: var(--space-6);
+  }
+
+  .line-height__item {
+    padding: var(--space-5);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+  }
+
+  .line-height__item code {
+    font-size: var(--text-xs);
+    display: block;
+    margin-bottom: var(--space-1);
+  }
+
+  .line-height__value {
+    font-family: var(--font-mono);
+    font-size: var(--text-2xl);
+    font-weight: var(--font-weight-bold);
+    color: var(--accent-primary);
+    display: block;
+    margin-bottom: var(--space-3);
+  }
+
+  .line-height__sample {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    margin: 0;
+  }
+
+  .usage-example {
+    margin-bottom: var(--space-8);
+    padding: var(--space-6);
+    background-color: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+  }
+
+  .usage-example h4 {
+    margin: 0 0 var(--space-4);
+  }
+
+  .usage-example > code {
+    display: block;
+    margin-top: var(--space-4);
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+  }
+
+  .example-title {
+    font-family: var(--font-display);
+    font-size: var(--text-5xl);
+    line-height: var(--leading-tight);
+    margin: 0;
+  }
+
+  .example-title em {
+    font-style: italic;
+    color: var(--accent-primary);
+  }
+
+  .example-h2 {
+    font-family: var(--font-headline);
+    font-size: var(--text-3xl);
+    line-height: var(--leading-tight);
+    margin: 0;
+  }
+
+  .example-h2 em {
+    font-style: italic;
+    color: var(--accent-primary);
+  }
+
+  .example-body {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    line-height: var(--leading-relaxed);
+    color: var(--text-secondary);
+    margin: 0;
+    max-width: var(--content-width);
+  }
+
+  .example-code {
+    font-family: var(--font-mono);
+    font-size: var(--text-sm);
+    line-height: var(--leading-loose);
+    margin: 0;
+  }
+</style>

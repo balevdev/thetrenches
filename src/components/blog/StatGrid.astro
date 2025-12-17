@@ -1,0 +1,76 @@
+---
+interface StatItem {
+  value: string;
+  label: string;
+  accent?: 'primary' | 'success' | 'violet' | 'rose' | 'warning' | 'error';
+}
+
+interface Props {
+  stats: StatItem[];
+  columns?: 2 | 3 | 4;
+}
+
+const { stats, columns = 3 } = Astro.props;
+---
+
+<div class:list={['stat-grid', `stat-grid--${columns}`]}>
+  {stats.map(stat => (
+    <div class:list={['stat', `stat--${stat.accent || 'primary'}`]}>
+      <span class="stat__value">{stat.value}</span>
+      <span class="stat__label">{stat.label}</span>
+    </div>
+  ))}
+</div>
+
+<style>
+  .stat-grid {
+    display: grid;
+    gap: var(--space-4);
+    padding: var(--space-5);
+    background: var(--bg-card);
+    border: 1px solid var(--border-medium);
+    border-radius: var(--radius-lg);
+    margin: var(--space-6) 0;
+  }
+
+  .stat-grid--2 { grid-template-columns: repeat(2, 1fr); }
+  .stat-grid--3 { grid-template-columns: repeat(3, 1fr); }
+  .stat-grid--4 { grid-template-columns: repeat(4, 1fr); }
+
+  @media (max-width: 640px) {
+    .stat-grid--3,
+    .stat-grid--4 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  .stat {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    text-align: center;
+    padding: var(--space-3);
+  }
+
+  .stat__value {
+    font-family: var(--font-mono);
+    font-size: var(--text-xl);
+    font-weight: var(--font-weight-bold);
+    line-height: 1;
+  }
+
+  .stat__label {
+    font-size: var(--text-xs);
+    color: var(--text-tertiary);
+    text-transform: uppercase;
+    letter-spacing: var(--tracking-wide);
+  }
+
+  /* Accent Colors */
+  .stat--primary .stat__value { color: var(--accent-primary); }
+  .stat--success .stat__value { color: var(--color-success); }
+  .stat--violet .stat__value { color: var(--accent-violet); }
+  .stat--rose .stat__value { color: var(--accent-rose); }
+  .stat--warning .stat__value { color: var(--color-warning); }
+  .stat--error .stat__value { color: var(--color-error); }
+</style>

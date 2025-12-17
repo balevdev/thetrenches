@@ -1,0 +1,106 @@
+---
+interface Props {
+  type?: 'info' | 'warning' | 'success' | 'error' | 'insight' | 'violet' | 'rose';
+  title?: string;
+}
+
+const { type = 'info', title } = Astro.props;
+
+const icons = {
+  info: `<circle cx="12" cy="12" r="10"></circle><path d="M12 16v-4"></path><path d="M12 8h.01"></path>`,
+  warning: `<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path><path d="M12 9v4"></path><path d="M12 17h.01"></path>`,
+  success: `<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><path d="m9 11 3 3L22 4"></path>`,
+  error: `<circle cx="12" cy="12" r="10"></circle><path d="m15 9-6 6"></path><path d="m9 9 6 6"></path>`,
+  insight: `<path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"></path><path d="M9 18h6"></path><path d="M10 22h4"></path>`,
+  violet: `<rect width="7" height="7" x="3" y="3"></rect><rect width="7" height="7" x="14" y="3"></rect><rect width="7" height="7" x="14" y="14"></rect><rect width="7" height="7" x="3" y="14"></rect>`,
+  rose: `<path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"></path>`,
+};
+---
+
+<aside class:list={['callout', `callout--${type}`]} role="note">
+  <svg class="callout__icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" set:html={icons[type]} />
+  <div class="callout__body">
+    {title && <strong class="callout__title">{title}</strong>}
+    <div class="callout__content"><slot /></div>
+  </div>
+</aside>
+
+<style>
+  .callout {
+    display: flex;
+    gap: var(--space-4);
+    padding: var(--space-5) var(--space-6);
+    margin: var(--space-6) 0;
+    border-radius: var(--radius-lg);
+    border-left: 3px solid var(--color-info);
+    background: var(--color-info-muted);
+  }
+
+  /* Type variants */
+  .callout--warning {
+    border-color: var(--color-warning);
+    background: var(--color-warning-muted);
+  }
+  .callout--success {
+    border-color: var(--color-success);
+    background: var(--color-success-muted);
+  }
+  .callout--error {
+    border-color: var(--color-error);
+    background: var(--color-error-muted);
+  }
+  .callout--insight {
+    border-color: var(--accent-cool);
+    background: var(--accent-cool-muted);
+  }
+  .callout--violet {
+    border-color: var(--accent-violet);
+    background: var(--accent-violet-muted);
+  }
+  .callout--rose {
+    border-color: var(--accent-rose);
+    background: var(--accent-rose-muted);
+  }
+
+  /* Icon */
+  .callout__icon {
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .callout--info .callout__icon { color: var(--color-info); }
+  .callout--warning .callout__icon { color: var(--color-warning); }
+  .callout--success .callout__icon { color: var(--color-success); }
+  .callout--error .callout__icon { color: var(--color-error); }
+  .callout--insight .callout__icon { color: var(--accent-cool); }
+  .callout--violet .callout__icon { color: var(--accent-violet); }
+  .callout--rose .callout__icon { color: var(--accent-rose); }
+
+  /* Body */
+  .callout__body {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .callout__title {
+    display: block;
+    font-family: var(--font-body);
+    font-size: var(--text-sm);
+    font-weight: var(--font-weight-semibold);
+    margin-bottom: var(--space-1);
+    color: var(--text-primary);
+  }
+
+  .callout__content {
+    font-size: var(--text-sm);
+    color: var(--text-secondary);
+    line-height: var(--leading-relaxed);
+  }
+
+  .callout__content :global(p) {
+    margin-bottom: 0;
+  }
+
+  .callout__content :global(p + p) {
+    margin-top: var(--space-3);
+  }
+</style>

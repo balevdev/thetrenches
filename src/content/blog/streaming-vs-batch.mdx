@@ -1,0 +1,356 @@
+---
+title: "Shift Left or <em>Stay Right?</em>"
+subtitle: "Streaming vs Batch Processing Deep Dive"
+description: "A deep dive into the streaming vs batch processing paradigm, exploring when to use each approach, the architectural trade-offs, and practical decision frameworks."
+pubDate: 2025-01-01
+category: "Architecture"
+readTime: "15 min"
+tags: ["streaming", "batch", "flink", "dbt", "kafka", "data-architecture"]
+accent: "orange"
+heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/streamorbatch/public"
+---
+
+import Callout from '../../components/blog/Callout.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import Verdict from '../../components/blog/Verdict.astro';
+import TechStack from '../../components/blog/TechStack.astro';
+
+Most production data platforms use **both** batch and streaming approaches rather than choosing exclusively between them. The decision hinges on specific use case requirements rather than universal superiority.
+
+## Two Mental Models
+
+### Batch: Collect Everything, Analyze Thoroughly
+
+<KeyPoint title="Batch Philosophy" accent="batch">
+  Let's wait until we have all the data, then compute the answer once and get it right.
+</KeyPoint>
+
+**Key Advantages:**
+
+1. **Complete Picture**: All data exists before processing begins; no late arrivals or ordering concerns; straightforward cross-dataset joins
+
+2. **Simple Retry Logic**: Failed jobs can be rerun with full recomputation as a viable option; idempotent by design
+
+3. **Mature Ecosystem**: Decades of established tooling (Airflow, dbt, Spark); widespread SQL knowledge; proven debugging patterns
+
+4. **Cost Predictable**: Efficient resource usage through on-demand compute; no always-on infrastructure for sporadic workloads
+
+### Streaming: Process As It Happens
+
+<KeyPoint title="Streaming Philosophy" accent="stream">
+  Every event matters now. We can't wait, the business needs to react immediately.
+</KeyPoint>
+
+**Key Advantages:**
+
+1. **Millisecond Latency**: React to events immediately through fraud detection, real-time pricing, and live dashboards
+
+2. **Event Sourcing**: Event logs serve as source of truth; tables and caches become derived views; replay capability for state rebuilding
+
+3. **Unified Processing**: Single codebase for real-time and batch via replay; Kappa architecture eliminates dual-system complexity
+
+4. **Decoupled Systems**: Producers and consumers evolve independently; new consumers don't require producer modifications; event-driven microservices
+
+## Architecture Patterns
+
+### Modern Batch Architecture
+
+```
+Sources → Airbyte (Extract & Load) → Apache Iceberg + Trino (Storage) → dbt (Transform) → BI Tools / Reverse ETL
+```
+
+Provides hourly/daily freshness with simplified operations.
+
+### Streaming Event-Driven Stack
+
+```
+Sources → Kafka/Redpanda (Capture) → Apache Flink (Transform) → ClickHouse/Redis (Serve)
+```
+
+Delivers sub-second latency with continuous processing.
+
+### Key Components Comparison
+
+<ComparisonTable
+  headers={["Component", "Batch Stack", "Streaming Stack"]}
+  rows={[
+    { feature: "Ingestion", batch: "Airbyte, Apache NiFi, custom scripts", stream: "Debezium CDC, direct producers" },
+    { feature: "Storage", batch: "Apache Iceberg, ClickHouse, Trino", stream: "Kafka (event log), ClickHouse (OLAP)" },
+    { feature: "Transformation", batch: "dbt, Spark, SQL", stream: "Flink, ksqlDB, Spark Structured Streaming" },
+    { feature: "Orchestration", batch: "Airflow, Dagster, Prefect", stream: "Always-on (Kubernetes, managed Flink)" },
+    { feature: "Serving", batch: "Direct warehouse queries, caching", stream: "Pre-computed views in Redis/ClickHouse" },
+  ]}
+/>
+
+<Callout type="insight" title="Hybrid is Often Right">
+  Stream for operational use cases (fraud, alerts, live dashboards). Batch for analytical use cases (reporting, ML training, ad-hoc queries).
+</Callout>
+
+## Best-in-Class Technology
+
+<TechStack
+  title="Batch Stack"
+  accent="batch"
+  items={[
+    { category: "Transform", name: "dbt", description: "SQL-first, tested, documented" },
+    { category: "Query", name: "Trino", description: "Distributed SQL at scale" },
+    { category: "Format", name: "Iceberg", description: "Open table format" },
+    { category: "Processing", name: "Spark", description: "Petabyte-scale batch" },
+  ]}
+/>
+
+<TechStack
+  title="Streaming Stack"
+  accent="stream"
+  items={[
+    { category: "Processing", name: "Flink", description: "Stateful, exactly-once" },
+    { category: "Event Bus", name: "Kafka", description: "Durable event logs" },
+    { category: "Alternative", name: "Redpanda", description: "Kafka-compatible, simpler" },
+    { category: "Stream SQL", name: "ksqlDB", description: "SQL over streams" },
+  ]}
+/>
+
+## Code Examples
+
+### Example 1: Daily Revenue by Category
+
+**dbt (Batch)**
+
+```sql
+-- Batch: Simple, readable, testable
+SELECT
+    DATE(order_timestamp) AS order_date,
+    category,
+    SUM(amount) AS daily_revenue,
+    COUNT(*) AS order_count
+FROM {{ ref('orders') }}
+WHERE order_timestamp >= DATEADD('day', -30, CURRENT_DATE())
+GROUP BY 1, 2
+```
+
+**Flink SQL (Streaming)**
+
+```sql
+-- Streaming: Continuous, requires windowing
+SELECT
+    TUMBLE_START(order_time, INTERVAL '1' DAY) AS order_date,
+    category,
+    SUM(amount) AS daily_revenue,
+    COUNT(*) AS order_count
+FROM orders
+GROUP BY
+    TUMBLE(order_time, INTERVAL '1' DAY),
+    category
+```
+
+<Verdict winner="batch">
+  Batch wins due to simplicity, testability via dbt tests, and trivial historical recompute capabilities, unless real-time revenue updates are necessary.
+</Verdict>
+
+### Example 2: Fraud Detection (Velocity Check)
+
+**PySpark (Batch)**
+
+```python
+# Batch: Run hourly - detects fraud after the fact
+from pyspark.sql import functions as F
+from pyspark.sql.window import Window
+
+user_window = Window.partitionBy("user_id").orderBy("timestamp")
+
+flagged = (
+    transactions
+    .withColumn("prev_lat", F.lag("lat").over(user_window))
+    .withColumn("prev_lon", F.lag("lon").over(user_window))
+    .withColumn("prev_time", F.lag("timestamp").over(user_window))
+    .withColumn("distance_km", haversine_udf("lat", "lon", "prev_lat", "prev_lon"))
+    .withColumn("time_diff_min", (F.col("timestamp") - F.col("prev_time")) / 60)
+    .filter((F.col("distance_km") > 500) & (F.col("time_diff_min") < 30))
+)
+```
+
+**Flink SQL (Streaming)**
+
+```sql
+-- Streaming: Detect in real-time, block before damage
+CREATE TABLE payments (
+    txn_id STRING,
+    user_id STRING,
+    amount DECIMAL(10, 2),
+    lat DOUBLE,
+    lon DOUBLE,
+    event_time TIMESTAMP(3),
+    WATERMARK FOR event_time AS event_time - INTERVAL '5' SECOND
+) WITH ('connector' = 'kafka', ...);
+
+-- Detect impossible velocity: >500km in <30 min
+INSERT INTO fraud_alerts
+SELECT p1.user_id, p1.txn_id, p2.txn_id,
+       ST_Distance(ST_Point(p1.lon, p1.lat), ST_Point(p2.lon, p2.lat)) / 1000 AS km
+FROM payments p1, payments p2
+WHERE p1.user_id = p2.user_id
+  AND p1.event_time < p2.event_time
+  AND p2.event_time < p1.event_time + INTERVAL '30' MINUTE
+  AND ST_Distance(...) > 500000;
+```
+
+<Verdict winner="stream">
+  Streaming excels here. Batch detects fraud hours post-incident while streaming blocks transactions within milliseconds, preventing significant financial losses.
+</Verdict>
+
+## Monitoring & Visibility
+
+### Batch Monitoring
+- Jobs produce binary outcomes (success/failure)
+- dbt tests catch data quality issues
+- Airflow displays DAG execution history
+- Clear audit trail exists per run
+
+### Streaming Monitoring
+- Continuous metrics track consumer lag, end-to-end latency, checkpoint success rates
+- Requires always-on monitoring
+- Distributed debugging presents greater challenges
+
+<ComparisonTable
+  headers={["Metric", "Batch", "Streaming"]}
+  rows={[
+    { feature: "Data freshness", batch: "\"Last run: 2 hours ago\"", stream: "\"Consumer lag: 50ms\"" },
+    { feature: "Pipeline health", batch: "Job success/failure rate", stream: "Checkpoint success, backpressure" },
+    { feature: "Data quality", batch: "dbt tests, Great Expectations", stream: "Schema registry, runtime validation" },
+    { feature: "Lineage", batch: "dbt docs, DataHub (mature)", stream: "Event correlation IDs (manual)" },
+    { feature: "Debugging", batch: "Re-run failed job, inspect logs", stream: "Distributed tracing, state inspection" },
+  ]}
+/>
+
+<Callout type="insight">
+  Batch has mature lineage tools (dbt docs generates automatic lineage). Streaming requires manual correlation ID propagation.
+</Callout>
+
+## Operational Complexity
+
+### Batch Operations
+
+- **Simple retry logic**: Failed jobs rerun with full recomputation as viable fallback; no state corruption risk
+- **Mature scheduling**: Airflow, Dagster, Prefect offer well-understood dependency management
+- **Delayed detection** - Issues discovered when next job executes; hours or days after occurrence
+- **DAG dependency hell** - Complex pipelines create cascading failures; slow jobs block downstream processes
+
+### Streaming Operations
+
+- **Immediate detection**: Consumer lag spikes visible instantly without waiting for scheduled runs
+- **Always-on processing**: No scheduling management; no batch windows; continuous data flow
+- **State management complexity**: Checkpoints, savepoints, state backends require management; corrupted state may necessitate full Kafka rebuild
+- **Upgrade complexity**: Stateful job upgrades demand savepoints; schema changes need careful coordination
+
+<Callout type="warning" title="Team Readiness">
+  Teams proficient in Airflow and SQL can operate dbt pipelines immediately, while Flink requires learning watermarks, event time, checkpointing, and distributed systems debugging skills.
+</Callout>
+
+## Cost Economics
+
+### When Batch is Cheaper
+
+- Infrequent processing (daily/weekly schedules)
+- Serverless warehouses (pay-per-query models)
+- Small data volumes (&lt;1TB/day)
+- Ad-hoc analytics workloads
+- No always-on infrastructure required
+
+### When Streaming is Cheaper
+
+- High-volume continuous processing
+- Replacing multiple redundant batch jobs
+- Eliminating intermediate storage requirements
+- Real-time requirements preventing over-provisioning alternatives
+
+<Callout type="warning" title="Migration Costs Are Real">
+  During transition, you run both stacks. Budget 12-18 months of parallel operation. Factor in team training, debugging unfamiliar failure modes, and the inevitable "oh, we forgot that pipeline depended on this" discoveries.
+</Callout>
+
+## Decision Framework
+
+### Clear Wins for Batch
+
+**Historical Analytics**
+- Ad-hoc queries spanning years of data
+- Complex joins across large datasets
+- Columnar storage optimization
+
+**ML Training**
+- Feature engineering leverages historical data
+- Model training gains nothing from real-time processing
+- Simpler implementation
+
+**Compliance Reporting**
+- Audit reports, regulatory filings, point-in-time snapshots
+- Full reproducibility required
+
+### Clear Wins for Streaming
+
+**Fraud Detection**
+- Milliseconds are critical
+- Block fraudulent transactions before completion
+- Real-time processing is essential
+
+**Operational Monitoring**
+- System health tracking, alerting, live dashboards
+- Stale data becomes useless
+- Continuous processing required
+
+**Event-Driven Systems**
+- Microservices choreography
+- Real-time notifications
+- User-facing features requiring instant responsiveness
+
+<Callout type="success" title="Starting Recommendation">
+  Start with batch unless you have a specific latency requirement that batch cannot meet. It's easier to add streaming later than to simplify an over-engineered streaming system.
+</Callout>
+
+## Risks & Failure Modes
+
+### Batch Risks
+
+- **Stale data**: Decisions based on outdated information
+- **Delayed detection**: Problems discovered hours later
+- **Cascade failures**: One slow job blocks everything downstream
+- **Resource contention**: Batch windows competing for compute resources
+
+### Streaming Risks
+
+- **Silent data loss**: Misconfigured consumers drop events undetected
+- **State corruption**: Requires full rebuild from Kafka
+- **Backpressure cascade**: Slow consumer affects entire pipeline
+- **Schema breaks**: Producer changes break downstream consumers
+
+### Mitigation Strategies
+
+<ComparisonTable
+  headers={["Risk", "Batch Mitigation", "Streaming Mitigation"]}
+  rows={[
+    { feature: "Data quality issues", batch: "dbt tests, Great Expectations, post-run validation", stream: "Schema registry, runtime validation, dead letter queues" },
+    { feature: "Pipeline failures", batch: "Retry policies, alerting on failure, SLAs with buffer", stream: "Checkpointing, automatic restart, consumer lag alerting" },
+    { feature: "Data loss", batch: "Idempotent jobs, backup before overwrite", stream: "Kafka retention, exactly-once semantics, idempotent sinks" },
+    { feature: "Schema evolution", batch: "dbt schema tests, migration scripts", stream: "Schema registry compatibility rules, versioned topics" },
+  ]}
+/>
+
+## The Bottom Line
+
+Neither paradigm is universally superior. They optimize for different outcomes:
+
+- **Batch** optimizes for simplicity, completeness, and cost-effectiveness for periodic workloads
+- **Streaming** optimizes for latency, reactivity, and continuous processing
+
+Most modern data platforms employ both paradigms. Stream for operational use cases prioritizing latency. Batch for analytical use cases emphasizing completeness. Let requirements drive architecture rather than ideology.
+
+<Callout type="insight" title="Author's Recommendation">
+  Start with batch. It's simpler to build, test, and operate. Add streaming pipelines for specific use cases where the latency requirement justifies the complexity. Measure everything. Let data guide your architecture evolution, not hype.
+</Callout>
+
+## Learn More
+
+- [dbt Docs](https://docs.getdbt.com/)
+- [Apache Spark](https://spark.apache.org/)
+- [Apache Flink](https://flink.apache.org/)
+- [Apache Kafka](https://kafka.apache.org/)
