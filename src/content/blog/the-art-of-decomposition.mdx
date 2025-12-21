@@ -1,0 +1,570 @@
+---
+title: "The Art of <em>System Decomposition</em>"
+subtitle: "A First-Principles Guide to System Decomposition"
+description: "Decomposition is a tool, not a goal. This guide examines why boundaries exist, what they cost, when they pay off, and how to think about system design from first principles rather than best-practice cargo culting."
+pubDate: 2025-12-20
+category: "Architecture"
+readTime: "18 min"
+tags: ["microservices", "architecture", "system-design", "engineering", "domain-driven-design"]
+accent: "purple"
+heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/909b6907-6283-4454-b499-aed9aee48a00/public"
+---
+
+import Callout from '../../components/blog/Callout.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import Verdict from '../../components/blog/Verdict.astro';
+import Card from '../../components/blog/Card.astro';
+
+**This article is an argument, not a survey.** It argues that most production systems are over-decomposed, and that restraint is the undervalued skill in system design. You may disagree. That's fine. But consider the case before dismissing it.
+
+The pattern is predictable: a startup reads about Netflix's architecture, decides they need microservices, splits their Django app into twelve containers, and then wonders why a feature that used to take a day now takes a sprint. They've traded the complexity they understood for complexity they don't.
+
+Decomposition is not a measure of sophistication. It's a trade: you exchange one set of properties for another. The sophistication lies in knowing which trades serve your specific context, and having the discipline to resist trades that don't.
+
+<KeyPoint title="The First Principle" accent="violet">
+A boundary is a trade. You gain independence in some dimensions while losing properties that only exist in unified systems. Every cut has a cost. The question is whether what you gain justifies what you lose.
+</KeyPoint>
+
+---
+
+## The Properties You're Trading Away
+
+Before splitting anything, understand what you're giving up. This isn't about resisting change; it's about making informed decisions rather than following trends.
+
+A monolithic application has properties that distributed systems cannot replicate:
+
+<ComparisonTable
+  headers={['Property', 'Single Process', 'Distributed']}
+  rows={[
+    { feature: 'Function call latency', colA: '~100 nanoseconds', colB: '1–200 milliseconds' },
+    { feature: 'Data consistency', colA: 'ACID transactions', colB: 'Eventual consistency or complex coordination' },
+    { feature: 'Debugging', colA: 'Stack traces, breakpoints', colB: 'Distributed tracing, correlation IDs' },
+    { feature: 'Deployment', colA: 'Atomic (all or nothing)', colB: 'Coordinated rollouts' },
+    { feature: 'Failure modes', colA: 'Process crash', colB: 'Partial failures, network partitions' },
+    { feature: 'Refactoring', colA: 'IDE support, type checking', colB: 'Contract versioning, backward compatibility' },
+  ]}
+/>
+
+That latency gap isn't rounding error. A function call is **10,000 to 100,000 times faster** than a network call. Chain four services together, add serialization overhead, and you've introduced 10–50ms of latency before any business logic runs.
+
+**Concrete example**: A checkout flow that was a single database transaction completing in 50ms becomes a saga spanning six services. Happy path: 400ms. Timeout scenarios: user sees a spinner for 30 seconds, then an error message that doesn't explain whether their order went through. The support team now handles hundreds of "did my order go through?" tickets per day.
+
+<Callout type="warning" title="The Latency Tax">
+Every network hop adds serialization time (1–5ms), network round trip (1–50ms depending on geography), deserialization (1–5ms), and potential retry overhead. Four hops minimum adds 12–240ms before your code executes. The availability math is sobering: four services at 99.9% each yield 99.6% theoretical availability. Circuit breakers, retries, and redundancy mitigate this, but they add complexity that monoliths don't need.
+</Callout>
+
+---
+
+## What Boundaries Actually Solve
+
+Boundaries exist to solve specific problems. Not to look modern. Not to match what Netflix does. Not because a conference speaker said so.
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 2rem 0;">
+
+<Card variant="violet" title="Team Autonomy">
+When 50 engineers modify the same codebase, merge conflicts and coordination overhead dominate. Boundaries let teams own domains and deploy independently, but only if boundaries align with team structure. Boundaries that cross team ownership create more coordination, not less.
+</Card>
+
+<Card variant="rose" title="Independent Scaling">
+Your search service needs 20 replicas during Black Friday. Your admin panel needs one. Without boundaries, they scale together, wasting resources or creating bottlenecks. But this only matters if your components actually have different scaling profiles.
+</Card>
+
+<Card title="Failure Isolation">
+A memory leak in image processing shouldn't crash payment processing. Boundaries contain blast radius, but only if the services don't share critical dependencies. A shared database, a shared cache, or synchronous call chains undermine this isolation entirely.
+</Card>
+
+<Card variant="highlight" title="Technology Flexibility">
+Your ML team needs Python with GPU access. Your API team prefers Go. Boundaries enable heterogeneous stacks when you genuinely need them. But polyglot architectures also mean polyglot hiring, polyglot debugging, and polyglot deployment pipelines.
+</Card>
+
+</div>
+
+Notice the pattern: each benefit solves a **specific, nameable problem**. "Better separation of concerns" is not specific. "The payments team needs to deploy without waiting for the catalog team's two-week release cycle" is specific.
+
+<KeyPoint title="The Boundary Test" accent="rose">
+Before creating any boundary, complete this sentence: "This boundary solves the problem of ____." If you can't fill in the blank with something concrete and measurable, you don't need the boundary.
+</KeyPoint>
+
+### Anti-Patterns: Boundaries That Create Problems
+
+Some boundaries don't solve problems; they create them:
+
+**The Entity Service**: Splitting by data entity (UserService, ProductService, OrderService) creates a distributed database with network overhead. Every operation requires choreographing calls across entities that naturally belong together.
+
+**The Layer Service**: Separating "frontend API," "business logic," and "data access" into different services. Every user request now traverses three network hops to accomplish what a single process could do with function calls.
+
+**The Premature Extraction**: Extracting a service because "we might need to scale it independently someday." Unless you have evidence of different scaling needs today, you've added network complexity for a hypothetical future that may never arrive.
+
+---
+
+## The Four-Question Framework
+
+Before any split, these questions help determine whether decomposition provides value. They're a starting point for analysis, not a mechanical decision rule. Context matters, and reasonable engineers can weigh these factors differently.
+
+<ComparisonTable
+  headers={['Question', 'If Yes', 'If No']}
+  rows={[
+    { feature: '1. Will different teams own these components?', colA: 'Service boundary may help team autonomy', colB: "Same engineers maintain both sides. You've just added network hops" },
+    { feature: '2. Do they need different release cadences?', colA: 'Independent deployment provides value', colB: "They always deploy together. You've created a distributed monolith" },
+    { feature: '3. Do they have different resource profiles?', colA: 'Independent scaling reduces costs', colB: "Similar profiles. You're just running more containers" },
+    { feature: '4. Should failure in one NOT take down the other?', colA: 'Isolation is possible (if no shared dependencies)', colB: 'Shared database/dependencies mean illusory isolation' },
+  ]}
+/>
+
+<Verdict winner="violet" title="General Guidance">
+If you answered "no" to all four questions, a service boundary probably doesn't help. A well-structured module within a monolith provides the same logical separation without distributed systems complexity. But also consider external constraints: regulatory requirements, data residency, security isolation, or M&A readiness can override this framework. Start with the four questions, then factor in your specific constraints.
+</Verdict>
+
+### When External Constraints Override the Framework
+
+Some situations require service boundaries regardless of the four questions:
+
+**Regulatory compliance**: PCI-DSS requires cardholder data environments to be isolated. HIPAA mandates specific access controls. SOC 2 auditors want clear security boundaries. These are legal requirements that override architectural preferences.
+
+**Data residency**: GDPR requires EU citizen data to stay in the EU. If you serve global customers, you may need geographically separated services. A monolith can't easily satisfy "this data never leaves Frankfurt."
+
+**Security isolation**: Some components handle fundamentally different trust levels. A service processing untrusted user uploads should be isolated from your core database. Defense in depth sometimes requires network boundaries.
+
+**M&A readiness**: Companies anticipating acquisition or divestiture benefit from clean service boundaries. Selling a business unit is easier when that unit's systems can be separated cleanly.
+
+<Callout type="info" title="The Nuance">
+These requirements don't mean "adopt microservices everywhere." They mean "place specific boundaries where external constraints demand them." You might have a compliant payment service alongside a monolithic everything-else. That's fine. The goal is solving real problems, not achieving architectural purity.
+</Callout>
+
+---
+
+## The Modular Monolith: The Path Nobody Talks About
+
+The industry presents a false choice: chaotic monolith or enlightened microservices.
+
+The practical middle ground, the one successful companies actually use before they hit genuine scale, is the **modular monolith**: a single deployment unit with strict internal boundaries.
+
+```
+Modular Monolith Structure:
+
+├── orders/
+│   ├── api/           <- Public interface (other modules call this)
+│   ├── internal/      <- Implementation details (private)
+│   ├── repository/    <- Data access (encapsulated)
+│   └── types.go       <- Domain types
+├── payments/
+│   ├── api/
+│   ├── internal/
+│   └── ...
+└── inventory/
+    └── ...
+
+Rules:
+1. Modules communicate through api/ interfaces only
+2. No imports of internal/ across module boundaries
+3. Each module owns its database tables
+4. Violations fail the build (use linting/architecture tests)
+```
+
+### Enforcing Boundaries in Code
+
+The module structure means nothing without enforcement. Here's how to make boundaries real:
+
+**Go**: Use `internal/` directories. The Go compiler enforces that `internal/` packages can only be imported by their parent module.
+
+**Java**: Use ArchUnit or jMolecules to write tests that verify architectural rules:
+
+```java
+@ArchTest
+static final ArchRule ordersDoNotDependOnPaymentInternals =
+    noClasses()
+        .that().resideInAPackage("..orders..")
+        .should().dependOnClassesThat()
+        .resideInAPackage("..payments.internal..");
+```
+
+**TypeScript/JavaScript**: Use eslint-plugin-boundaries or dependency-cruiser:
+
+```javascript
+// .dependency-cruiser.js
+module.exports = {
+  forbidden: [{
+    name: 'no-cross-module-internals',
+    from: { path: '^src/([^/]+)/' },
+    to: { path: '^src/(?!$1)[^/]+/internal/' }
+  }]
+};
+```
+
+<Callout type="warning" title="The Enforcement Reality">
+Boundary enforcement sounds clean in theory. In practice, teams under deadline pressure find workarounds. Database table ownership is hard to enforce without runtime checks. **The modular monolith requires discipline, not just tooling.** Without leadership buy-in and a code review culture that treats boundary violations seriously, the boundaries erode. Plan for this. Success depends more on culture than configuration.
+</Callout>
+
+### What You Get
+
+| Modular Monolith | Microservices |
+|------------------|---------------|
+| Logical separation enforced by tooling | Logical separation enforced by network |
+| Function calls (~100ns) | Network calls (1–200ms) |
+| ACID transactions | Eventual consistency |
+| Stack traces for debugging | Distributed tracing |
+| Atomic deployment | Coordinated rollouts |
+| Single runtime to operate | N runtimes to operate |
+| One CI/CD pipeline | N pipelines, or a complex monorepo setup |
+
+### The Extraction Principle
+
+<KeyPoint title="Extraction Over Upfront Decomposition" accent="violet">
+Extracting a well-defined module into a service is mechanical work: add serialization, replace function calls with HTTP/gRPC clients, set up deployment. Defining clean boundaries in a tangled codebase is the real architectural challenge. Do the hard work in the monolith, where debugging is easy.
+</KeyPoint>
+
+When a module genuinely needs independence (when you can answer "yes" to the framework questions or have external constraints), extraction follows the existing boundary. The hard architectural work is already done. The api/ interface becomes your service contract. The internal/ implementation moves to a new repository.
+
+Teams that start with microservices rarely get boundaries right on the first try. They spend years fixing distributed boundaries because refactoring across services requires versioning, backward compatibility, and coordinated deployments. Teams that start with modular monoliths can refactor freely, then extract once they understand the domain.
+
+---
+
+## Data Ownership: Where Decomposition Gets Real
+
+Abstract service boundaries are easy. Architects draw them on whiteboards all day. **Data ownership is where decomposition gets real**, and where most migrations fail.
+
+The microservices promise was independent databases for independent services. The reality is that data has gravity: business processes span domains, reports need cross-domain joins, and consistency requirements don't care about your service boundaries.
+
+### The Trade-off You Cannot Escape
+
+<ComparisonTable
+  headers={['Approach', 'What You Get', 'What You Pay']}
+  rows={[
+    { feature: 'Shared database', colA: 'Strong consistency, direct queries, simple joins', colB: 'Schema coupling, team coordination, shared failure domain' },
+    { feature: 'API calls', colA: 'Clear ownership, independent schemas', colB: 'Runtime dependency, latency, availability coupling' },
+    { feature: 'Data replication', colA: 'Read independence, no runtime coupling', colB: 'Eventual consistency, sync infrastructure, storage costs' },
+    { feature: 'CQRS with projections', colA: 'Optimized read models, cross-domain views', colB: 'Complexity, eventual consistency, projection maintenance' },
+  ]}
+/>
+
+Neither option is free. You're choosing between **data coupling** and **runtime coupling**. Pick the coupling that hurts less for your specific situation. Often, the honest answer is "shared database with schema governance" rather than pretending you've achieved data independence.
+
+### Decision Framework: When to Share, When to Split
+
+**Share a database when:**
+- Same team owns both services (coordination cost is low)
+- Strong consistency is non-negotiable (financial transactions)
+- The services are in the same bounded context
+- You're not ready to solve distributed data problems
+- The primary access patterns involve cross-domain queries
+
+**Separate databases when:**
+- Different teams with different release cycles
+- Independent scaling of storage matters
+- Eventual consistency is genuinely acceptable
+- The services represent different business domains
+- Failure isolation is a real requirement
+
+### The Outbox Pattern: Making Separation Work
+
+When you do separate databases, you need reliable event propagation. The naive approach fails:
+
+```
+1. Write to database    ✓
+2. Publish event        ✗ (network blip)
+Result: Data saved, event lost, downstream services never know
+```
+
+You can't fix this with "try harder to publish." Network failures are inevitable, and you can't make a database write and a message publish atomic without distributed transactions.
+
+The **outbox pattern** makes event publishing transactional:
+
+```sql
+BEGIN;
+  INSERT INTO orders (id, customer_id, total) VALUES (...);
+  INSERT INTO outbox (event_type, payload, created_at)
+    VALUES ('OrderCreated', '{"orderId": "..."}', NOW());
+COMMIT;
+```
+
+```
+┌─────────────────────┐     ┌─────────────────┐     ┌──────────────┐
+│   Order Service     │     │  Outbox Relay   │     │    Kafka     │
+│  ┌───────────────┐  │     │                 │     │              │
+│  │ orders table  │  │     │  polls outbox   │────▶│  publishes   │
+│  ├───────────────┤  │     │  marks as sent  │     │   events     │
+│  │ outbox table  │──┼────▶│  retries failed │     │              │
+│  └───────────────┘  │     └─────────────────┘     └──────────────┘
+└─────────────────────┘
+```
+
+A separate process polls the outbox and publishes events. Events may duplicate, so consumers must be idempotent. But you never lose events. Debezium CDC is the modern alternative: it reads the database transaction log directly.
+
+---
+
+## Bounded Contexts: Finding Natural Seams
+
+Domain-Driven Design's most practical gift is the **bounded context**: a boundary within which terms have consistent meaning.
+
+Consider "Customer" across an e-commerce company:
+
+| Context | What "Customer" Means |
+|---------|----------------------|
+| Sales | Contact info, cart, purchase history |
+| Support | Ticket history, SLA tier, satisfaction score |
+| Billing | Payment methods, invoices, credit limit |
+| Marketing | Segments, preferences, campaign engagement |
+
+Attempting one Customer entity for all contexts produces an incoherent mess: hundreds of fields, tangled validation rules, changes in one area breaking another.
+
+**This is why forced data sharing fails.** When the Sales team says "customer" and the Billing team says "customer," they mean different things. This isn't a bug. It reflects how the business actually works.
+
+### Finding Context Boundaries
+
+**Listen to the language.** When different teams use the same word differently, you've found a context boundary. **Watch the data flows.** Data that changes together belongs together. **Map change patterns.** When Sales requests changes, which code changes? If the answers don't overlap across teams, you've found natural boundaries.
+
+```
+E-commerce Context Map:
+
+┌─────────────────────────────────────────────────────────────────────┐
+│                          Sales Context                               │
+│  Customer, Order, Cart, Checkout                                     │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ OrderPlaced event
+┌─────────────────────────────────────────────────────────────────────┐
+│                       Fulfillment Context                            │
+│  Shipment, Package, Carrier, TrackingNumber                          │
+└─────────────────────────────────────────────────────────────────────┘
+                              │
+                              ▼ ShipmentDispatched event
+┌─────────────────────────────────────────────────────────────────────┐
+│                         Billing Context                              │
+│  Invoice, PaymentMethod, Receivable, CreditMemo                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+"Order" appears in all three, meaning something different each time. Don't try to unify them. Let each context have its own representation, connected by events at the boundaries.
+
+<Callout type="warning" title="Conway's Law">
+Your service boundaries will reflect your team boundaries. If they don't align, friction accumulates until one changes. Before drawing service boundaries, look at your org chart. Boundaries that fight the org chart create constant coordination overhead that no architecture can solve.
+</Callout>
+
+---
+
+## Integration Patterns: Where Architectures Fail
+
+Splitting services is the easy part. Integration is where architectures fail. Not in the decomposition, but in the coupling that follows.
+
+### The Synchronous Trap
+
+Synchronous call chains create tight runtime coupling:
+
+```
+User Request → Service A → Service B → Service C → Service D
+```
+
+| Problem | Impact |
+|---------|--------|
+| Any service down | Entire request fails |
+| Latency | A + B + C + D + network overhead |
+| Slow service | Slows everything |
+| Debugging | Spans four systems |
+| Cascading failures | One timeout causes upstream timeouts |
+
+This runtime coupling is often **worse than the code coupling you were trying to escape.** At least with code coupling, you have stack traces. At least code coupling is visible in import statements. Runtime coupling hides in HTTP clients and only reveals itself during outages.
+
+### Asynchronous Integration
+
+<KeyPoint title="The Integration Principle" accent="rose">
+Prefer asynchronous communication where latency permits. Events decouple services in time. Service A publishes "OrderCreated." Services B, C, D react when they can. A doesn't wait for them, doesn't know they exist, and doesn't fail when they're down.
+</KeyPoint>
+
+**When synchronous is acceptable:**
+- User-facing flows requiring immediate response
+- Queries that need current data
+- Simple request/response patterns with few hops
+- Idempotent operations with proper retry logic
+
+**When asynchronous is preferable:**
+- Fire-and-forget operations
+- Fan-out to multiple consumers
+- Operations that can tolerate seconds of delay
+- Decoupling producer/consumer lifecycles
+- Operations where the producer shouldn't fail if the consumer is down
+
+### Sagas: Distributed Transactions
+
+When a business process spans services, database transactions can't help. You need a **saga**: a sequence of local transactions coordinated through events or an orchestrator.
+
+**Choreography** (decentralized): Each service listens for events and publishes its own.
+
+```
+Orders ──OrderCreated──▶ Payments ──PaymentReceived──▶ Inventory
+   ▲                         │                              │
+   └────PaymentFailed────────┴──────StockReserved───────────┘
+```
+
+**Orchestration** (centralized): A coordinator controls the flow, making the process explicit.
+
+```
+                     ┌─────────────────┐
+                     │   Orchestrator  │
+                     │  (Order Saga)   │
+                     └────────┬────────┘
+                              │
+       ┌──────────────────────┼──────────────────────┐
+       ▼                      ▼                      ▼
+┌──────────────┐     ┌──────────────┐     ┌──────────────┐
+│   Payments   │     │  Inventory   │     │   Shipping   │
+└──────────────┘     └──────────────┘     └──────────────┘
+```
+
+<ComparisonTable
+  headers={['Approach', 'Advantages', 'Disadvantages']}
+  rows={[
+    { feature: 'Choreography', colA: 'Scales better, no single point of coordination', colB: 'Hard to understand full flow, debugging across services, implicit coupling through events' },
+    { feature: 'Orchestration', colA: 'Explicit flow, easier to understand and debug, centralized error handling', colB: 'Central coordinator is a dependency, can become bottleneck, logic centralized in one place' },
+  ]}
+/>
+
+**The critical insight:** Every saga step needs a compensating action. If payment succeeds but inventory fails, you refund the payment. Design compensation into every service from the start, not as an afterthought. Services must be idempotent, and timeouts should trigger compensation rather than indefinite waiting.
+
+---
+
+## Resilience Patterns: What Distribution Demands
+
+Distributed systems fail in ways monoliths don't. Network partitions, partial failures, cascading timeouts. These require explicit handling, not hope.
+
+### Circuit Breakers
+
+When a dependency fails, continuing to call it makes things worse. Threads block, timeouts accumulate, failure cascades upstream. Your entire system slows down because one dependency is struggling.
+
+```
+    ┌─────────┐     failures     ┌───────────┐     timeout     ┌─────────────┐
+    │  CLOSED │────────────────▶│   OPEN    │────────────────▶│  HALF-OPEN  │
+    │         │                  │           │                  │             │
+    │ Normal  │                  │ Fail-fast │                  │ Test one    │
+    │ traffic │◀─────────────────│ (no calls)│◀─────────────────│ request     │
+    └─────────┘    success       └───────────┘     failure      └─────────────┘
+```
+
+| State | Behavior |
+|-------|----------|
+| Closed | Normal operation. Track failure rate. |
+| Open | After threshold failures, stop calling dependency. Return fallback immediately. |
+| Half-Open | After timeout, allow one test request. Success closes; failure keeps open. |
+
+Use libraries like Resilience4j (Java), Polly (.NET), opossum (Node.js), or gobreaker (Go). Complement circuit breakers with **bulkhead isolation**: isolate thread/connection pools for different dependencies so a slow payment gateway doesn't exhaust resources needed for inventory checks.
+
+### Timeouts and Retries
+
+Every external call needs a timeout. Without one, a hung dependency hangs your service.
+
+**Example failure mode**: A third-party payment provider goes slow instead of down. No errors, just 60-second response times that back up every checkout request, exhausting thread pools. The symptom looks like high load, but the cause is a slow dependency.
+
+<ComparisonTable
+  headers={['Pattern', 'Purpose', 'Configuration']}
+  rows={[
+    { feature: 'Exponential backoff', colA: 'Prevent retry storms', colB: 'Base delay × 2^attempt (cap at max)' },
+    { feature: 'Jitter', colA: 'Prevent synchronized retries', colB: 'Add random 0–30% to delay' },
+    { feature: 'Idempotency keys', colA: 'Ensure retries are safe', colB: 'UUID per operation, server dedupes' },
+    { feature: 'Retry budgets', colA: 'Limit system-wide retry load', colB: 'Max 20% of requests can be retries' },
+  ]}
+/>
+
+**Timeout guidance:** Connect timeout of 1–3 seconds (fast fail if unreachable), read timeout based on p99 latency × 2, and total timeout less than your SLA requirements.
+
+---
+
+## Platform Considerations
+
+If your organization has a mature platform team providing self-service infrastructure, the operational tax of additional services is lower. If you're a small team doing everything yourself, each service needs CI/CD, monitoring, alerting, security scanning, and on-call rotations.
+
+**Service meshes** (Istio, Linkerd) help with 20+ services, polyglot environments, or zero-trust requirements. They're overkill for fewer than 10 services with simple networking needs. Don't adopt one to follow best practices; adopt one when you have the specific problems it solves.
+
+### The Organizational Reality
+
+Architecture decisions don't happen in a vacuum. Real factors that influence decomposition choices include:
+
+**Team politics**: Sometimes microservices adoption is driven by organizational dynamics rather than technical needs. A VP building an empire, teams wanting autonomy, or engineers wanting modern tech on their resumes. These aren't invalid reasons, but be honest about them.
+
+**Hiring dynamics**: Some engineers won't join a company running a "boring monolith." Whether this is rational or not, it affects your ability to hire. Factor it into your decisions.
+
+**Platform maturity**: A platform team that provides observability, deployment pipelines, and service templates dramatically reduces the cost of running additional services. Without that platform, each new service is a burden.
+
+Acknowledge these factors. Pretending architecture is purely technical leads to decisions that fail for non-technical reasons.
+
+---
+
+## Evolution Patterns
+
+### The Strangler Fig
+
+When evolving a mature system, don't rewrite in place. Build new implementation alongside old, gradually redirecting traffic. Shadow traffic first (read-only, compare results), then handle a subset of writes, then all traffic while keeping the old system as backup. The old system "withers" as the new one proves itself. Use feature flags, monitor both systems, and have a documented rollback plan.
+
+### The Independence Test
+
+Before any deployment, ask: "Can I deploy without coordinating with any other team?"
+
+| Coupling Source | Resolution |
+|-----------------|------------|
+| Shared code | Duplicate or version as library |
+| Shared database | The boundary might be wrong |
+| API contract | Implement backward compatibility |
+| Shared configuration | Extract to service discovery |
+| Shared deployment | The services aren't really independent |
+
+True service independence means deploying without waiting for anyone. If you're still scheduling coordinated releases, you haven't achieved what decomposition promised. You've created a distributed monolith with extra steps.
+
+---
+
+## The Architecture Evolution Path
+
+Most successful systems follow this trajectory:
+
+| Stage | Characteristics | Appropriate When |
+|-------|-----------------|------------------|
+| 1. Monolith | Single deployment, simple operations, fast development | Most startups, small teams, new products |
+| 2. Modular Monolith | Clear internal boundaries, extractable modules, single deployment | Growing teams, established products |
+| 3. Selective Extraction | Extract services where specific needs exist, keep rest in monolith | Specific pain that extraction solves |
+| 4. Distributed System | Multiple services with clear ownership and boundaries | Large organizations, high scale, justified complexity |
+
+<Callout type="insight" title="Reality Check">
+Most companies never need stage 4. Shopify famously scaled with a modular monolith (though they've since extracted services for specific pain points). Basecamp serves millions of users from a Rails monolith. The pattern: start simple, extract when you have specific evidence that extraction helps. If you're unsure whether you need microservices, you probably don't.
+</Callout>
+
+<Verdict winner="violet" title="The Practical Takeaway">
+Start with a modular monolith. Extract services when you feel specific pain that extraction solves, not before. The cost of premature decomposition (distributed complexity, operational overhead, debugging difficulty) exceeds the cost of delayed extraction (refactoring later). Most systems need far fewer services than their architects imagine.
+</Verdict>
+
+---
+
+## Measuring What Matters
+
+Before any decomposition, establish baselines: deployment frequency, lead time for changes, MTTR, change failure rate, P95 latency, and infrastructure cost. Document the specific problems you're trying to solve. "Orders team blocked by Catalog team releases" is measurable. "Better architecture" is not.
+
+After decomposition, measure the same things. If the metrics don't improve, the decomposition didn't help, regardless of how clean the architecture looks on a whiteboard.
+
+---
+
+## A Cautionary Tale
+
+A Series B fintech with 15 engineers split their Django monolith into 23 services over 18 months. Deployment time went from 15 minutes to 2 hours. Feature development slowed 40%. Infrastructure costs tripled. They still coordinated releases. They never hit the scale that would have justified it.
+
+The company was acquired two years later. The acquiring company migrated everything back to a monolith.
+
+<Callout type="warning" title="The Lesson">
+This isn't about microservices being bad. It's about solving problems you don't have. They had one team. They didn't need independent deployment. They needed to ship faster, and chose an architecture that made shipping slower.
+</Callout>
+
+---
+
+## Summary: The Principles That Matter
+
+**Boundaries solve coordination problems.** If you don't have coordination problems (different teams, different deployment cadences, different scaling needs), you don't need boundaries. You need good code organization.
+
+**Every pattern solves a specific problem.** Outbox solves reliable event publishing. Circuit breakers solve cascade failures. Sagas solve distributed transactions. If you don't have the problem, don't adopt the pattern.
+
+**Technology changes faster than domains.** Code organized around business concepts survives technology migrations. Code organized around technical layers doesn't. Orders, Customers, and Payments will outlive your current framework.
+
+**Start where debugging is easy.** Get the boundaries right in a monolith where you have stack traces and breakpoints. Extract to services once the boundaries are proven. Debugging distributed systems is hard. Don't make it harder by figuring out boundaries at the same time.
+
+**Measure the real costs.** Before and after any decomposition, measure: deployment frequency, incident recovery time, developer productivity, infrastructure costs, and system latency. If the numbers don't improve, the decomposition didn't help.
+
+**The goal is working software.** Not impressive architecture. Not best practices compliance. Software that works, that your team can maintain, that your users rely on. Sometimes that's microservices. Sometimes it's a monolith. Usually it's something in between, shaped by your specific context.
+
+---
+
+*The discipline isn't in the decomposition. It's in the restraint to decompose only where it helps.*
