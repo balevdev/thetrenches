@@ -14,6 +14,46 @@ interface Props {
 
 const { post, headings } = Astro.props;
 const { title, subtitle, description, pubDate, category, readTime, heroImage, ogImage } = post.data;
+
+// Generate article JSON-LD
+const articleLD = {
+  "@context": "https://schema.org",
+  "@type": "BlogPosting",
+  "@id": `${Astro.url.href}#article`,
+  "mainEntityOfPage": {
+    "@type": "WebPage",
+    "@id": Astro.url.href
+  },
+  "headline": title,
+  "description": description,
+  "image": ogImage || heroImage,
+  "datePublished": pubDate.toISOString(),
+  "dateModified": pubDate.toISOString(),
+  "author": {
+    "@type": "Person",
+    "@id": `${Astro.site}#author`,
+    "name": "Boyan Balev"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "@id": `${Astro.site}#organization`,
+    "name": "The Trenches",
+    "logo": {
+      "@type": "ImageObject",
+      "url": `${Astro.site}favicon.svg`
+    }
+  },
+  "articleSection": category,
+  "wordCount": Math.floor(readTime * 200), // Approximate word count
+  "timeRequired": `PT${readTime}M`,
+  "inLanguage": "en-US",
+  "isPartOf": {
+    "@type": "Blog",
+    "@id": `${Astro.site}blog#blog`,
+    "name": "The Trenches Blog",
+    "description": "Practical engineering insights from the frontlines"
+  }
+};
 ---
 
 <BaseLayout
@@ -22,7 +62,10 @@ const { title, subtitle, description, pubDate, category, readTime, heroImage, og
   ogImage={ogImage || heroImage}
   ogType="article"
   publishedTime={pubDate.toISOString()}
+  articleSection={category}
 >
+  <script type="application/ld+json" set:html={JSON.stringify(articleLD)} />
+  
   <Header slot="header" />
   <ProgressBar />
 

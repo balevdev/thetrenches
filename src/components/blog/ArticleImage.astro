@@ -4,14 +4,25 @@ interface Props {
   alt: string;
   caption?: string;
   wide?: boolean;
+  width?: number;
+  height?: number;
+  priority?: boolean;
 }
 
-const { src, alt, caption, wide = false } = Astro.props;
+const { src, alt, caption, wide = false, width, height, priority = false } = Astro.props;
 ---
 
 <figure class:list={['article-image', { 'article-image--wide': wide }]}>
   <div class="article-image__wrapper">
-    <img src={src} alt={alt} loading="lazy" />
+    <img 
+      src={src} 
+      alt={alt} 
+      loading={priority ? "eager" : "lazy"}
+      decoding="async"
+      width={width}
+      height={height}
+      fetchpriority={priority ? "high" : undefined}
+    />
   </div>
   {caption && (
     <figcaption class="article-image__caption">{caption}</figcaption>

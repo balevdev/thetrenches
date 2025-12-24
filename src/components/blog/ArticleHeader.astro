@@ -52,7 +52,7 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
   <div class="article-header__info">
     <div class="author">
       {author.avatar ? (
-        <img src={author.avatar} alt={author.name} class="author__avatar" />
+        <img src={author.avatar} alt={author.name} class="author__avatar" width="44" height="44" decoding="async" />
       ) : (
         <div class="author__avatar author__avatar--placeholder"></div>
       )}
@@ -74,7 +74,7 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
   {heroImage && (
     <figure class="article-header__hero">
       <div class="article-header__hero-wrapper">
-        <img src={heroImage} alt={title.replace(/<[^>]*>/g, '')} />
+        <img src={heroImage} alt={title.replace(/<[^>]*>/g, '')} loading="eager" decoding="async" fetchpriority="high" />
       </div>
     </figure>
   )}
