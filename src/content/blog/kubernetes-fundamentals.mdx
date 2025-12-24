@@ -1,7 +1,7 @@
 ---
 title: "Kubernetes <em>Fundamentals</em>"
 subtitle: "Hands-On Introduction"
-description: "A complete hands-on guide to Kubernetes covering 18 essential concepts. Follow along step-by-step on your own computer—every command works, every example runs."
+description: "A complete hands-on guide to Kubernetes covering 18 essential concepts. Follow along step-by-step on your own computer. Every command works, every example runs."
 pubDate: 2025-12-24
 category: "Infrastructure"
 readTime: "60 min"
@@ -24,7 +24,7 @@ This is a **100% hands-on tutorial covering 18 Kubernetes concepts**. You'll set
 
 ## What is Kubernetes?
 
-Kubernetes (K8s) is a **container orchestration platform** originally developed by Google based on their internal system called Borg. Think of it as an operating system for your data center—instead of managing individual servers, you manage a cluster as a single unit, and Kubernetes handles the details.
+Kubernetes (K8s) is a **container orchestration platform** originally developed by Google based on their internal system called Borg. Think of it as an operating system for your data center. Instead of managing individual servers, you manage a cluster as a single unit, and Kubernetes handles the details.
 
 ### The Problem Kubernetes Solves
 
@@ -83,7 +83,7 @@ Kubernetes follows a **declarative model**. You write YAML files describing your
     Pods crash? Nodes fail? Kubernetes automatically recovers.
   </Card>
   <Card title="Scalable">
-    From 1 pod to 10,000—same commands, same YAML files.
+    From 1 pod to 10,000. Same commands, same YAML files.
   </Card>
   <Card variant="highlight" title="Abstracted">
     Focus on your app. Kubernetes handles servers, networking, and storage.
@@ -235,7 +235,7 @@ You now have a working Kubernetes cluster.
 
 ### What is a Pod?
 
-A **Pod** is the smallest deployable unit in Kubernetes—the atomic building block. A pod wraps one or more containers that share:
+A **Pod** is the smallest deployable unit in Kubernetes, the atomic building block. A pod wraps one or more containers that share:
 - **Network namespace**: Same IP address, can communicate via localhost
 - **Storage volumes**: Can share files
 - **Lifecycle**: Started and stopped together
@@ -261,10 +261,10 @@ Think of a pod as a "logical host" for your containers. While most pods run a si
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't create pods directly in production—use Deployments
+- Don't create pods directly in production. Use Deployments
 - Don't put loosely coupled services in the same pod (they can't scale independently)
 - Don't assume pods have stable IPs or hostnames
-- Don't store state inside containers—it's lost on restart
+- Don't store state inside containers. It's lost on restart
 </Callout>
 
 ### Hands-On: Working with Pods
@@ -280,7 +280,7 @@ kubectl get pods
 kubectl describe pod nginx-pod
 ```
 
-The `describe` command shows events at the bottom—crucial for debugging.
+The `describe` command shows events at the bottom, crucial for debugging.
 
 **View the logs:**
 ```bash
@@ -347,9 +347,9 @@ Deployment
 
 <Callout type="warning" title="Don't">
 - Don't use Deployments for stateful apps that need stable network identity
-- Don't set replicas to 0 in production as a way to "pause"—delete instead
-- Don't use `latest` tag—use specific versions for reproducibility
-- Don't skip the `selector`—it connects the Deployment to its pods
+- Don't set replicas to 0 in production as a way to "pause". Delete instead
+- Don't use `latest` tag. Use specific versions for reproducibility
+- Don't skip the `selector`. It connects the Deployment to its pods
 </Callout>
 
 ### Hands-On: Create Your First Deployment
@@ -434,7 +434,7 @@ kubectl get pods -l app=hello
 A new pod is already being created. Kubernetes maintains your desired state of 3 replicas.
 
 <KeyPoint title="The Core Insight" accent="violet">
-You didn't restart anything. Kubernetes noticed reality didn't match your declared state (3 replicas) and automatically fixed it. This is the **declarative model** in action—you declare *what*, Kubernetes handles *how*.
+You didn't restart anything. Kubernetes noticed reality didn't match your declared state (3 replicas) and automatically fixed it. This is the **declarative model** in action: you declare *what*, Kubernetes handles *how*.
 </KeyPoint>
 
 ### Scaling
@@ -485,16 +485,16 @@ When you create a Service named `backend` in namespace `demo-app`:
 
 <Callout type="tip" title="Do">
 - Use ClusterIP for internal services (most common)
-- Name services meaningfully—they become DNS names
+- Name services meaningfully. They become DNS names
 - Use selectors that match your pod labels exactly
 - Set appropriate `targetPort` to match your container's port
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't expose databases with LoadBalancer—use ClusterIP + port-forward for debugging
-- Don't hardcode pod IPs—always use Service names
+- Don't expose databases with LoadBalancer. Use ClusterIP + port-forward for debugging
+- Don't hardcode pod IPs. Always use Service names
 - Don't use NodePort in production (use LoadBalancer or Ingress)
-- Don't forget to create a Service—pods without Services are unreachable
+- Don't forget to create a Service. Pods without Services are unreachable
 </Callout>
 
 ### Hands-On: Expose Your Application
@@ -527,14 +527,14 @@ kubectl get service hello-service
 kubectl describe service hello-service
 ```
 
-Notice the `Endpoints`—these are the pod IPs receiving traffic.
+Notice the `Endpoints`. These are the pod IPs receiving traffic.
 
 **Access via port-forward:**
 ```bash
 kubectl port-forward svc/hello-service 9090:80
 ```
 
-Open http://localhost:9090 in your browser. Refresh multiple times—notice the hostname changes as Kubernetes load-balances.
+Open http://localhost:9090 in your browser. Refresh multiple times and notice the hostname changes as Kubernetes load-balances.
 
 Press `Ctrl+C` to stop port-forwarding.
 
@@ -547,11 +547,11 @@ Press `Ctrl+C` to stop port-forwarding.
 **Labels** are key-value pairs attached to Kubernetes objects. They're the primary way to organize, select, and filter resources. Unlike names (which must be unique), you can apply the same labels to many objects.
 
 Common label patterns:
-- `app: frontend` — Application name
-- `environment: production` — Environment
-- `version: v1.2.3` — Version
-- `tier: backend` — Architecture tier
-- `team: payments` — Owning team
+- `app: frontend` (Application name)
+- `environment: production` (Environment)
+- `version: v1.2.3` (Version)
+- `tier: backend` (Architecture tier)
+- `team: payments` (Owning team)
 
 ### How Selectors Work
 
@@ -572,7 +572,7 @@ Services use selectors to find pods. Deployments use selectors to manage their p
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't use labels for large or structured data—use annotations instead
+- Don't use labels for large or structured data. Use annotations instead
 - Don't change the labels a selector uses after creation (breaks the connection)
 - Don't use overly generic labels like `type: app`
 - Don't forget that selector labels must match template labels exactly
@@ -627,10 +627,10 @@ A **Namespace** is a virtual cluster within your physical cluster. It provides:
 - **Access control**: Apply RBAC policies per namespace
 
 Default namespaces:
-- `default` — Where resources go if you don't specify
-- `kube-system` — Kubernetes system components
-- `kube-public` — Publicly readable (rarely used)
-- `kube-node-lease` — Node heartbeats
+- `default` (Where resources go if you don't specify)
+- `kube-system` (Kubernetes system components)
+- `kube-public` (Publicly readable, rarely used)
+- `kube-node-lease` (Node heartbeats)
 
 ### When to Use Namespaces
 
@@ -652,7 +652,7 @@ Default namespaces:
 
 <Callout type="warning" title="Don't">
 - Don't use namespaces as the only security boundary (use separate clusters for true isolation)
-- Don't create too many namespaces—they add operational overhead
+- Don't create too many namespaces. They add operational overhead
 - Don't put cluster-wide resources in namespaces (they're cluster-scoped)
 - Don't assume namespaces provide network isolation by default (they don't)
 </Callout>
@@ -739,7 +739,7 @@ resources:
 ### Dos and Don'ts
 
 <Callout type="tip" title="Do">
-- Always set requests—pods without them have lowest scheduling priority
+- Always set requests. Pods without them have lowest scheduling priority
 - Set memory limits to prevent runaway processes from affecting other pods
 - Use Vertical Pod Autoscaler (VPA) in recommendation mode to find optimal values
 - Monitor actual usage and adjust over time
@@ -747,9 +747,9 @@ resources:
 
 <Callout type="warning" title="Don't">
 - Don't set requests equal to limits unless you need guaranteed QoS
-- Don't set limits too low—causes throttling and OOM kills
+- Don't set limits too low. Causes throttling and OOM kills
 - Don't forget that CPU is compressible (throttled) but memory isn't (killed)
-- Don't skip resource specs—you'll have scheduling issues at scale
+- Don't skip resource specs. You'll have scheduling issues at scale
 </Callout>
 
 ### Hands-On: Observe Resource Usage
@@ -983,10 +983,10 @@ A **ConfigMap** stores non-sensitive configuration data as key-value pairs. It s
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't store secrets in ConfigMaps—use Secrets instead
+- Don't store secrets in ConfigMaps. Use Secrets instead
 - Don't store more than 1MB of data (etcd limit)
 - Don't modify ConfigMaps that mounted pods are using (changes may not propagate)
-- Don't use ConfigMaps for binary data—use Secrets with type `Opaque`
+- Don't use ConfigMaps for binary data. Use Secrets with type `Opaque`
 </Callout>
 
 ### Hands-On: Working with ConfigMaps
@@ -1048,8 +1048,8 @@ A **Secret** stores sensitive data like passwords, tokens, and keys. While simil
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't commit Secrets to git—use sealed-secrets or external-secrets operator
-- Don't assume Secrets are secure by default—they're only base64-encoded
+- Don't commit Secrets to git. Use sealed-secrets or external-secrets operator
+- Don't assume Secrets are secure by default. They're only base64-encoded
 - Don't log secret values in your application
 - Don't share secrets across namespaces without good reason
 </Callout>
@@ -1179,7 +1179,7 @@ Kubernetes **probes** let you tell Kubernetes how to check if your container is 
 ### Dos and Don'ts
 
 <Callout type="tip" title="Do">
-- Always set readiness probes—prevents traffic to unready pods
+- Always set readiness probes. Prevents traffic to unready pods
 - Use startup probes for slow-starting apps instead of long `initialDelaySeconds`
 - Make health endpoints lightweight (no database queries if possible)
 - Set appropriate timeouts and thresholds
@@ -1187,7 +1187,7 @@ Kubernetes **probes** let you tell Kubernetes how to check if your container is 
 
 <Callout type="warning" title="Don't">
 - Don't make liveness probe check dependencies (database, external services)
-- Don't set liveness timeouts too aggressive—causes restart loops
+- Don't set liveness timeouts too aggressive. Causes restart loops
 - Don't use the same endpoint for liveness and readiness if they have different meanings
 - Don't forget that failed liveness = restart, which may not fix the issue
 </Callout>
@@ -1295,7 +1295,7 @@ Look for the "Conditions" section and probe configuration.
 ### Dos and Don'ts
 
 <Callout type="tip" title="Do">
-- Set resource requests—HPA uses requests as the baseline for percentage calculations
+- Set resource requests. HPA uses requests as the baseline for percentage calculations
 - Start with CPU-based scaling, add memory/custom metrics as needed
 - Set reasonable min/max values based on your capacity and traffic patterns
 - Use stabilization windows to prevent rapid scale-up/down cycles
@@ -1305,7 +1305,7 @@ Look for the "Conditions" section and probe configuration.
 - Don't set min replicas to 1 for production services (no HA)
 - Don't scale on memory for apps with memory leaks (scale won't help)
 - Don't set target utilization too low (wastes resources) or too high (poor response)
-- Don't expect instant scaling—it takes time to spin up pods
+- Don't expect instant scaling. It takes time to spin up pods
 </Callout>
 
 ### Hands-On: Create an HPA
@@ -1413,9 +1413,9 @@ spec:
 
 <Callout type="warning" title="Don't">
 - Don't use `Recreate` strategy unless your app can't handle multiple versions
-- Don't skip readiness probes—rolling updates depend on them
+- Don't skip readiness probes. Rolling updates depend on them
 - Don't deploy without the ability to quickly rollback
-- Don't manually edit pods—update the Deployment instead
+- Don't manually edit pods. Update the Deployment instead
 </Callout>
 
 ### Hands-On: Perform a Rolling Update
@@ -1456,7 +1456,7 @@ kubectl rollout undo deployment/hello-healthy --to-revision=1 -n demo-app
 
 ### What is Persistent Storage?
 
-Containers are ephemeral—their filesystem is lost when they restart. For data that must survive restarts (databases, uploads, logs), you need **persistent storage**.
+Containers are ephemeral. Their filesystem is lost when they restart. For data that must survive restarts (databases, uploads, logs), you need **persistent storage**.
 
 Kubernetes storage model:
 - **PersistentVolume (PV)**: A piece of storage in the cluster (like a disk)
@@ -1486,9 +1486,9 @@ User creates PVC → Kubernetes finds/creates matching PV → Pod mounts the PVC
 
 <Callout type="warning" title="Don't">
 - Don't use `hostPath` volumes in production (ties pod to node)
-- Don't assume RWX is available—many providers only support RWO
+- Don't assume RWX is available. Many providers only support RWO
 - Don't delete PVCs without backing up data
-- Don't use `emptyDir` for persistent data—it's deleted with the pod
+- Don't use `emptyDir` for persistent data. It's deleted with the pod
 </Callout>
 
 ### Hands-On: Create Persistent Storage
@@ -1554,7 +1554,7 @@ sleep 10
 kubectl logs -l app=storage-demo -n demo-app
 ```
 
-**Test persistence—delete the pod and verify data survives:**
+**Test persistence by deleting the pod and verifying data survives:**
 ```bash
 kubectl delete pod -l app=storage-demo -n demo-app
 sleep 15
@@ -1602,9 +1602,9 @@ A **CronJob** is a Job that runs on a schedule (like Unix cron). Use cases:
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't use Jobs for long-running services—use Deployments
+- Don't use Jobs for long-running services. Use Deployments
 - Don't assume CronJob runs exactly at the scheduled time (may be delayed)
-- Don't skip setting resource limits—jobs can consume unexpected resources
+- Don't skip setting resource limits. Jobs can consume unexpected resources
 - Don't use `concurrencyPolicy: Allow` if jobs can't run simultaneously
 </Callout>
 
@@ -1727,9 +1727,9 @@ Use cases:
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't use DaemonSets for application workloads—use Deployments
+- Don't use DaemonSets for application workloads. Use Deployments
 - Don't forget that DaemonSets ignore replicas (one per node)
-- Don't set high resource limits—they run on every node
+- Don't set high resource limits. They run on every node
 - Don't use DaemonSets if you only need pods on some nodes (use Deployment with node affinity)
 </Callout>
 
@@ -1777,7 +1777,7 @@ spec:
 kubectl apply -f daemonset.yaml
 ```
 
-**Check it—one pod per node:**
+**Check it (one pod per node):**
 ```bash
 kubectl get pods -n demo-app -l app=node-monitor -o wide
 kubectl get daemonset -n demo-app
@@ -1819,13 +1819,13 @@ A **StatefulSet** manages stateful applications that need:
 - Use StatefulSets for databases (MySQL, PostgreSQL, MongoDB)
 - Use a Headless Service for stable DNS names
 - Set `podManagementPolicy: Parallel` if order doesn't matter
-- Plan storage capacity—PVCs persist even after StatefulSet deletion
+- Plan storage capacity. PVCs persist even after StatefulSet deletion
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't use StatefulSets for stateless apps—unnecessary complexity
+- Don't use StatefulSets for stateless apps. Unnecessary complexity
 - Don't delete StatefulSets without backing up data
-- Don't rely only on StatefulSets for HA—also need proper replication
+- Don't rely only on StatefulSets for HA. Also need proper replication
 - Don't forget to create a Headless Service (clusterIP: None)
 </Callout>
 
@@ -1938,7 +1938,7 @@ kubectl delete pvc -l app=web-stateful -n demo-app
 
 ### Ingress Controllers
 
-Ingress is just an API object—you need an **Ingress Controller** to implement it:
+Ingress is just an API object. You need an **Ingress Controller** to implement it:
 - **nginx-ingress**: Most common, feature-rich
 - **Traefik**: Built into k3s, auto-configuration
 - **HAProxy**: High-performance
@@ -1956,8 +1956,8 @@ k3d/k3s includes Traefik by default.
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't use Ingress for non-HTTP protocols (TCP/UDP)—use LoadBalancer Service
-- Don't expose sensitive services directly—add authentication
+- Don't use Ingress for non-HTTP protocols (TCP/UDP). Use LoadBalancer Service
+- Don't expose sensitive services directly. Add authentication
 - Don't forget to install an Ingress Controller
 - Don't skip rate limiting and security headers in production
 </Callout>
@@ -2127,10 +2127,10 @@ Now Kubernetes won't evict all your pods at once during node maintenance.
 </Callout>
 
 <Callout type="warning" title="Don't">
-- Don't set `minAvailable` equal to `replicas`—blocks all disruptions
+- Don't set `minAvailable` equal to `replicas`. Blocks all disruptions
 - Don't assume Network Policies work without a supporting CNI
 - Don't forget PDBs only protect against *voluntary* disruptions
-- Don't make Network Policies too restrictive—can break legitimate traffic
+- Don't make Network Policies too restrictive. Can break legitimate traffic
 </Callout>
 
 ---
@@ -2222,7 +2222,7 @@ k3d cluster list
 ---
 
 <KeyPoint title="The Mental Model Shift" accent="primary">
-Kubernetes isn't about managing servers—it's about **declaring intent**. You describe the desired state, controllers continuously reconcile reality to match, and the system self-heals when things break. Once this clicks, everything else is just learning the vocabulary.
+Kubernetes isn't about managing servers. It's about **declaring intent**. You describe the desired state, controllers continuously reconcile reality to match, and the system self-heals when things break. Once this clicks, everything else is just learning the vocabulary.
 </KeyPoint>
 
 ## What You've Learned
