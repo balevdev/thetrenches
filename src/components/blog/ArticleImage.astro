@@ -10,12 +10,15 @@ interface Props {
 }
 
 const { src, alt, caption, wide = false, width, height, priority = false } = Astro.props;
+
+// Use single image size - no variants needed
+const finalSrc = src.includes('imagedelivery.net') ? src.replace('/public', '/public') : src;
 ---
 
 <figure class:list={['article-image', { 'article-image--wide': wide }]}>
   <div class="article-image__wrapper">
     <img 
-      src={src} 
+      src={finalSrc} 
       alt={alt} 
       loading={priority ? "eager" : "lazy"}
       decoding="async"

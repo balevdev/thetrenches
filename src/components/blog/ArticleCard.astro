@@ -30,13 +30,21 @@ const isoDate = pubDate.toISOString();
 
 // Determine accent color based on category
 const categoryAccent = 'primary';
+
+// Use single image size - no variants needed
+const finalHeroImage = heroImage?.includes('imagedelivery.net') ? heroImage.replace('/public', '/public') : heroImage;
 ---
 
 <article class="article-card reveal">
   <a href={href} class="article-card__link">
     <div class="article-card__image">
       {heroImage ? (
-        <img src={heroImage} alt="" loading="lazy" decoding="async" />
+        <img 
+          src={finalHeroImage} 
+          alt="" 
+          loading="lazy" 
+          decoding="async" 
+        />
       ) : (
         <div class={`article-card__placeholder article-card__placeholder--${categoryAccent}`}>
           <div class="article-card__placeholder-icon">
