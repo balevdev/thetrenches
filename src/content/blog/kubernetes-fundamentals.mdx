@@ -1,0 +1,2281 @@
+---
+title: "Kubernetes <em>Fundamentals</em>"
+subtitle: "Hands-On Introduction"
+description: "A complete hands-on guide to Kubernetes covering 18 essential concepts. Follow along step-by-step on your own computer—every command works, every example runs."
+pubDate: 2025-12-24
+category: "Infrastructure"
+readTime: "60 min"
+tags: ["kubernetes", "containers", "devops", "infrastructure", "cloud-native"]
+accent: "blue"
+heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/97e49c24-d618-488e-4820-b7284f053600/public"
+---
+
+import Callout from '../../components/blog/Callout.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import Verdict from '../../components/blog/Verdict.astro';
+import Card from '../../components/blog/Card.astro';
+
+<KeyPoint title="What You'll Build" accent="violet">
+This is a **100% hands-on tutorial covering 18 Kubernetes concepts**. You'll set up a local Kubernetes cluster on your machine and deploy real applications step-by-step. Every command works. Every example runs. By the end, you'll have deployed a complete application with multiple services, health checks, autoscaling, persistent storage, and production-grade configurations.
+</KeyPoint>
+
+---
+
+## What is Kubernetes?
+
+Kubernetes (K8s) is a **container orchestration platform** originally developed by Google based on their internal system called Borg. Think of it as an operating system for your data center—instead of managing individual servers, you manage a cluster as a single unit, and Kubernetes handles the details.
+
+### The Problem Kubernetes Solves
+
+Imagine running 50 containerized services across 20 servers. Without orchestration, you'd need to:
+- Manually decide which server runs each container
+- Restart crashed containers yourself
+- Update services one by one, hoping nothing breaks
+- Handle server failures at 3 AM
+- Manage networking between all containers
+- Balance load across instances
+
+Kubernetes automates all of this. You tell Kubernetes *what* you want (e.g., "run 5 copies of my web app"), and it figures out *how* to make it happen and keep it that way.
+
+### How Kubernetes Works
+
+Kubernetes follows a **declarative model**. You write YAML files describing your desired state ("I want 3 replicas of this app"), submit them to Kubernetes, and controllers continuously work to match reality to your declared state.
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                     Kubernetes Cluster                       │
+├─────────────────────────────────────────────────────────────┤
+│  Control Plane                                               │
+│  ┌─────────────┐ ┌─────────────┐ ┌──────────────────────┐   │
+│  │ API Server  │ │ Scheduler   │ │ Controller Manager   │   │
+│  │ (kubectl    │ │ (assigns    │ │ (maintains desired   │   │
+│  │  talks here)│ │  pods to    │ │  state)              │   │
+│  └─────────────┘ │  nodes)     │ └──────────────────────┘   │
+│                  └─────────────┘                             │
+├─────────────────────────────────────────────────────────────┤
+│  Worker Nodes                                                │
+│  ┌──────────────────────┐   ┌──────────────────────┐        │
+│  │ Node 1               │   │ Node 2               │        │
+│  │ ┌────────────────┐   │   │ ┌────────────────┐   │        │
+│  │ │ kubelet        │   │   │ │ kubelet        │   │        │
+│  │ │ (node agent)   │   │   │ │ (node agent)   │   │        │
+│  │ └────────────────┘   │   │ └────────────────┘   │        │
+│  │ ┌──────┐ ┌──────┐    │   │ ┌──────┐ ┌──────┐    │        │
+│  │ │ Pod  │ │ Pod  │    │   │ │ Pod  │ │ Pod  │    │        │
+│  │ └──────┘ └──────┘    │   │ └──────┘ └──────┘    │        │
+│  └──────────────────────┘   └──────────────────────┘        │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**Key Components:**
+- **API Server**: The front door to Kubernetes. All commands go through here.
+- **Scheduler**: Decides which node should run new pods based on resource requirements and constraints.
+- **Controller Manager**: Runs control loops that watch the cluster state and make changes to move toward the desired state.
+- **kubelet**: Agent on each node that ensures containers are running as specified.
+- **etcd**: Distributed key-value store holding all cluster state (not shown, but critical).
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 2rem 0;">
+  <Card variant="violet" title="Declarative">
+    Tell Kubernetes *what* you want, not *how*. It figures out the rest.
+  </Card>
+  <Card variant="rose" title="Self-Healing">
+    Pods crash? Nodes fail? Kubernetes automatically recovers.
+  </Card>
+  <Card title="Scalable">
+    From 1 pod to 10,000—same commands, same YAML files.
+  </Card>
+  <Card variant="highlight" title="Abstracted">
+    Focus on your app. Kubernetes handles servers, networking, and storage.
+  </Card>
+</div>
+
+---
+
+## Prerequisites
+
+Before we start, you need three tools installed on your computer.
+
+### 1. Docker Desktop
+
+Kubernetes runs containers, so you need Docker.
+
+**macOS:**
+```bash
+# Install with Homebrew
+brew install --cask docker
+
+# Or download from: https://www.docker.com/products/docker-desktop
+```
+
+**Windows:**
+```bash
+# Install with winget
+winget install Docker.DockerDesktop
+
+# Or download from: https://www.docker.com/products/docker-desktop
+```
+
+**Linux (Ubuntu/Debian):**
+```bash
+# Install Docker
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# Log out and back in for group changes to take effect
+```
+
+**Verify Docker is running:**
+```bash
+docker run hello-world
+```
+
+You should see "Hello from Docker!" message.
+
+### 2. kubectl (Kubernetes CLI)
+
+This is the command-line tool to interact with Kubernetes.
+
+**macOS:**
+```bash
+brew install kubectl
+```
+
+**Windows:**
+```bash
+winget install Kubernetes.kubectl
+```
+
+**Linux:**
+```bash
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+chmod +x kubectl
+sudo mv kubectl /usr/local/bin/
+```
+
+**Verify installation:**
+```bash
+kubectl version --client
+```
+
+### 3. k3d (Local Kubernetes Cluster)
+
+k3d runs k3s (lightweight Kubernetes) inside Docker containers. It's fast, lightweight, and perfect for learning.
+
+**macOS:**
+```bash
+brew install k3d
+```
+
+**Windows:**
+```bash
+winget install k3d
+```
+
+**Linux:**
+```bash
+curl -s https://raw.githubusercontent.com/k3d-io/k3d/main/install.sh | bash
+```
+
+**Verify installation:**
+```bash
+k3d version
+```
+
+<Callout type="tip" title="Why k3d?">
+k3d is faster than Minikube and kind because k3s is a lightweight Kubernetes distribution. Clusters start in seconds, not minutes. It's also easier to create multi-node clusters for testing.
+</Callout>
+
+---
+
+## Start Your Cluster
+
+Now let's create your Kubernetes cluster. With k3d, this takes about 30 seconds.
+
+```bash
+k3d cluster create learn-k8s --port "8080:80@loadbalancer"
+```
+
+This creates a cluster named `learn-k8s` and maps port 8080 on your machine to port 80 on the cluster's load balancer.
+
+You should see output like:
+```
+INFO[0000] Creating cluster [learn-k8s]
+INFO[0025] Cluster 'learn-k8s' created successfully!
+INFO[0025] You can now use it like this:
+kubectl cluster-info
+```
+
+**Verify your cluster is running:**
+```bash
+kubectl cluster-info
+```
+
+Output:
+```
+Kubernetes control plane is running at https://0.0.0.0:xxxxx
+CoreDNS is running at https://0.0.0.0:xxxxx/api/v1/namespaces/kube-system/services/kube-dns:dns/proxy
+```
+
+**Check what nodes you have:**
+```bash
+kubectl get nodes
+```
+
+Output:
+```
+NAME                      STATUS   ROLES                  AGE   VERSION
+k3d-learn-k8s-server-0    Ready    control-plane,master   30s   v1.32.x+k3s1
+```
+
+You now have a working Kubernetes cluster.
+
+---
+
+## Concept 1: Pods
+
+### What is a Pod?
+
+A **Pod** is the smallest deployable unit in Kubernetes—the atomic building block. A pod wraps one or more containers that share:
+- **Network namespace**: Same IP address, can communicate via localhost
+- **Storage volumes**: Can share files
+- **Lifecycle**: Started and stopped together
+
+Think of a pod as a "logical host" for your containers. While most pods run a single container, some run "sidecar" containers (like a logging agent next to your app).
+
+### When to Use Pods
+
+| Use Case | Recommendation |
+|----------|---------------|
+| Running your application | Always use Deployments (which create pods for you) |
+| Quick debugging/testing | Direct pod creation is fine |
+| Batch processing | Use Jobs (which create pods) |
+| Multi-container patterns | Sidecars for logging, proxies, or init containers |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use meaningful names that describe the workload
+- Always set resource requests and limits
+- Use init containers for setup tasks (migrations, config)
+- Group tightly coupled containers in the same pod
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't create pods directly in production—use Deployments
+- Don't put loosely coupled services in the same pod (they can't scale independently)
+- Don't assume pods have stable IPs or hostnames
+- Don't store state inside containers—it's lost on restart
+</Callout>
+
+### Hands-On: Working with Pods
+
+**Create a pod directly (for learning):**
+```bash
+kubectl run nginx-pod --image=nginx:1.27 --port=80
+```
+
+**Check it:**
+```bash
+kubectl get pods
+kubectl describe pod nginx-pod
+```
+
+The `describe` command shows events at the bottom—crucial for debugging.
+
+**View the logs:**
+```bash
+kubectl logs nginx-pod
+```
+
+**Shell into the pod:**
+```bash
+kubectl exec -it nginx-pod -- /bin/bash
+# Inside the container:
+cat /etc/nginx/nginx.conf
+exit
+```
+
+**Delete it:**
+```bash
+kubectl delete pod nginx-pod
+```
+
+Notice: Once deleted, it's gone forever. Nothing recreates it. That's why we use Deployments.
+
+---
+
+## Concept 2: Deployments
+
+### What is a Deployment?
+
+A **Deployment** is a higher-level object that manages pods for you. It provides:
+- **Declarative updates**: Describe the desired state, Kubernetes makes it happen
+- **Self-healing**: Automatically replaces failed pods
+- **Scaling**: Easily run multiple replicas
+- **Rolling updates**: Update without downtime
+- **Rollbacks**: Instantly revert to previous versions
+
+The Deployment creates a **ReplicaSet**, which in turn creates and manages the pods. You rarely interact with ReplicaSets directly.
+
+```
+Deployment
+    └── ReplicaSet
+            ├── Pod 1
+            ├── Pod 2
+            └── Pod 3
+```
+
+### When to Use Deployments
+
+| Use Case | Resource |
+|----------|----------|
+| Stateless applications (APIs, web servers) | Deployment |
+| Stateful applications (databases) | StatefulSet |
+| Run on every node (monitoring agents) | DaemonSet |
+| Run once to completion (migrations) | Job |
+| Run on a schedule (backups) | CronJob |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Always use Deployments for stateless apps (never bare pods)
+- Set `replicas` to at least 2 for high availability
+- Define resource requests and limits
+- Use meaningful labels for organization and selection
+- Set up health checks (readiness and liveness probes)
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use Deployments for stateful apps that need stable network identity
+- Don't set replicas to 0 in production as a way to "pause"—delete instead
+- Don't use `latest` tag—use specific versions for reproducibility
+- Don't skip the `selector`—it connects the Deployment to its pods
+</Callout>
+
+### Hands-On: Create Your First Deployment
+
+Create a file called `hello-deployment.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-app
+  labels:
+    app: hello
+    environment: learning
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: hello
+  template:
+    metadata:
+      labels:
+        app: hello
+        version: "2.0"
+    spec:
+      containers:
+      - name: hello
+        image: gcr.io/google-samples/hello-app:2.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+```
+
+**Apply it:**
+```bash
+kubectl apply -f hello-deployment.yaml
+```
+
+**Watch the pods start:**
+```bash
+kubectl get pods -l app=hello -w
+```
+
+Press `Ctrl+C` when all pods show `Running`.
+
+**See the Deployment status:**
+```bash
+kubectl get deployment hello-app
+```
+
+Output:
+```
+NAME        READY   UP-TO-DATE   AVAILABLE   AGE
+hello-app   3/3     3            3           30s
+```
+
+### Self-Healing in Action
+
+List your pods and note their names:
+```bash
+kubectl get pods -l app=hello
+```
+
+Delete one (copy a pod name from the output above):
+```bash
+kubectl delete pod <pod-name>
+# Or delete the first pod automatically:
+kubectl delete pod $(kubectl get pods -l app=hello -o jsonpath='{.items[0].metadata.name}')
+```
+
+Immediately check:
+```bash
+kubectl get pods -l app=hello
+```
+
+A new pod is already being created. Kubernetes maintains your desired state of 3 replicas.
+
+<KeyPoint title="The Core Insight" accent="violet">
+You didn't restart anything. Kubernetes noticed reality didn't match your declared state (3 replicas) and automatically fixed it. This is the **declarative model** in action—you declare *what*, Kubernetes handles *how*.
+</KeyPoint>
+
+### Scaling
+
+**Scale up:**
+```bash
+kubectl scale deployment hello-app --replicas=5
+kubectl get pods -l app=hello
+```
+
+**Scale down:**
+```bash
+kubectl scale deployment hello-app --replicas=3
+```
+
+---
+
+## Concept 3: Services
+
+### What is a Service?
+
+A **Service** provides stable networking for pods. While pods are ephemeral (they come and go, with changing IPs), Services provide:
+- **Stable IP address** (ClusterIP) that doesn't change
+- **Stable DNS name** (`service-name.namespace.svc.cluster.local`)
+- **Load balancing** across all matching pods
+- **Service discovery** for other applications
+
+### Service Types
+
+<ComparisonTable
+  headers={["Type", "Description", "Use Case"]}
+  rows={[
+    { feature: "ClusterIP (default)", colA: "Internal IP, only reachable within cluster", colB: "Backend services, databases" },
+    { feature: "NodePort", colA: "Exposes on each node's IP at static port (30000-32767)", colB: "Development, simple external access" },
+    { feature: "LoadBalancer", colA: "Provisions cloud load balancer (ELB, ALB, etc.)", colB: "Production external access" },
+    { feature: "ExternalName", colA: "Maps to external DNS name", colB: "Integrating external services" },
+  ]}
+/>
+
+### How Service Discovery Works
+
+When you create a Service named `backend` in namespace `demo-app`:
+1. Kubernetes creates DNS entry `backend.demo-app.svc.cluster.local`
+2. Other pods can reach it simply as `backend` (within same namespace) or `backend.demo-app` (from other namespaces)
+3. The Service load-balances traffic to all pods matching its selector
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use ClusterIP for internal services (most common)
+- Name services meaningfully—they become DNS names
+- Use selectors that match your pod labels exactly
+- Set appropriate `targetPort` to match your container's port
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't expose databases with LoadBalancer—use ClusterIP + port-forward for debugging
+- Don't hardcode pod IPs—always use Service names
+- Don't use NodePort in production (use LoadBalancer or Ingress)
+- Don't forget to create a Service—pods without Services are unreachable
+</Callout>
+
+### Hands-On: Expose Your Application
+
+Create `hello-service.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-service
+spec:
+  selector:
+    app: hello              # Must match pod labels
+  ports:
+  - port: 80                # Port the service listens on
+    targetPort: 8080        # Port the container listens on
+    protocol: TCP
+  type: ClusterIP           # Internal only (default)
+```
+
+**Apply it:**
+```bash
+kubectl apply -f hello-service.yaml
+```
+
+**View the service:**
+```bash
+kubectl get service hello-service
+kubectl describe service hello-service
+```
+
+Notice the `Endpoints`—these are the pod IPs receiving traffic.
+
+**Access via port-forward:**
+```bash
+kubectl port-forward svc/hello-service 9090:80
+```
+
+Open http://localhost:9090 in your browser. Refresh multiple times—notice the hostname changes as Kubernetes load-balances.
+
+Press `Ctrl+C` to stop port-forwarding.
+
+---
+
+## Concept 4: Labels and Selectors
+
+### What are Labels?
+
+**Labels** are key-value pairs attached to Kubernetes objects. They're the primary way to organize, select, and filter resources. Unlike names (which must be unique), you can apply the same labels to many objects.
+
+Common label patterns:
+- `app: frontend` — Application name
+- `environment: production` — Environment
+- `version: v1.2.3` — Version
+- `tier: backend` — Architecture tier
+- `team: payments` — Owning team
+
+### How Selectors Work
+
+**Selectors** query objects by their labels. Two types:
+
+1. **Equality-based**: `app=frontend`, `environment!=staging`
+2. **Set-based**: `environment in (production, staging)`, `tier notin (frontend)`
+
+Services use selectors to find pods. Deployments use selectors to manage their pods.
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use consistent labeling conventions across your team
+- Include `app`, `version`, and `environment` at minimum
+- Use labels for operational tasks (selecting pods to delete, view logs, etc.)
+- Apply labels to all resources, not just pods
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use labels for large or structured data—use annotations instead
+- Don't change the labels a selector uses after creation (breaks the connection)
+- Don't use overly generic labels like `type: app`
+- Don't forget that selector labels must match template labels exactly
+</Callout>
+
+### Hands-On: Working with Labels
+
+**View labels on pods:**
+```bash
+kubectl get pods --show-labels
+```
+
+**Add a label:**
+```bash
+kubectl label pods -l app=hello team=platform
+kubectl get pods --show-labels
+```
+
+**Filter by label:**
+```bash
+kubectl get pods -l app=hello
+kubectl get pods -l app=hello,team=platform
+kubectl get pods -l 'environment in (learning, development)'
+```
+
+**Remove a label:**
+```bash
+kubectl label pods -l app=hello team-
+```
+
+The minus sign (`team-`) removes the label.
+
+**Use labels with other commands:**
+```bash
+# Logs from all pods with label
+kubectl logs -l app=hello --all-containers
+
+# Delete all pods with label (Deployment will recreate them)
+kubectl delete pods -l app=hello
+```
+
+---
+
+## Concept 5: Namespaces
+
+### What is a Namespace?
+
+A **Namespace** is a virtual cluster within your physical cluster. It provides:
+- **Isolation**: Resources in different namespaces don't see each other by default
+- **Organization**: Group related resources (by team, project, or environment)
+- **Resource quotas**: Limit CPU, memory, and object counts per namespace
+- **Access control**: Apply RBAC policies per namespace
+
+Default namespaces:
+- `default` — Where resources go if you don't specify
+- `kube-system` — Kubernetes system components
+- `kube-public` — Publicly readable (rarely used)
+- `kube-node-lease` — Node heartbeats
+
+### When to Use Namespaces
+
+| Pattern | Description |
+|---------|-------------|
+| Per environment | `development`, `staging`, `production` |
+| Per team | `team-payments`, `team-users` |
+| Per application | `app-frontend`, `app-backend` |
+| Per tenant | Multi-tenant clusters |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use namespaces to separate environments in non-production clusters
+- Set resource quotas to prevent runaway resource consumption
+- Use network policies to control cross-namespace traffic
+- Set a default namespace in your kubeconfig to avoid `-n` flags
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use namespaces as the only security boundary (use separate clusters for true isolation)
+- Don't create too many namespaces—they add operational overhead
+- Don't put cluster-wide resources in namespaces (they're cluster-scoped)
+- Don't assume namespaces provide network isolation by default (they don't)
+</Callout>
+
+### Hands-On: Working with Namespaces
+
+**See existing namespaces:**
+```bash
+kubectl get namespaces
+```
+
+**Create a namespace:**
+```bash
+kubectl create namespace demo-app
+```
+
+**Or with YAML (recommended for GitOps):**
+```yaml
+# namespace.yaml
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: demo-app
+  labels:
+    environment: learning
+```
+
+**Set your default namespace:**
+```bash
+kubectl config set-context --current --namespace=demo-app
+```
+
+Now all commands default to `demo-app`. Reset later with:
+```bash
+kubectl config set-context --current --namespace=default
+```
+
+**See pods in all namespaces:**
+```bash
+kubectl get pods -A
+```
+
+**Deploy to a specific namespace:**
+```bash
+kubectl run nginx-test --image=nginx:1.27 -n demo-app
+kubectl get pods -n demo-app
+```
+
+---
+
+## Concept 6: Resource Requests and Limits
+
+### What are Resource Requests and Limits?
+
+Kubernetes needs to know how much CPU and memory your containers need. You specify this with:
+
+- **Requests**: Guaranteed minimum resources. The scheduler uses this to place pods.
+- **Limits**: Maximum allowed. Container is throttled (CPU) or killed (memory) if exceeded.
+
+```yaml
+resources:
+  requests:
+    cpu: "100m"      # 100 millicores = 0.1 CPU
+    memory: "128Mi"  # 128 mebibytes
+  limits:
+    cpu: "500m"      # Max 0.5 CPU
+    memory: "256Mi"  # Killed if exceeds this
+```
+
+### CPU vs Memory Behavior
+
+| Resource | When Limit Exceeded |
+|----------|-------------------|
+| **CPU** | Throttled (slowed down), not killed |
+| **Memory** | Container is OOM-killed and restarted |
+
+### How to Size Resources
+
+1. **Start with estimates** based on local testing
+2. **Deploy and observe** actual usage with `kubectl top pods`
+3. **Adjust based on metrics** from monitoring (Prometheus/Grafana)
+4. **Set limits 2-4x requests** for burst headroom
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Always set requests—pods without them have lowest scheduling priority
+- Set memory limits to prevent runaway processes from affecting other pods
+- Use Vertical Pod Autoscaler (VPA) in recommendation mode to find optimal values
+- Monitor actual usage and adjust over time
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't set requests equal to limits unless you need guaranteed QoS
+- Don't set limits too low—causes throttling and OOM kills
+- Don't forget that CPU is compressible (throttled) but memory isn't (killed)
+- Don't skip resource specs—you'll have scheduling issues at scale
+</Callout>
+
+### Hands-On: Observe Resource Usage
+
+**Check node capacity:**
+```bash
+kubectl describe node | grep -A 5 "Allocated resources"
+```
+
+**View pod resource usage:**
+```bash
+kubectl top pods -n demo-app
+```
+
+<Callout type="info" title="Metrics Take Time">
+Metrics need a minute or two to populate. If you see "metrics not available", wait and try again.
+</Callout>
+
+---
+
+## Hands-On: Deploy a Complete Application
+
+Let's deploy a realistic multi-tier application to practice what we've learned.
+
+### Step 1: Create a Namespace
+
+```bash
+kubectl create namespace demo-app
+```
+
+### Step 2: Deploy the Backend API
+
+Create `backend.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: demo-app
+  labels:
+    app: backend
+    tier: api
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+        tier: api
+    spec:
+      containers:
+      - name: backend
+        image: hashicorp/http-echo:1.0
+        args:
+        - "-text=Hello from the backend API!"
+        - "-listen=:5678"
+        ports:
+        - containerPort: 5678
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backend
+  namespace: demo-app
+spec:
+  selector:
+    app: backend
+  ports:
+  - port: 80
+    targetPort: 5678
+```
+
+**Apply it:**
+```bash
+kubectl apply -f backend.yaml
+```
+
+### Step 3: Deploy the Frontend
+
+Create `frontend.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend
+  namespace: demo-app
+  labels:
+    app: frontend
+    tier: web
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+        tier: web
+    spec:
+      containers:
+      - name: frontend
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/conf.d/default.conf
+          subPath: default.conf
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: frontend-config
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-config
+  namespace: demo-app
+data:
+  default.conf: |
+    server {
+        listen 80;
+        location / {
+            default_type text/html;
+            return 200 '<html><body><h1>Frontend</h1><p>Try <a href="/api">/api</a> to reach the backend</p></body></html>';
+        }
+        location /api {
+            proxy_pass http://backend;
+        }
+    }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend
+  namespace: demo-app
+spec:
+  selector:
+    app: frontend
+  ports:
+  - port: 80
+    targetPort: 80
+  type: ClusterIP
+```
+
+**Apply it:**
+```bash
+kubectl apply -f frontend.yaml
+```
+
+### Step 4: Verify Everything is Running
+
+```bash
+kubectl get all -n demo-app
+```
+
+You should see deployments, pods, and services all running.
+
+### Step 5: Access the Application
+
+```bash
+kubectl port-forward svc/frontend 9090:80 -n demo-app
+```
+
+Open **http://localhost:9090** in your browser. Click "/api" to see the frontend calling the backend!
+
+Press `Ctrl+C` when done.
+
+<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; margin: 2rem 0;">
+  <Card variant="violet" title="Backend API">
+    2 replicas serving responses on an internal ClusterIP service
+  </Card>
+  <Card variant="rose" title="Frontend Proxy">
+    Nginx routing traffic to backend via Kubernetes DNS
+  </Card>
+  <Card title="Service Discovery">
+    Frontend finds backend using just the service name "backend"
+  </Card>
+  <Card variant="highlight" title="Load Balancing">
+    Traffic automatically distributed across all healthy pods
+  </Card>
+</div>
+
+---
+
+## Concept 7: ConfigMaps
+
+### What is a ConfigMap?
+
+A **ConfigMap** stores non-sensitive configuration data as key-value pairs. It separates configuration from container images, enabling:
+- **Environment-specific config**: Different settings per environment
+- **Runtime configuration**: Update config without rebuilding images
+- **Configuration files**: Store entire files (nginx.conf, app.properties)
+
+### Ways to Use ConfigMaps
+
+| Method | Use Case |
+|--------|----------|
+| Environment variables | Simple key-value settings |
+| Volume mount (file) | Configuration files |
+| Volume mount (directory) | Multiple config files |
+| Command arguments | Pass values to entrypoint |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use ConfigMaps for all configuration (not hardcoded in images)
+- Use descriptive keys that match your application's expected env vars
+- Version ConfigMaps by including a hash in the name for immutable updates
+- Use `kubectl create configmap --from-file` for existing config files
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't store secrets in ConfigMaps—use Secrets instead
+- Don't store more than 1MB of data (etcd limit)
+- Don't modify ConfigMaps that mounted pods are using (changes may not propagate)
+- Don't use ConfigMaps for binary data—use Secrets with type `Opaque`
+</Callout>
+
+### Hands-On: Working with ConfigMaps
+
+**Create from literal values:**
+```bash
+kubectl create configmap app-settings \
+  --from-literal=LOG_LEVEL=info \
+  --from-literal=CACHE_TTL=300 \
+  --from-literal=MAX_CONNECTIONS=100 \
+  -n demo-app
+```
+
+**View it:**
+```bash
+kubectl get configmap app-settings -n demo-app -o yaml
+```
+
+**Create from a file:**
+```bash
+echo '{"debug": false, "maxConnections": 100}' > config.json
+kubectl create configmap app-config --from-file=config.json -n demo-app
+rm config.json
+```
+
+**Use in a pod (environment variables):**
+
+The ConfigMap values are injected as environment variables. See the full example in the Configuration section later.
+
+---
+
+## Concept 8: Secrets
+
+### What is a Secret?
+
+A **Secret** stores sensitive data like passwords, tokens, and keys. While similar to ConfigMaps, Secrets:
+- Are base64-encoded (NOT encrypted by default)
+- Can be encrypted at rest (requires configuration)
+- Have type-specific handling (TLS, docker registry, etc.)
+- Are only sent to nodes that need them
+
+### Secret Types
+
+| Type | Use Case |
+|------|----------|
+| `Opaque` | Generic secret (default) |
+| `kubernetes.io/tls` | TLS certificates |
+| `kubernetes.io/dockerconfigjson` | Docker registry auth |
+| `kubernetes.io/basic-auth` | Basic authentication |
+| `kubernetes.io/ssh-auth` | SSH credentials |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Enable encryption at rest in production (EncryptionConfiguration)
+- Use external secret managers for production (Vault, AWS Secrets Manager)
+- Rotate secrets regularly
+- Use RBAC to restrict who can read secrets
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't commit Secrets to git—use sealed-secrets or external-secrets operator
+- Don't assume Secrets are secure by default—they're only base64-encoded
+- Don't log secret values in your application
+- Don't share secrets across namespaces without good reason
+</Callout>
+
+### Hands-On: Working with Secrets
+
+**Create a secret:**
+```bash
+kubectl create secret generic db-credentials \
+  --from-literal=username=admin \
+  --from-literal=password=supersecret123 \
+  -n demo-app
+```
+
+**View it (values are base64 encoded):**
+```bash
+kubectl get secret db-credentials -n demo-app -o yaml
+```
+
+**Decode a value:**
+```bash
+kubectl get secret db-credentials -n demo-app -o jsonpath='{.data.password}' | base64 -d
+echo  # Add newline for readability
+```
+
+**Create TLS secret (for HTTPS):**
+```bash
+# If you have cert files:
+# kubectl create secret tls my-tls-secret --cert=cert.pem --key=key.pem -n demo-app
+```
+
+---
+
+## Concept 9: Using Configuration in Pods
+
+### Hands-On: Environment Variables from ConfigMaps and Secrets
+
+Create `app-with-config.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: configured-app
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: configured-app
+  template:
+    metadata:
+      labels:
+        app: configured-app
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo \"LOG_LEVEL=$LOG_LEVEL, DB_USER=$DB_USER\"; sleep 10; done"]
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            cpu: "50m"
+            memory: "32Mi"
+        env:
+        # From ConfigMap - single key
+        - name: LOG_LEVEL
+          valueFrom:
+            configMapKeyRef:
+              name: app-settings
+              key: LOG_LEVEL
+        # From Secret - single key
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: username
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: password
+        # All keys from ConfigMap as env vars
+        envFrom:
+        - configMapRef:
+            name: app-settings
+            optional: true    # Don't fail if ConfigMap doesn't exist
+```
+
+**Apply and check logs:**
+```bash
+kubectl apply -f app-with-config.yaml
+sleep 15
+kubectl logs -l app=configured-app -n demo-app
+```
+
+You'll see your config values printed!
+
+---
+
+## Concept 10: Health Checks (Probes)
+
+### What are Probes?
+
+Kubernetes **probes** let you tell Kubernetes how to check if your container is healthy. Three types:
+
+| Probe | Question | On Failure |
+|-------|----------|------------|
+| **startupProbe** | Has the app finished starting? | Keep checking, delay other probes |
+| **readinessProbe** | Ready to receive traffic? | Remove from Service endpoints |
+| **livenessProbe** | Is it alive and healthy? | Kill and restart the container |
+
+### Probe Methods
+
+<ComparisonTable
+  headers={["Method", "Description", "Best For"]}
+  rows={[
+    { feature: "httpGet", colA: "HTTP GET request, success = 2xx/3xx", colB: "Web services" },
+    { feature: "tcpSocket", colA: "TCP connection attempt", colB: "Databases, non-HTTP services" },
+    { feature: "exec", colA: "Run command in container, success = exit 0", colB: "Complex health checks" },
+    { feature: "grpc", colA: "gRPC health check", colB: "gRPC services" },
+  ]}
+/>
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Always set readiness probes—prevents traffic to unready pods
+- Use startup probes for slow-starting apps instead of long `initialDelaySeconds`
+- Make health endpoints lightweight (no database queries if possible)
+- Set appropriate timeouts and thresholds
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't make liveness probe check dependencies (database, external services)
+- Don't set liveness timeouts too aggressive—causes restart loops
+- Don't use the same endpoint for liveness and readiness if they have different meanings
+- Don't forget that failed liveness = restart, which may not fix the issue
+</Callout>
+
+### Hands-On: Add Health Checks
+
+Create `hello-with-probes.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: hello-healthy
+  namespace: demo-app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: hello-healthy
+  template:
+    metadata:
+      labels:
+        app: hello-healthy
+    spec:
+      containers:
+      - name: hello
+        image: gcr.io/google-samples/hello-app:2.0
+        ports:
+        - containerPort: 8080
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "64Mi"
+          limits:
+            cpu: "100m"
+            memory: "128Mi"
+        # Startup probe - app has 30 seconds to start
+        startupProbe:
+          httpGet:
+            path: /
+            port: 8080
+          failureThreshold: 30
+          periodSeconds: 1
+        # Readiness probe - is it ready for traffic?
+        readinessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 5
+          periodSeconds: 5
+          failureThreshold: 3
+        # Liveness probe - is it still alive?
+        livenessProbe:
+          httpGet:
+            path: /
+            port: 8080
+          initialDelaySeconds: 10
+          periodSeconds: 10
+          failureThreshold: 3
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: hello-healthy
+  namespace: demo-app
+spec:
+  selector:
+    app: hello-healthy
+  ports:
+  - port: 80
+    targetPort: 8080
+```
+
+**Apply it:**
+```bash
+kubectl apply -f hello-with-probes.yaml
+```
+
+**Check the status:**
+```bash
+kubectl describe deployment hello-healthy -n demo-app
+```
+
+Look for the "Conditions" section and probe configuration.
+
+<KeyPoint title="Production Rule" accent="success">
+**Every production deployment needs health probes.** Readiness probes prevent traffic to broken pods. Liveness probes recover from deadlocks. Startup probes give slow apps time to initialize. Skip them, and you'll debug mystery failures at 3 AM.
+</KeyPoint>
+
+---
+
+## Concept 11: Horizontal Pod Autoscaler (HPA)
+
+### What is HPA?
+
+**Horizontal Pod Autoscaler** automatically adjusts the number of pod replicas based on observed metrics (CPU, memory, or custom metrics). It's "horizontal" because it adds more pods (vs. vertical scaling which adds more resources to existing pods).
+
+### How HPA Works
+
+1. HPA queries metrics every 15 seconds (default)
+2. Calculates desired replicas: `desiredReplicas = ceil(currentReplicas * (currentMetricValue / desiredMetricValue))`
+3. Scales up/down respecting min/max bounds
+4. Uses stabilization windows to prevent thrashing
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Set resource requests—HPA uses requests as the baseline for percentage calculations
+- Start with CPU-based scaling, add memory/custom metrics as needed
+- Set reasonable min/max values based on your capacity and traffic patterns
+- Use stabilization windows to prevent rapid scale-up/down cycles
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't set min replicas to 1 for production services (no HA)
+- Don't scale on memory for apps with memory leaks (scale won't help)
+- Don't set target utilization too low (wastes resources) or too high (poor response)
+- Don't expect instant scaling—it takes time to spin up pods
+</Callout>
+
+### Hands-On: Create an HPA
+
+Create `hpa.yaml`:
+
+```yaml
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: hello-hpa
+  namespace: demo-app
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: hello-healthy
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 50    # Scale when CPU > 50%
+  behavior:
+    scaleDown:
+      stabilizationWindowSeconds: 60   # Wait 60s before scaling down
+    scaleUp:
+      stabilizationWindowSeconds: 0    # Scale up immediately
+      policies:
+      - type: Percent
+        value: 100
+        periodSeconds: 15              # Can double every 15s
+```
+
+**Apply it:**
+```bash
+kubectl apply -f hpa.yaml
+```
+
+**Watch the HPA:**
+```bash
+kubectl get hpa -n demo-app -w
+```
+
+### Generate Load to Trigger Scaling
+
+Open a new terminal and run:
+```bash
+kubectl run load-generator --image=busybox:1.36 -n demo-app --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://hello-healthy; done"
+```
+
+Watch the HPA in your first terminal. After a minute, you'll see it scale up!
+
+**Clean up the load generator:**
+```bash
+kubectl delete pod load-generator -n demo-app
+```
+
+<KeyPoint title="Scaling Philosophy" accent="rose">
+HPA embodies Kubernetes' reactive approach: observe metrics, compare to targets, adjust automatically. Combined with resource requests (for scheduling) and limits (for protection), you get **automatic right-sizing** without manual intervention.
+</KeyPoint>
+
+---
+
+## Concept 12: Rolling Updates and Rollbacks
+
+### How Rolling Updates Work
+
+When you update a Deployment (e.g., new image version), Kubernetes performs a rolling update:
+
+1. Creates new pods with the updated spec
+2. Waits for new pods to be ready (pass readiness probe)
+3. Terminates old pods
+4. Repeats until all pods are updated
+
+Zero downtime because old pods serve traffic until new ones are ready.
+
+### Update Strategies
+
+| Strategy | Description |
+|----------|-------------|
+| `RollingUpdate` (default) | Gradual replacement with `maxSurge` and `maxUnavailable` |
+| `Recreate` | Kill all old pods first, then create new ones (has downtime) |
+
+```yaml
+spec:
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxSurge: 25%        # Max pods above desired during update
+      maxUnavailable: 25%  # Max pods unavailable during update
+```
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use meaningful image tags (not `latest`) for reproducible rollbacks
+- Set readiness probes so bad deployments don't receive traffic
+- Use `kubectl rollout status` to wait for deployments in CI/CD
+- Keep revision history for rollbacks (`revisionHistoryLimit`)
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use `Recreate` strategy unless your app can't handle multiple versions
+- Don't skip readiness probes—rolling updates depend on them
+- Don't deploy without the ability to quickly rollback
+- Don't manually edit pods—update the Deployment instead
+</Callout>
+
+### Hands-On: Perform a Rolling Update
+
+**Update the image:**
+```bash
+kubectl set image deployment/hello-healthy hello=gcr.io/google-samples/hello-app:1.0 -n demo-app
+```
+
+**Watch the rollout:**
+```bash
+kubectl rollout status deployment/hello-healthy -n demo-app
+```
+
+You'll see pods gradually replaced.
+
+**Check the rollout history:**
+```bash
+kubectl rollout history deployment/hello-healthy -n demo-app
+```
+
+### Rollback
+
+**Roll back to previous version:**
+```bash
+kubectl rollout undo deployment/hello-healthy -n demo-app
+```
+
+**Roll back to a specific revision:**
+```bash
+kubectl rollout history deployment/hello-healthy -n demo-app
+kubectl rollout undo deployment/hello-healthy --to-revision=1 -n demo-app
+```
+
+---
+
+## Concept 13: Persistent Storage
+
+### What is Persistent Storage?
+
+Containers are ephemeral—their filesystem is lost when they restart. For data that must survive restarts (databases, uploads, logs), you need **persistent storage**.
+
+Kubernetes storage model:
+- **PersistentVolume (PV)**: A piece of storage in the cluster (like a disk)
+- **PersistentVolumeClaim (PVC)**: A request for storage (like a request form)
+- **StorageClass**: Defines storage "types" (SSD, HDD, network storage)
+
+```
+User creates PVC → Kubernetes finds/creates matching PV → Pod mounts the PVC
+```
+
+### Access Modes
+
+| Mode | Description |
+|------|-------------|
+| `ReadWriteOnce` (RWO) | Single node can mount read-write |
+| `ReadOnlyMany` (ROX) | Many nodes can mount read-only |
+| `ReadWriteMany` (RWX) | Many nodes can mount read-write |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use PVCs for all persistent data (databases, uploads)
+- Choose appropriate access modes for your workload
+- Set storage requests based on actual needs + growth buffer
+- Use `volumeClaimTemplates` in StatefulSets for per-pod storage
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use `hostPath` volumes in production (ties pod to node)
+- Don't assume RWX is available—many providers only support RWO
+- Don't delete PVCs without backing up data
+- Don't use `emptyDir` for persistent data—it's deleted with the pod
+</Callout>
+
+### Hands-On: Create Persistent Storage
+
+Create `storage.yaml`:
+
+```yaml
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: data-pvc
+  namespace: demo-app
+spec:
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: app-with-storage
+  namespace: demo-app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: storage-demo
+  template:
+    metadata:
+      labels:
+        app: storage-demo
+    spec:
+      containers:
+      - name: app
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'Data saved at:' $(date) >> /data/log.txt && cat /data/log.txt && sleep 3600"]
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            cpu: "50m"
+            memory: "32Mi"
+        volumeMounts:
+        - name: data
+          mountPath: /data
+      volumes:
+      - name: data
+        persistentVolumeClaim:
+          claimName: data-pvc
+```
+
+**Apply it:**
+```bash
+kubectl apply -f storage.yaml
+```
+
+**Check the logs:**
+```bash
+sleep 10
+kubectl logs -l app=storage-demo -n demo-app
+```
+
+**Test persistence—delete the pod and verify data survives:**
+```bash
+kubectl delete pod -l app=storage-demo -n demo-app
+sleep 15
+kubectl logs -l app=storage-demo -n demo-app
+```
+
+The previous data is still there plus the new entry!
+
+---
+
+## Concept 14: Jobs and CronJobs
+
+### What are Jobs?
+
+A **Job** creates pods that run to completion (rather than continuously like Deployments). Use cases:
+- Database migrations
+- Batch processing
+- One-time scripts
+- Data imports/exports
+
+### What are CronJobs?
+
+A **CronJob** is a Job that runs on a schedule (like Unix cron). Use cases:
+- Scheduled backups
+- Report generation
+- Cleanup tasks
+- Periodic data syncs
+
+### Job Completion Modes
+
+| Field | Description |
+|-------|-------------|
+| `completions` | Number of successful completions needed |
+| `parallelism` | Number of pods running concurrently |
+| `backoffLimit` | Retries before marking job as failed |
+| `activeDeadlineSeconds` | Maximum runtime |
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Set `backoffLimit` to control retry behavior
+- Use `ttlSecondsAfterFinished` to auto-cleanup completed Jobs
+- Make jobs idempotent (safe to run multiple times)
+- Set `activeDeadlineSeconds` to prevent runaway jobs
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use Jobs for long-running services—use Deployments
+- Don't assume CronJob runs exactly at the scheduled time (may be delayed)
+- Don't skip setting resource limits—jobs can consume unexpected resources
+- Don't use `concurrencyPolicy: Allow` if jobs can't run simultaneously
+</Callout>
+
+### Hands-On: Create a Job
+
+Create `job.yaml`:
+
+```yaml
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: hello-job
+  namespace: demo-app
+spec:
+  completions: 3           # Run 3 times total
+  parallelism: 1           # One at a time
+  backoffLimit: 2          # Retry twice on failure
+  ttlSecondsAfterFinished: 60  # Cleanup after 60 seconds
+  template:
+    spec:
+      containers:
+      - name: worker
+        image: busybox:1.36
+        command: ["sh", "-c", "echo 'Processing batch item...' && sleep 5 && echo 'Done!'"]
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+      restartPolicy: Never   # Don't restart on failure, let Job handle it
+```
+
+**Apply and watch:**
+```bash
+kubectl apply -f job.yaml
+kubectl get jobs -n demo-app -w
+```
+
+**View the pods:**
+```bash
+kubectl get pods -n demo-app -l job-name=hello-job
+```
+
+### Hands-On: Create a CronJob
+
+Create `cronjob.yaml`:
+
+```yaml
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-job
+  namespace: demo-app
+spec:
+  schedule: "*/2 * * * *"    # Every 2 minutes
+  concurrencyPolicy: Forbid   # Don't run if previous still running
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: cleanup
+            image: busybox:1.36
+            command: ["sh", "-c", "echo 'Running cleanup at' $(date)"]
+            resources:
+              requests:
+                cpu: "50m"
+                memory: "32Mi"
+              limits:
+                cpu: "100m"
+                memory: "64Mi"
+          restartPolicy: Never
+```
+
+**Apply it:**
+```bash
+kubectl apply -f cronjob.yaml
+```
+
+**Check the CronJob:**
+```bash
+kubectl get cronjobs -n demo-app
+```
+
+**Wait 2 minutes and check for jobs:**
+```bash
+kubectl get jobs -n demo-app
+```
+
+**Clean up the CronJob:**
+```bash
+kubectl delete cronjob cleanup-job -n demo-app
+```
+
+---
+
+## Concept 15: DaemonSets
+
+### What is a DaemonSet?
+
+A **DaemonSet** ensures that a copy of a pod runs on every node (or selected nodes) in the cluster. As nodes are added, DaemonSet pods are automatically added to them.
+
+Use cases:
+- Log collectors (Fluentd, Filebeat)
+- Monitoring agents (Prometheus Node Exporter, Datadog agent)
+- Network plugins (Calico, Weave)
+- Storage daemons (Ceph, GlusterFS)
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use DaemonSets for node-level services
+- Use node selectors or affinity to target specific nodes
+- Set resource requests to ensure DaemonSet pods aren't evicted
+- Use tolerations if you need to run on control-plane nodes
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use DaemonSets for application workloads—use Deployments
+- Don't forget that DaemonSets ignore replicas (one per node)
+- Don't set high resource limits—they run on every node
+- Don't use DaemonSets if you only need pods on some nodes (use Deployment with node affinity)
+</Callout>
+
+### Hands-On: Create a DaemonSet
+
+Create `daemonset.yaml`:
+
+```yaml
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: node-monitor
+  namespace: demo-app
+  labels:
+    app: node-monitor
+spec:
+  selector:
+    matchLabels:
+      app: node-monitor
+  template:
+    metadata:
+      labels:
+        app: node-monitor
+    spec:
+      containers:
+      - name: monitor
+        image: busybox:1.36
+        command: ["sh", "-c", "while true; do echo \"Node: $NODE_NAME, Time: $(date)\"; sleep 30; done"]
+        env:
+        - name: NODE_NAME
+          valueFrom:
+            fieldRef:
+              fieldPath: spec.nodeName
+        resources:
+          requests:
+            cpu: "10m"
+            memory: "16Mi"
+          limits:
+            cpu: "50m"
+            memory: "32Mi"
+```
+
+**Apply it:**
+```bash
+kubectl apply -f daemonset.yaml
+```
+
+**Check it—one pod per node:**
+```bash
+kubectl get pods -n demo-app -l app=node-monitor -o wide
+kubectl get daemonset -n demo-app
+```
+
+**View logs:**
+```bash
+kubectl logs -l app=node-monitor -n demo-app
+```
+
+---
+
+## Concept 16: StatefulSets
+
+### What is a StatefulSet?
+
+A **StatefulSet** manages stateful applications that need:
+- **Stable network identities**: Pods get predictable names (`mysql-0`, `mysql-1`)
+- **Stable storage**: Each pod gets its own persistent volume
+- **Ordered deployment**: Pods are created/deleted in order
+- **Ordered scaling**: Scale up 0→1→2, scale down 2→1→0
+
+### StatefulSet vs Deployment
+
+<ComparisonTable
+  headers={["Feature", "Deployment", "StatefulSet"]}
+  rows={[
+    { feature: "Pod names", colA: "Random suffix", colB: "Ordinal index (0, 1, 2)" },
+    { feature: "Pod identity", colA: "Interchangeable", colB: "Unique and stable" },
+    { feature: "Storage", colA: "Shared or none", colB: "Per-pod persistent" },
+    { feature: "Scaling order", colA: "Parallel", colB: "Sequential" },
+    { feature: "Use case", colA: "Stateless apps", colB: "Databases, message queues" },
+  ]}
+/>
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use StatefulSets for databases (MySQL, PostgreSQL, MongoDB)
+- Use a Headless Service for stable DNS names
+- Set `podManagementPolicy: Parallel` if order doesn't matter
+- Plan storage capacity—PVCs persist even after StatefulSet deletion
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use StatefulSets for stateless apps—unnecessary complexity
+- Don't delete StatefulSets without backing up data
+- Don't rely only on StatefulSets for HA—also need proper replication
+- Don't forget to create a Headless Service (clusterIP: None)
+</Callout>
+
+### Hands-On: Create a StatefulSet
+
+Create `statefulset.yaml`:
+
+```yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-headless
+  namespace: demo-app
+spec:
+  clusterIP: None          # Headless service
+  selector:
+    app: web-stateful
+  ports:
+  - port: 80
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: web
+  namespace: demo-app
+spec:
+  serviceName: "web-headless"
+  replicas: 3
+  selector:
+    matchLabels:
+      app: web-stateful
+  template:
+    metadata:
+      labels:
+        app: web-stateful
+    spec:
+      containers:
+      - name: nginx
+        image: nginx:1.27-alpine
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: data
+          mountPath: /usr/share/nginx/html
+        resources:
+          requests:
+            cpu: "50m"
+            memory: "32Mi"
+          limits:
+            cpu: "100m"
+            memory: "64Mi"
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: ["ReadWriteOnce"]
+      resources:
+        requests:
+          storage: 100Mi
+```
+
+**Apply and watch ordered creation:**
+```bash
+kubectl apply -f statefulset.yaml
+kubectl get pods -n demo-app -l app=web-stateful -w
+```
+
+Notice pods are created in order: `web-0`, then `web-1`, then `web-2`.
+
+**Check stable hostnames:**
+```bash
+kubectl exec web-0 -n demo-app -- hostname
+kubectl exec web-1 -n demo-app -- hostname
+```
+
+**DNS names follow pattern:** `pod-name.service-name.namespace.svc.cluster.local`
+- `web-0.web-headless.demo-app.svc.cluster.local`
+- `web-1.web-headless.demo-app.svc.cluster.local`
+
+**Clean up:**
+```bash
+kubectl delete statefulset web -n demo-app
+# PVCs are NOT auto-deleted! Clean them manually:
+kubectl delete pvc -l app=web-stateful -n demo-app
+```
+
+---
+
+## Concept 17: Ingress
+
+### What is Ingress?
+
+**Ingress** manages external HTTP/HTTPS access to services in your cluster. It provides:
+- **Host-based routing**: `api.example.com` → api service
+- **Path-based routing**: `/api/*` → api service, `/web/*` → web service
+- **TLS termination**: HTTPS handling
+- **Single entry point**: One load balancer for multiple services
+
+### Ingress vs LoadBalancer Service
+
+<ComparisonTable
+  headers={["Aspect", "LoadBalancer", "Ingress"]}
+  rows={[
+    { feature: "Protocol", colA: "Any TCP/UDP", colB: "HTTP/HTTPS only" },
+    { feature: "Cost", colA: "One LB per service", colB: "One LB for all services" },
+    { feature: "Routing", colA: "Port-based", colB: "Host + path-based" },
+    { feature: "TLS", colA: "Per service", colB: "Centralized" },
+  ]}
+/>
+
+### Ingress Controllers
+
+Ingress is just an API object—you need an **Ingress Controller** to implement it:
+- **nginx-ingress**: Most common, feature-rich
+- **Traefik**: Built into k3s, auto-configuration
+- **HAProxy**: High-performance
+- **AWS ALB Ingress**: Native AWS integration
+
+k3d/k3s includes Traefik by default.
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use Ingress for HTTP services instead of multiple LoadBalancers
+- Configure TLS for production traffic
+- Use annotations for controller-specific features
+- Set up health check paths for your backends
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't use Ingress for non-HTTP protocols (TCP/UDP)—use LoadBalancer Service
+- Don't expose sensitive services directly—add authentication
+- Don't forget to install an Ingress Controller
+- Don't skip rate limiting and security headers in production
+</Callout>
+
+### Hands-On: Create an Ingress
+
+First, ensure you have services to route to:
+```bash
+kubectl get svc -n demo-app
+```
+
+Create `ingress.yaml`:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: demo-ingress
+  namespace: demo-app
+  annotations:
+    # Traefik-specific annotations (k3s default)
+    traefik.ingress.kubernetes.io/router.entrypoints: web
+spec:
+  rules:
+  - http:
+      paths:
+      - path: /api
+        pathType: Prefix
+        backend:
+          service:
+            name: backend
+            port:
+              number: 80
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: frontend
+            port:
+              number: 80
+```
+
+**Apply it:**
+```bash
+kubectl apply -f ingress.yaml
+```
+
+**Check the Ingress:**
+```bash
+kubectl get ingress -n demo-app
+kubectl describe ingress demo-ingress -n demo-app
+```
+
+**Test it (using the port we mapped when creating the cluster):**
+```bash
+curl http://localhost:8080/
+curl http://localhost:8080/api
+```
+
+---
+
+## Concept 18: Network Policies and Pod Disruption Budgets
+
+### Network Policies
+
+By default, all pods can talk to all other pods. **Network Policies** restrict this:
+
+```yaml
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: demo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: backend          # Apply to backend pods
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend     # Only allow from frontend
+    ports:
+    - protocol: TCP
+      port: 5678
+```
+
+<Callout type="info" title="CNI Requirement">
+Network Policies require a CNI that supports them. k3s uses Flannel by default which doesn't enforce Network Policies. For production, use Calico or Cilium.
+</Callout>
+
+**Apply it:**
+```bash
+kubectl apply -f - <<EOF
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: backend-policy
+  namespace: demo-app
+spec:
+  podSelector:
+    matchLabels:
+      app: backend
+  policyTypes:
+  - Ingress
+  ingress:
+  - from:
+    - podSelector:
+        matchLabels:
+          app: frontend
+    ports:
+    - protocol: TCP
+      port: 5678
+EOF
+```
+
+### Pod Disruption Budgets
+
+**Pod Disruption Budgets (PDB)** protect your application during voluntary disruptions (node drains, upgrades, cluster autoscaler):
+
+```yaml
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hello-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1           # Always keep at least 1 running
+  # OR use: maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: hello-healthy
+```
+
+**Apply it:**
+```bash
+kubectl apply -f - <<EOF
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: hello-pdb
+  namespace: demo-app
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: hello-healthy
+EOF
+```
+
+**View it:**
+```bash
+kubectl get pdb -n demo-app
+```
+
+Now Kubernetes won't evict all your pods at once during node maintenance.
+
+### Dos and Don'ts
+
+<Callout type="tip" title="Do">
+- Use Network Policies to implement least-privilege networking
+- Start with deny-all, then allow specific traffic
+- Set PDBs for all production workloads
+- Test PDBs with `kubectl drain` in staging
+</Callout>
+
+<Callout type="warning" title="Don't">
+- Don't set `minAvailable` equal to `replicas`—blocks all disruptions
+- Don't assume Network Policies work without a supporting CNI
+- Don't forget PDBs only protect against *voluntary* disruptions
+- Don't make Network Policies too restrictive—can break legitimate traffic
+</Callout>
+
+---
+
+## Essential kubectl Commands
+
+Here's a cheat sheet of commands you'll use daily:
+
+```bash
+# === View Resources ===
+kubectl get pods                      # List pods
+kubectl get pods -A                   # All namespaces
+kubectl get pods -o wide              # More columns (IP, node)
+kubectl get pods -w                   # Watch for changes
+kubectl get all                       # Pods, services, deployments
+kubectl get pods --show-labels        # Show labels
+
+# === Details and Debugging ===
+kubectl describe pod <name>           # Full details + events
+kubectl logs <pod-name>               # Container logs
+kubectl logs <pod-name> -f            # Follow logs
+kubectl logs <pod-name> --previous    # Logs from crashed container
+kubectl logs -l app=myapp             # Logs from all pods with label
+kubectl exec -it <pod-name> -- sh     # Shell into container
+kubectl top pods                      # Resource usage
+
+# === Apply and Delete ===
+kubectl apply -f file.yaml            # Create/update resources
+kubectl delete -f file.yaml           # Delete resources
+kubectl apply -f ./manifests/         # Apply entire directory
+kubectl delete pod <name> --force --grace-period=0  # Force delete
+
+# === Deployments ===
+kubectl rollout status deployment/<name>
+kubectl rollout history deployment/<name>
+kubectl rollout undo deployment/<name>
+kubectl rollout restart deployment/<name>  # Force rolling restart
+kubectl scale deployment/<name> --replicas=5
+
+# === Port Forwarding ===
+kubectl port-forward svc/<name> 8080:80
+kubectl port-forward pod/<name> 8080:3000
+
+# === Context and Namespace ===
+kubectl config get-contexts           # List clusters
+kubectl config use-context <name>     # Switch cluster
+kubectl config set-context --current --namespace=<name>
+
+# === Quick Debugging ===
+kubectl run debug --image=busybox -it --rm -- sh  # Temporary debug pod
+kubectl get events --sort-by='.lastTimestamp'     # Recent events
+```
+
+### Troubleshooting Quick Reference
+
+| Problem | Command | Look For |
+|---------|---------|----------|
+| Pod won't start | `kubectl describe pod <name>` | Events at bottom |
+| Pod stuck Pending | `kubectl describe pod <name>` | FailedScheduling, insufficient resources |
+| CrashLoopBackOff | `kubectl logs <pod> --previous` | Application errors |
+| ImagePullBackOff | `kubectl describe pod <name>` | Registry auth, image name |
+| Service not working | `kubectl get endpoints <svc>` | Empty = no matching pods |
+| Can't connect between pods | `kubectl exec -it <pod> -- wget -qO- <service>` | DNS, network policy |
+
+---
+
+## Clean Up
+
+When you're done experimenting:
+
+```bash
+# Delete the demo namespace and everything in it
+kubectl delete namespace demo-app
+
+# Delete resources in default namespace
+kubectl delete deployment hello-app
+kubectl delete service hello-service 2>/dev/null
+
+# Stop the cluster (preserves state)
+k3d cluster stop learn-k8s
+
+# Or delete the cluster entirely
+k3d cluster delete learn-k8s
+
+# List all clusters
+k3d cluster list
+```
+
+---
+
+<KeyPoint title="The Mental Model Shift" accent="primary">
+Kubernetes isn't about managing servers—it's about **declaring intent**. You describe the desired state, controllers continuously reconcile reality to match, and the system self-heals when things break. Once this clicks, everything else is just learning the vocabulary.
+</KeyPoint>
+
+## What You've Learned
+
+In this hands-on tutorial, you mastered **18 Kubernetes concepts**:
+
+| # | Concept | What You Learned |
+|---|---------|------------------|
+| 1 | Pods | The atomic unit of deployment |
+| 2 | Deployments | Self-healing, declarative application management |
+| 3 | Services | Stable networking and load balancing |
+| 4 | Labels & Selectors | Organizing and selecting resources |
+| 5 | Namespaces | Virtual clusters for isolation |
+| 6 | Resource Management | Requests, limits, and capacity planning |
+| 7 | ConfigMaps | Externalized configuration |
+| 8 | Secrets | Sensitive data management |
+| 9 | Configuration in Pods | Using ConfigMaps and Secrets |
+| 10 | Health Probes | Startup, readiness, and liveness checks |
+| 11 | HPA | Automatic horizontal scaling |
+| 12 | Rolling Updates | Zero-downtime deployments and rollbacks |
+| 13 | Persistent Storage | PVCs for stateful data |
+| 14 | Jobs & CronJobs | Batch and scheduled workloads |
+| 15 | DaemonSets | Per-node workloads |
+| 16 | StatefulSets | Stateful applications with stable identity |
+| 17 | Ingress | HTTP routing and TLS termination |
+| 18 | Network Policies & PDBs | Security and availability |
+
+---
+
+## Next Steps
+
+Now that you understand the fundamentals, here's where to go next:
+
+### For Production
+- **Use managed Kubernetes**: EKS, GKE, or AKS. The $70-150/month saves you from managing the control plane.
+- **Set up monitoring**: Prometheus + Grafana for metrics, Loki for logs
+- **Implement GitOps**: ArgoCD or Flux for declarative deployments
+- **Add an Ingress Controller**: nginx-ingress for advanced routing
+- **Enable RBAC**: Role-based access control for security
+
+### Advanced Topics to Explore
+- **Helm**: Package manager for Kubernetes
+- **Operators**: Custom controllers for complex applications
+- **Service Mesh**: Istio or Linkerd for advanced networking
+- **Custom Resource Definitions**: Extend Kubernetes API
+- **Multi-cluster**: Federation and multi-cluster management
+
+### More Resources
+- [Kubernetes Official Docs](https://kubernetes.io/docs/)
+- [kubectl Cheat Sheet](https://kubernetes.io/docs/reference/kubectl/cheatsheet/)
+- [Kubernetes the Hard Way](https://github.com/kelseyhightower/kubernetes-the-hard-way) (for deep understanding)
+- [CNCF Landscape](https://landscape.cncf.io/) (explore the ecosystem)
+
+<Verdict winner="violet" title="You're Ready">
+You now have hands-on experience with all 18 core Kubernetes concepts. The key insight: **Kubernetes is a declarative system**. You declare what you want, and controllers continuously work to make reality match. Start with Deployments and Services, add health checks and resource limits, then progressively add more features as you need them. Happy deploying!
+</Verdict>
