@@ -60,6 +60,7 @@ const finalSrc = src.includes('imagedelivery.net') ? src.replace('/public', '/pu
     overflow: hidden;
     background: var(--bg-secondary);
     border: 1px solid var(--border-medium);
+    aspect-ratio: 16 / 9;
   }
 
   .article-image__wrapper::before {
@@ -78,7 +79,8 @@ const finalSrc = src.includes('imagedelivery.net') ? src.replace('/public', '/pu
   .article-image__wrapper img {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
     margin: 0;
   }
 

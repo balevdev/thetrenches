@@ -200,6 +200,7 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
     overflow: hidden;
     background: var(--bg-secondary);
     border: 1px solid var(--border-medium);
+    aspect-ratio: 2 / 1;
   }
 
   .article-header__hero-wrapper::before {
@@ -218,6 +219,7 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
   .article-header__hero-wrapper img {
     display: block;
     width: 100%;
-    height: auto;
+    height: 100%;
+    object-fit: cover;
   }
 </style>

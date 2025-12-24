@@ -225,7 +225,6 @@ const navLinks = [
 
   /* Mobile Menu */
   .header__mobile-menu {
-    display: none;
     position: absolute;
     top: 100%;
     left: 0;
@@ -233,22 +232,16 @@ const navLinks = [
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-medium);
     padding: var(--space-4) var(--container-padding);
-    animation: slideDown 0.2s ease;
-  }
-
-  @keyframes slideDown {
-    from {
-      opacity: 0;
-      transform: translateY(-8px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+    opacity: 0;
+    transform: translateY(-8px);
+    transition: opacity 0.2s ease, transform 0.2s ease;
+    pointer-events: none;
   }
 
   .header__mobile-menu.open {
-    display: block;
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
   }
 
   @media (min-width: 768px) {
