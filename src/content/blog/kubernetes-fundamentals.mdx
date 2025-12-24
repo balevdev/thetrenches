@@ -1107,7 +1107,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: busybox:1.36
+        image: busybox:1.37
         command: ["sh", "-c", "while true; do echo \"LOG_LEVEL=$LOG_LEVEL, DB_USER=$DB_USER\"; sleep 10; done"]
         resources:
           requests:
@@ -1357,7 +1357,7 @@ kubectl get hpa -n demo-app -w
 
 Open a new terminal and run:
 ```bash
-kubectl run load-generator --image=busybox:1.36 -n demo-app --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://hello-healthy; done"
+kubectl run load-generator --image=busybox:1.37 -n demo-app --restart=Never -- /bin/sh -c "while true; do wget -q -O- http://hello-healthy; done"
 ```
 
 Watch the HPA in your first terminal. After a minute, you'll see it scale up!
@@ -1525,7 +1525,7 @@ spec:
     spec:
       containers:
       - name: app
-        image: busybox:1.36
+        image: busybox:1.37
         command: ["sh", "-c", "echo 'Data saved at:' $(date) >> /data/log.txt && cat /data/log.txt && sleep 3600"]
         resources:
           requests:
@@ -1627,7 +1627,7 @@ spec:
     spec:
       containers:
       - name: worker
-        image: busybox:1.36
+        image: busybox:1.37
         command: ["sh", "-c", "echo 'Processing batch item...' && sleep 5 && echo 'Done!'"]
         resources:
           requests:
@@ -1671,7 +1671,7 @@ spec:
         spec:
           containers:
           - name: cleanup
-            image: busybox:1.36
+            image: busybox:1.37
             command: ["sh", "-c", "echo 'Running cleanup at' $(date)"]
             resources:
               requests:
@@ -1756,7 +1756,7 @@ spec:
     spec:
       containers:
       - name: monitor
-        image: busybox:1.36
+        image: busybox:1.37
         command: ["sh", "-c", "while true; do echo \"Node: $NODE_NAME, Time: $(date)\"; sleep 30; done"]
         env:
         - name: NODE_NAME
@@ -2048,7 +2048,15 @@ spec:
 ```
 
 <Callout type="info" title="CNI Requirement">
-Network Policies require a CNI that supports them. k3s uses Flannel by default which doesn't enforce Network Policies. For production, use Calico or Cilium.
+Network Policies require a CNI that supports them. k3s uses Flannel by default which doesn't enforce Network Policies. To enable Network Policy support in k3s, you can:
+
+**Option 1: Install with Calico**
+```bash
+k3d cluster create learn-k8s-calico --port "8080:80@loadbalancer" --k3s-arg "--flannel-backend=none@server:*" --k3s-arg "--disable-network-policy@server:*"
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+```
+
+**Option 2: For production**, use managed Kubernetes (EKS, GKE, AKS) which typically include CNI support.
 </Callout>
 
 **Apply it:**
@@ -2180,7 +2188,7 @@ kubectl config use-context <name>     # Switch cluster
 kubectl config set-context --current --namespace=<name>
 
 # === Quick Debugging ===
-kubectl run debug --image=busybox -it --rm -- sh  # Temporary debug pod
+kubectl run debug --image=busybox:1.37 -it --rm -- sh  # Temporary debug pod
 kubectl get events --sort-by='.lastTimestamp'     # Recent events
 ```
 
@@ -2207,7 +2215,7 @@ kubectl delete namespace demo-app
 
 # Delete resources in default namespace
 kubectl delete deployment hello-app
-kubectl delete service hello-service 2>/dev/null
+kubectl delete service hello-service
 
 # Stop the cluster (preserves state)
 k3d cluster stop learn-k8s
