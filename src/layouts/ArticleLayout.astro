@@ -138,8 +138,9 @@ const articleLD = {
     display: grid;
     grid-template-columns: 1fr;
     gap: var(--space-12);
-    max-width: var(--content-width);
+    max-width: min(var(--content-width), 100%);
     margin: 0 auto;
+    min-width: 0;
   }
 
   @media (min-width: 1024px) {
@@ -162,9 +163,13 @@ const articleLD = {
   }
 
   .article__content {
-    max-width: var(--content-width);
+    max-width: 100%;
     order: 1;
     width: 100%;
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    overflow-x: hidden;
   }
 
   /* Article content typography */
@@ -211,8 +216,16 @@ const articleLD = {
     max-width: var(--wide-width);
     margin-left: 50%;
     transform: translateX(-50%);
-    width: 100vw;
+    width: 100%;
     padding: 0 var(--container-padding);
+  }
+
+  @media (max-width: 640px) {
+    .article__content :global(.wide) {
+      margin-left: 0;
+      transform: none;
+      width: 100%;
+    }
   }
 
   @media (min-width: 1024px) {
@@ -225,7 +238,7 @@ const articleLD = {
   }
 
   .article__footer {
-    max-width: var(--content-width);
+    max-width: min(var(--content-width), 100%);
     margin: var(--space-12) auto 0;
     padding-top: var(--space-8);
     border-top: 1px solid var(--border-subtle);

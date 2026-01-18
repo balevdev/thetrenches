@@ -66,7 +66,7 @@
   --header-height: 64px;
 
   /* Responsive Container Padding */
-  --container-padding: var(--space-6);
+  --container-padding: clamp(var(--space-4), 4vw, var(--space-6));
 
   /* Breakpoints (for reference - use in media queries)
    * --bp-sm: 640px   - Mobile landscape
@@ -216,14 +216,9 @@
 /* ============================================
    Responsive Adjustments
    ============================================ */
-@media (max-width: 768px) {
-  :root {
-    --container-padding: var(--space-4);
-  }
-}
-
 @media (max-width: 640px) {
   :root {
+    --header-height: 56px;
     --text-4xl: 2rem;
     --text-5xl: 2.5rem;
     --text-6xl: 3rem;

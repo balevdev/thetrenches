@@ -225,13 +225,15 @@ const navLinks = [
 
   /* Mobile Menu */
   .header__mobile-menu {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: var(--header-height);
     left: 0;
     right: 0;
     background-color: var(--bg-primary);
     border-bottom: 1px solid var(--border-medium);
     padding: var(--space-4) var(--container-padding);
+    max-height: calc(100vh - var(--header-height));
+    overflow-y: auto;
     opacity: 0;
     transform: translateY(-8px);
     transition: opacity 0.2s ease, transform 0.2s ease;
@@ -293,6 +295,7 @@ const navLinks = [
       const isExpanded = menuToggle.getAttribute('aria-expanded') === 'true';
       menuToggle.setAttribute('aria-expanded', String(!isExpanded));
       mobileMenu.classList.toggle('open');
+      document.body.style.overflow = !isExpanded ? 'hidden' : '';
     });
 
     // Close on link click
@@ -300,6 +303,7 @@ const navLinks = [
       link.addEventListener('click', () => {
         menuToggle.setAttribute('aria-expanded', 'false');
         mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
       });
     });
 
@@ -308,6 +312,7 @@ const navLinks = [
       if (e.key === 'Escape' && mobileMenu.classList.contains('open')) {
         menuToggle.setAttribute('aria-expanded', 'false');
         mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
       }
     });
 
@@ -317,6 +322,7 @@ const navLinks = [
       if (!target.closest('[data-header]') && mobileMenu.classList.contains('open')) {
         menuToggle.setAttribute('aria-expanded', 'false');
         mobileMenu.classList.remove('open');
+        document.body.style.overflow = '';
       }
     });
   }

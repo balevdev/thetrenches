@@ -124,6 +124,8 @@ article a {
   text-decoration: underline;
   text-decoration-color: var(--accent-primary-muted);
   text-underline-offset: 3px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
 }
 
 article a:hover {

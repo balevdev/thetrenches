@@ -82,10 +82,12 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
 
 <style>
   .article-header {
-    max-width: var(--content-width);
+    max-width: min(var(--content-width), 100%);
     margin: 0 auto var(--space-12);
     padding: var(--space-16) 0 var(--space-12);
     border-bottom: 1px solid var(--border-subtle);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
   }
 
   .article-header--has-hero {
@@ -126,6 +128,9 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
     line-height: var(--leading-tight);
     margin: 0 0 var(--space-4);
     color: var(--text-primary);
+    overflow-wrap: break-word;
+    word-wrap: break-word;
+    hyphens: auto;
   }
 
   .article-header__title :global(em) {

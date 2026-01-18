@@ -408,8 +408,8 @@
 .article-grid {
   display: grid;
   gap: var(--space-8);
-  /* min(100%, 320px) prevents overflow on very small screens */
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr));
+  /* min(100%, 280px) prevents overflow on very small screens */
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
 }
 
 .article-card {
