@@ -4,7 +4,7 @@ subtitle: "Building Persistent Memory and Guardrails for AI Coding Assistants"
 description: "Every AI coding session starts from zero. Architecture decisions, progress, and hard-won lessons disappear between conversations. The Agentic Context System fixes this with a structured file approach that gives AI persistent memory across sessions."
 pubDate: 2026-01-18
 category: "Architecture"
-readTime: "15 min"
+readTime: "18 min"
 tags: ["ai", "developer-tools", "productivity", "claude", "workflow"]
 accent: "purple"
 heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/8678993c-6447-4da9-a4ca-88b55b57b000/public"
@@ -99,29 +99,38 @@ This is the **Agentic Context System**: a structured set of files that give any 
   rows={[
     { feature: 'Session start time', colA: '10-15 min explaining context', colB: '30 sec reading files' },
     { feature: 'Coding consistency', colA: 'Varies wildly session to session', colB: 'Follows established patterns' },
-    { feature: 'Progress tracking', colA: 'Mental notes, Slack messages', colB: 'Documented in progress.txt' },
+    { feature: 'Progress tracking', colA: 'Mental notes, Slack messages', colB: 'Documented with phase gates' },
     { feature: 'Mistake repetition', colA: 'Same errors every week', colB: 'Lessons learned persist' },
-    { feature: 'Onboarding new AI tools', colA: 'Start from scratch', colB: 'Same context works everywhere' },
+    { feature: 'Agent handoffs', colA: 'Start from scratch each time', colB: 'Structured context transfer' },
   ]}
 />
 
 ---
 
-## The Seven Files
+## The File System
 
-The entire system consists of seven files organized into two categories: **Context Files** that the AI reads at session start, and **Task Files** that track active work.
+The Agentic Context System organizes files into three categories: **Context Files** that the AI reads at session start, **Task Files** that track active work, and **Templates** that standardize workflows.
 
 ```
 your-project/
-├── CLAUDE.md                 # Technical specifications (project bible)
-├── CURRENT_TASK.md           # Current task being worked on
-├── feature_list.json         # Master registry of all features
-├── progress.txt              # Append-only session log
+├── CLAUDE.md                     # Project bible (tech specs, architecture)
+├── CURRENT_TASK.md               # Active task with phase tracking
+├── Prompt.md                     # Session execution protocol
+├── features/
+│   ├── index.json                # Lightweight status map + session plan
+│   ├── backlog.json              # Slim list (id, name, deps only)
+│   └── active/                   # Full definitions for active features
+│       └── FEATURE_ID.json
 └── .claude/
-    ├── lessons-learned.md    # Accumulated wisdom from sessions
+    ├── lessons-learned.md        # Accumulated wisdom from sessions
+    ├── commands/
+    │   └── work.md               # Planning mode with implementation hints
+    ├── templates/
+    │   └── HANDOFF.md            # Context spawn template
     └── static/
-        ├── rules.md          # Critical operating rules
-        └── checklists.md     # Verification procedures
+        ├── patterns.md           # Stack-specific patterns
+        ├── checklists.md         # Phase-specific verification
+        └── rules.md              # Critical operating rules
 ```
 
 <TechStack
@@ -129,9 +138,9 @@ your-project/
   accent="violet"
   items={[
     { category: 'CLAUDE.md', name: 'Project Bible', description: 'Technical specs, architecture, coding standards' },
+    { category: 'Prompt.md', name: 'Execution Protocol', description: 'Session startup, phase gates, blocking rules' },
     { category: 'rules.md', name: 'Operating Rules', description: 'Critical rules that must never be violated' },
     { category: 'lessons-learned.md', name: 'Accumulated Wisdom', description: 'Patterns and mistakes from previous sessions' },
-    { category: 'checklists.md', name: 'Verification Procedures', description: 'Step-by-step verification for tasks and sessions' },
   ]}
 />
 
@@ -139,13 +148,14 @@ your-project/
   title="Task Files (Updated During Sessions)"
   accent="rose"
   items={[
-    { category: 'feature_list.json', name: 'Feature Registry', description: 'All features with acceptance criteria and status' },
-    { category: 'CURRENT_TASK.md', name: 'Active Work', description: 'The task being worked on right now' },
-    { category: 'progress.txt', name: 'Session Log', description: 'Append-only audit trail of all sessions' },
+    { category: 'features/index.json', name: 'Status Map', description: 'Lightweight feature status + session planning' },
+    { category: 'features/active/', name: 'Feature Definitions', description: 'Full specs for in-progress features' },
+    { category: 'CURRENT_TASK.md', name: 'Active Work', description: 'Current phase, attempts, blockers' },
+    { category: 'HANDOFF.md', name: 'Context Transfer', description: 'State for spawning new agents' },
   ]}
 />
 
-Each file has a specific purpose. None are optional. Together, they give the AI everything it needs to pick up exactly where you left off.
+Each file has a specific purpose. The key improvement over simpler systems is **separation of concerns**: lightweight files for quick status checks, detailed files only when needed.
 
 ---
 
@@ -157,23 +167,23 @@ The `CLAUDE.md` file is the most important file in the system. It's the technica
 The name comes from Claude (Anthropic's AI), but the file works with any AI assistant. It's just a convention. The AI reads it because you tell it to, not because of the filename.
 </Callout>
 
-Here's how a `CLAUDE.md` might look for a todo CLI project. The file starts with a project overview:
+Here's how a `CLAUDE.md` might look for a todo API project. The file starts with a project overview:
 
 ```markdown
-# CLAUDE.md - Todo CLI Technical Reference
+# CLAUDE.md - Todo API Technical Reference
 
 ## PROJECT OVERVIEW
 
-A command-line todo list application in Python.
+A REST API for managing tasks.
 
-- **Project Name:** todo-cli
-- **Tech Stack:** Python 3.11+, Click (CLI framework), SQLite (storage)
+- **Project Name:** todo-api
+- **Tech Stack:** Bun, Hono, SQLite (via Bun's built-in sqlite)
 
 ### Core Principles
 
-1. **Simple First**: Start with basic features, add complexity later
-2. **Test Everything**: Every feature has tests before it's complete
-3. **User-Friendly**: Clear error messages, helpful --help text
+1. **Type Safety**: TypeScript everywhere, no `any` types
+2. **Test First**: Write tests before implementation when possible
+3. **Simple APIs**: RESTful design, clear error messages
 ```
 
 Next, the architecture section documents the project structure:
@@ -183,18 +193,21 @@ Next, the architecture section documents the project structure:
 
 ### Directory Structure
 
-todo-cli/
+todo-api/
 ├── src/
-│   └── todo/
-│       ├── __init__.py
-│       ├── cli.py          # Click commands
-│       ├── database.py     # SQLite operations
-│       └── models.py       # Data classes
+│   ├── index.ts          # Entry point, Hono app setup
+│   ├── routes/
+│   │   └── todos.ts      # Todo CRUD routes
+│   ├── db/
+│   │   └── index.ts      # Database connection
+│   └── types/
+│       └── todo.ts       # TypeScript interfaces
 ├── tests/
-│   ├── test_cli.py
-│   └── test_database.py
-├── pyproject.toml
-└── README.md
+│   ├── routes/
+│   │   └── todos.test.ts
+│   └── setup.ts          # Test utilities
+├── package.json
+└── tsconfig.json
 ```
 
 Finally, coding standards and common commands:
@@ -202,18 +215,18 @@ Finally, coding standards and common commands:
 ```markdown
 ## CODING STANDARDS
 
-- Use type hints everywhere
-- Format with `black`
-- Lint with `ruff`
-- Test with `pytest`
+- Use TypeScript with strict mode
+- Format with Prettier
+- Lint with ESLint
+- Test with Bun's built-in test runner
 
 ## COMMANDS
 
 # Development
-pip install -e ".[dev]"    # Install in dev mode
-pytest                      # Run tests
-black .                     # Format code
-ruff check .               # Lint code
+bun install                 # Install dependencies
+bun run dev                 # Start dev server
+bun test                    # Run tests
+bun run lint               # Lint code
 ```
 
 **What to include in CLAUDE.md:**
@@ -227,111 +240,338 @@ The file should answer one question: *"What do I need to know to work on this pr
 
 ---
 
-## feature_list.json: The Master Registry
+## Prompt.md: The Execution Protocol
 
-The `feature_list.json` file is the authoritative list of everything your project should do. Each feature has a unique ID, acceptance criteria, and a pass/fail status.
+The `Prompt.md` file is new in this improved system. It defines **how** the AI should work, not just **what** it should know.
+
+```markdown
+# Session Protocol
+
+## Startup
+1. CURRENT_TASK.md → Active feature
+2. features/index.json → Check status_map for dependency passes
+3. features/active/FEATURE_ID.json → Get full feature definition
+4. Read by task type (patterns.md for backend, design.md for frontend)
+
+## Phase Gate Rule
+
+After completing Phase N:
+1. Run: `bun test && bun run lint`
+2. If pass: Commit `[FEATURE_ID] Phase N: Description`
+3. If fail: Fix before Phase N+1 (counts toward 3-attempt limit)
+4. Update CURRENT_TASK.md:
+   - Set Phase N status to `complete` with commit hash
+   - Increment Current Phase to N+1
+   - Reset Attempts to 0/3
+
+## Attempt Tracking
+
+On any test/lint failure:
+1. Increment attempt counter (e.g., 1/3 → 2/3)
+2. Log error in Attempt Log: `[YYYY-MM-DD HH:MM] - Error description`
+3. At 3/3: Set status to BLOCKED, document all attempts, STOP work
+
+## End
+git status    # Clean
+bun test      # Pass
+bun run lint  # Pass
+```
+
+<KeyPoint title="The Execution Protocol is the Backbone" accent="rose">
+Without an execution protocol, the AI makes its own decisions about workflow. Sometimes it commits too early. Sometimes it never commits. Sometimes it moves on despite failing tests. The protocol makes these decisions explicit and consistent.
+</KeyPoint>
+
+---
+
+## Phase Gates & Verification
+
+The biggest improvement in this system is **phase gates**: mandatory checkpoints that prevent the AI from moving forward until the current phase is verified.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     PHASE GATE FLOW                              │
+│                                                                  │
+│   ┌────────┐    ┌────────┐    ┌────────┐    ┌────────┐          │
+│   │Phase 1 │───▶│ VERIFY │───▶│Phase 2 │───▶│ VERIFY │───▶ ...  │
+│   │ Build  │    │& Commit│    │ Build  │    │& Commit│          │
+│   └────────┘    └────────┘    └────────┘    └────────┘          │
+│                      │                           │               │
+│                      ▼                           ▼               │
+│                 FAIL? Fix                   FAIL? Fix            │
+│                 (counts as                  (counts as           │
+│                  attempt)                    attempt)            │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+Each feature is broken into execution phases:
+
+1. **Schema & Types** - Data structures, interfaces
+2. **Validation** - Input validation with tests
+3. **Queries** - Database/API operations with tests
+4. **UI Components** - User interface pieces
+5. **Routes** - Page/endpoint wiring
+6. **Integration** - End-to-end testing
+
+**After each phase:**
+- Run tests and linting
+- If pass: Commit with descriptive message
+- If fail: Fix the issue (counts as an attempt)
+- Update CURRENT_TASK.md with phase status
+
+This creates accountability. The AI can't claim "phase 2 done" without a passing commit. You can trace exactly when each phase completed and what changes were included.
+
+---
+
+## Attempt Tracking & Blocking
+
+AI agents can get stuck in loops, trying the same failing approach repeatedly. The **attempt tracking** system prevents this.
+
+```markdown
+## Current Phase
+
+**Phase:** 2 - Validation
+**Attempts:** 2/3
+
+### Attempt Log
+[2024-01-15 10:30] - bun test failed: test_validate_title expect error
+[2024-01-15 10:45] - bun test failed: validation function not exported
+```
+
+**The rules:**
+
+1. Each test/lint failure increments the attempt counter
+2. Log what went wrong and what was tried
+3. At 3 attempts: **STOP**. Mark as BLOCKED. Wait for human.
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    ATTEMPT TRACKING                              │
+│                                                                  │
+│   Attempt 1 ──▶ Fail ──▶ Log + Fix ──▶ Attempt 2 ──▶ Fail       │
+│                                              │                   │
+│                                              ▼                   │
+│                                    Log + Fix ──▶ Attempt 3       │
+│                                                      │           │
+│                                                      ▼           │
+│                                                Fail ──▶ BLOCKED  │
+│                                                      │           │
+│                                                      ▼           │
+│                                               Wait for Human     │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+<Callout type="warning" title="Why 3 Attempts?">
+Three is enough to try different approaches but not so many that the AI spins for hours on an impossible task. The log requirement means you can see exactly what was tried when you come back to unblock it.
+</Callout>
+
+When a task is BLOCKED:
+
+```markdown
+## Status
+
+**BLOCKED** - Exceeded 3 attempts on Phase 2
+
+### Attempt Log
+[2024-01-15 10:30] - bun test failed: validation function not found
+[2024-01-15 10:45] - Added export, now type error in todo.ts
+[2024-01-15 11:00] - Fixed types, now circular import error
+
+### What Was Tried
+1. Added missing export to validators/index.ts
+2. Fixed CreateTodoInput type definition
+3. Attempted to break circular dependency by moving types to separate file
+
+### What's Needed
+Human review of the circular dependency between validators/todo.ts
+and types/todo.ts. May need architectural decision about where
+validation types should live.
+```
+
+The AI stops making things worse. You come back to a documented situation, not a mess.
+
+---
+
+## Feature Registry: The features/ Directory
+
+Instead of a monolithic `feature_list.json`, the improved system uses a directory structure:
+
+```
+features/
+├── index.json       # Lightweight: status + session plan
+├── backlog.json     # Slim: id, name, dependencies only
+└── active/          # Full definitions for current work
+    └── CORE-001.json
+```
+
+**index.json** (lightweight, always read):
 
 ```json
 {
-  "project": {
-    "name": "todo-cli",
-    "version": "0.1.0",
-    "description": "Command-line todo list application"
+  "meta": {
+    "project": "todo-api",
+    "total_features": 12,
+    "completed_count": 3,
+    "next_priority": "CORE-002",
+    "session_plan": {
+      "1": {
+        "name": "Foundation",
+        "features": ["SETUP-001", "SETUP-002"],
+        "token_budget": 50000
+      },
+      "2": {
+        "name": "Core API",
+        "features": ["CORE-001", "CORE-002", "CORE-003"],
+        "token_budget": 80000
+      }
+    }
   },
-  "phases": [
+  "status_map": {
+    "SETUP-001": { "passes": true, "session": 1 },
+    "SETUP-002": { "passes": true, "session": 1 },
+    "CORE-001": { "passes": false, "session": 2 }
+  }
+}
+```
+
+**backlog.json** (slim reference):
+
+```json
+{
+  "features": [
     {
-      "id": "SETUP",
-      "name": "Project Setup",
-      "description": "Initialize the Python project",
-      "features": [
-        {
-          "id": "SETUP-001",
-          "phase": "SETUP",
-          "name": "Initialize Python Project",
-          "description": "Create pyproject.toml and basic structure",
-          "dependencies": [],
-          "acceptanceCriteria": [
-            "pyproject.toml exists with project metadata",
-            "src/todo/__init__.py exists",
-            "pytest runs (even with 0 tests)",
-            "black and ruff are configured"
-          ],
-          "passes": false
-        }
-      ]
+      "id": "CORE-001",
+      "name": "Database Layer",
+      "session": 2,
+      "dependencies": ["SETUP-001"]
     },
     {
-      "id": "CORE",
-      "name": "Core Features",
-      "description": "Basic todo functionality",
-      "features": [
-        {
-          "id": "CORE-001",
-          "phase": "CORE",
-          "name": "Database Layer",
-          "description": "SQLite database for storing todos",
-          "dependencies": ["SETUP-001"],
-          "acceptanceCriteria": [
-            "Can create a new database file",
-            "Can add a todo item",
-            "Can list all todo items",
-            "Can mark a todo as complete",
-            "Can delete a todo",
-            "All operations have unit tests"
-          ],
-          "passes": false
-        }
-      ]
+      "id": "CORE-002",
+      "name": "Todo CRUD Routes",
+      "session": 2,
+      "dependencies": ["CORE-001"]
     }
   ]
 }
 ```
 
-<KeyPoint title="The Immutable Criteria Rule" accent="rose">
-**Never modify acceptance criteria after defining them.** The criteria are the contract. If you change the criteria, you're changing what "done" means. Instead, create a new feature if requirements change.
+**active/CORE-001.json** (full definition):
+
+```json
+{
+  "id": "CORE-001",
+  "name": "Database Layer",
+  "description": "SQLite database for storing todos using Bun's built-in sqlite",
+  "session": 2,
+  "token_budget": 25000,
+  "dependencies": ["SETUP-001"],
+  "acceptance_criteria": [
+    "Can create a new database file",
+    "Can add a todo item",
+    "Can list all todo items",
+    "Can mark a todo as complete",
+    "Can delete a todo",
+    "All operations have unit tests"
+  ],
+  "execution_phases": [
+    {
+      "phase": 1,
+      "name": "Schema & Types",
+      "tasks": ["Todo interface", "Database schema"]
+    },
+    {
+      "phase": 2,
+      "name": "Validation",
+      "tasks": ["Title validation", "Input sanitization"]
+    },
+    {
+      "phase": 3,
+      "name": "Queries",
+      "tasks": ["CRUD operations", "Query tests"]
+    }
+  ],
+  "quality_gates": [
+    "All CRUD operations work",
+    "Database handles errors gracefully",
+    "Error responses follow ApiError format"
+  ]
+}
+```
+
+<KeyPoint title="Token Budget Awareness" accent="violet">
+Each feature has a `token_budget` estimate. This helps plan sessions realistically. If a feature is budgeted at 70k tokens and your session limit is 100k, you know you can probably complete it. If it's budgeted at 150k, plan for multiple sessions.
 </KeyPoint>
 
-The workflow is simple:
+---
 
-1. Define features with acceptance criteria upfront
-2. Work on one feature at a time
-3. When ALL criteria are met, set `"passes": true`
-4. Move to the next feature
+## Session Planning
 
-The `passes` field is binary. Not "mostly done." Not "80% complete." Either all criteria pass, or the feature isn't done.
+Features are grouped into **sessions** — coherent chunks of work that fit within a token budget and represent a logical milestone.
+
+```json
+"session_plan": {
+  "1": {
+    "name": "Foundation",
+    "features": ["SETUP-001", "SETUP-002"],
+    "token_budget": 50000
+  },
+  "2": {
+    "name": "Core Database",
+    "features": ["CORE-001", "CORE-002"],
+    "token_budget": 80000
+  },
+  "3": {
+    "name": "API Routes",
+    "features": ["ROUTE-001", "ROUTE-002", "ROUTE-003"],
+    "token_budget": 100000
+  }
+}
+```
+
+**Before each session:**
+1. Check which session you're on
+2. Verify all features from previous sessions pass
+3. Load the full definitions for this session's features
+4. Check that dependencies are met
+
+**Session completion:**
+- All features in the session have `passes: true`
+- All tests pass
+- Clean git status
+- CURRENT_TASK.md updated to next session's first feature
+
+This creates natural checkpoints and helps estimate project progress.
 
 ---
 
 ## CURRENT_TASK.md: Real-Time Progress
 
-The `CURRENT_TASK.md` file tracks the active task. It's updated continuously as work progresses.
-
-```
-┌─────────────────────────────────────────────────────────────────────┐
-│                        TASK LIFECYCLE                                │
-├─────────────────────────────────────────────────────────────────────┤
-│                                                                      │
-│   NOT_STARTED ────────▶ IN_PROGRESS ────────▶ COMPLETED             │
-│        │                     │                    │                  │
-│        │                     │                    ▼                  │
-│        │                     │              Next Task                │
-│        │                     │                                       │
-│        │                     ▼                                       │
-│        │               BLOCKED ──────▶ Human Input ──────▶ Resume   │
-│        │                                                             │
-└─────────────────────────────────────────────────────────────────────┘
-```
-
-<Callout type="warning" title="The BLOCKED State">
-When the AI can't proceed after 3 distinct attempts, it marks the task as BLOCKED with full context about what was tried and what's needed. This prevents the AI from spinning in circles or making questionable autonomous decisions when stuck. Explicit blocking saves you from debugging mysterious half-completed work.
-</Callout>
-
-Here's a template for `CURRENT_TASK.md`:
+The `CURRENT_TASK.md` file tracks the active task with phase-level detail.
 
 ```markdown
 # CORE-001: Database Layer
 
-**Status:** IN_PROGRESS | **Previous:** SETUP-001
+**Status:** IN_PROGRESS | **Session:** 2
+
+## Phase Progress
+
+| Phase | Name            | Status   | Commit  |
+|-------|-----------------|----------|---------|
+| 1     | Schema & Types  | complete | a1b2c3d |
+| 2     | Validation      | complete | e4f5g6h |
+| 3     | Queries         | in_progress | -    |
+| 4     | UI Components   | pending  | -       |
+| 5     | Routes          | pending  | -       |
+| 6     | Integration     | pending  | -       |
+
+## Current Phase
+
+**Phase:** 3 - Queries
+**Attempts:** 1/3
+
+### Attempt Log
+[2024-01-15 14:30] - pytest failed: test_list_todos assertion error
 
 ## Acceptance Criteria
 
@@ -342,24 +582,180 @@ Here's a template for `CURRENT_TASK.md`:
 - [ ] Can delete a todo
 - [ ] All operations have unit tests
 
-## Progress
-
-- 2024-01-15: Created database.py with init and add functions
-- 2024-01-15: Added unit tests for init and add
-- Currently working on list functionality
-
-## Blockers
-
-None currently.
-
 ## Next
 
-- Implement list_todos() function
-- Add mark_complete() and delete() functions
-- Complete unit test coverage
+- Fix list_todos() to return correct order
+- Implement mark_complete() and delete()
+- Complete test coverage
 ```
 
-The file gets updated as work progresses. Each session picks up where the last one ended.
+The phase table makes it immediately clear:
+- What's been committed
+- What's in progress
+- Where the AI is stuck (if blocked)
+
+---
+
+## Implementation Hints
+
+When planning a feature, the improved system includes **implementation hints** — concrete file paths, pattern references, and code snippets.
+
+```markdown
+## Implementation Hints
+
+### Files to Create/Modify
+- `src/db/index.ts` (create)
+- `src/types/todo.ts` (modify: add Todo interface)
+- `tests/db/todos.test.ts` (create)
+
+### Pattern References
+- Database setup: `src/db/connection.ts` lines 1-20
+- Interface with validation: `src/types/user.ts` lines 1-25
+
+### Test Cases (write first)
+1. Empty database returns empty list
+2. Add todo returns generated ID
+3. List todos returns in creation order
+4. Complete todo updates completedAt field
+5. Delete non-existent todo returns null
+
+### Code Snippets
+```typescript
+interface Todo {
+  id: number;
+  title: string;
+  description: string | null;
+  completedAt: string | null;
+  createdAt: string;
+}
+```
+```
+
+These hints serve multiple purposes:
+- New agents know exactly where to look
+- Patterns are explicitly referenced, not guessed
+- Test cases are defined before implementation
+- Key interfaces are sketched out
+
+---
+
+## Context Handoff Protocol
+
+When spawning a new agent (new conversation, parallel worker, or session timeout), context can be lost. The **handoff protocol** preserves it.
+
+Create `.claude/HANDOFF.md` before spawning:
+
+```markdown
+# Handoff: CORE-001
+
+## Quick Start
+
+1. Read this file
+2. Read `/CURRENT_TASK.md`
+3. Run `bun test` to verify clean state
+
+## Current State
+
+- **Phase:** 3 - Queries
+- **Status:** in_progress
+- **Last commit:** e4f5g6h
+
+## Key Files
+
+### Pattern to follow
+- `src/db/connection.ts` lines 1-20 (database setup pattern)
+
+### Types modified
+- `src/types/todo.ts`: Todo interface
+
+### Files created this session
+- `src/db/todos.ts`
+- `tests/db/todos.test.ts`
+
+## Test Command
+
+```bash
+bun test tests/db/todos.test.ts
+```
+
+## Context Notes
+
+Using Bun's built-in SQLite (synchronous API, not async).
+Decided to use integer IDs, not UUIDs, for simplicity.
+
+## Remaining Work
+
+1. [ ] Fix listTodos() ordering
+2. [ ] Implement markComplete()
+3. [ ] Implement deleteTodo()
+4. [ ] Add remaining tests
+```
+
+The new agent:
+1. Reads HANDOFF.md first
+2. Gets immediate context about where things stand
+3. Knows exactly which files to check
+4. Understands decisions already made
+
+---
+
+## The Workflow
+
+The improved Agentic Context System follows a phase-gated loop:
+
+```text
+┌─────────────────────────────────────────────────────────────────┐
+│                     THE AGENTIC LOOP                             │
+│                                                                  │
+│   ┌─────────┐    ┌─────────┐    ┌─────────┐    ┌─────────┐      │
+│   │  READ   │───▶│  WORK   │───▶│ VERIFY  │───▶│ COMMIT  │      │
+│   │ Context │    │ Phase N │    │ & Test  │    │ Phase N │      │
+│   └─────────┘    └─────────┘    └─────────┘    └─────────┘      │
+│        ▲                              │              │           │
+│        │                              │              ▼           │
+│        │                         FAIL?│        ┌─────────┐      │
+│        │                              │        │ UPDATE  │      │
+│        │                              ▼        │ TASK.md │      │
+│        │                        [Attempt++]    └─────────┘      │
+│        │                              │              │           │
+│        │                              │              ▼           │
+│        │                         3 attempts?   Phase N+1?       │
+│        │                              │              │           │
+│        │                              ▼              │           │
+│        │                          BLOCKED            │           │
+│        │                                             │           │
+│        └─────────────────────────────────────────────┘           │
+│                          (next phase)                            │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Session Start:**
+1. AI reads CLAUDE.md, Prompt.md, CURRENT_TASK.md
+2. AI checks features/index.json for session context
+3. AI loads full feature definition from features/active/
+4. AI continues from the current phase
+
+**During Session (for each phase):**
+1. Build the phase deliverables
+2. Run tests and linting
+3. If pass: Commit with `[FEATURE_ID] Phase N: Description`
+4. If fail: Fix (increment attempt counter), retry
+5. At 3 failures: BLOCKED, stop
+6. Update CURRENT_TASK.md phase table
+7. Move to next phase
+
+**Session End:**
+1. All phases complete → Update status_map to `passes: true`
+2. Clean git status
+3. If spawning new agent → Create HANDOFF.md
+
+<Callout type="info" title="The Session Start Prompt">
+Start every session with this prompt:
+
+*"Read my project files (CLAUDE.md, Prompt.md, CURRENT_TASK.md, and features/) and continue working on the current task."*
+
+The AI will read the files, understand the context, and pick up exactly where you left off.
+</Callout>
 
 ---
 
@@ -370,11 +766,11 @@ Three additional files round out the system:
 <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0;">
 
 <Card variant="violet" title="rules.md">
-Critical rules that must never be violated: one task at a time, commit frequently, never break tests, leave codebase clean. These are the non-negotiables.
+Critical rules that must never be violated: one task at a time, commit after each phase, never break tests, 3-attempt blocking rule. These are the non-negotiables.
 </Card>
 
 <Card variant="rose" title="checklists.md">
-Step-by-step verification procedures. Feature completion checklist. Session end checklist. The AI runs these before marking anything done.
+Phase-specific verification procedures. Schema checklist. Validation checklist. Integration checklist. The AI runs these before marking phases complete.
 </Card>
 
 <Card title="lessons-learned.md">
@@ -388,20 +784,20 @@ Accumulated wisdom from past sessions. That SQLite connection issue. That import
 ```markdown
 ## CRITICAL RULES - NEVER VIOLATE
 
-1. **ONE TASK AT A TIME**
+1. **PHASE GATE RULE**
+   - Never move to Phase N+1 until Phase N passes tests
+   - Every phase completion requires a commit
+   - Failed tests count as attempts toward the 3-attempt limit
+
+2. **ONE TASK AT A TIME**
    - Never work on more than one feature per session
    - Complete the current task before starting another
    - If blocked, mark as BLOCKED rather than switching tasks
 
-2. **COMMIT FREQUENTLY**
-   - Commit after every meaningful change
-   - Small, focused commits are better than large ones
-   - Never end a session with uncommitted changes
-
-3. **LEAVE CODEBASE CLEAN**
-   - `git status` must show "nothing to commit" at session end
-   - All tests must pass
-   - No linting errors
+3. **ATTEMPT TRACKING**
+   - Log every failure with timestamp and description
+   - At 3 attempts: STOP. Mark BLOCKED. Wait for human.
+   - Never silently retry without logging
 ```
 
 **lessons-learned.md example:**
@@ -409,153 +805,50 @@ Accumulated wisdom from past sessions. That SQLite connection issue. That import
 ```markdown
 ## Database
 
-1. ALWAYS USE CONTEXT MANAGERS FOR SQLITE
-   - Bad: `conn = sqlite3.connect(db); conn.execute(...)`
-   - Good: `with sqlite3.connect(db) as conn: conn.execute(...)`
-   - Discovered in CORE-001 when database locked after crash
+1. BUN SQLITE IS SYNCHRONOUS
+   - Bad: `await db.query(...).all()` // won't work
+   - Good: `db.query(...).all()` // sync API
+   - Discovered in CORE-001 when async/await caused errors
+
+2. USE INTEGER IDS, NOT UUIDS
+   - SQLite auto-increment is simpler and faster
+   - UUIDs add complexity without benefit for this project
+   - Decided in CORE-001 planning phase
+
+3. USE IN-MEMORY DB FOR TESTS
+   - Good: `new Database(':memory:')`
+   - Keeps tests fast and isolated
 ```
 
 The lessons-learned file grows over time. Each mistake becomes a permanent memory. The AI never makes the same error twice because it reads the file at session start.
 
 ---
 
-## The Verification Feedback Loop
-
-Here's a common failure mode: the AI writes code, says "done," and moves on. Later you discover it didn't actually work. Tests weren't run. Edge cases weren't handled. The AI claimed completion without verification.
-
-The fix is explicit verification requirements. The `checklists.md` file contains step-by-step procedures that the AI must run before marking anything complete.
-
-```markdown
-## Feature Completion Checklist
-
-Before marking any feature as `passes: true`:
-
-1. [ ] All acceptance criteria have passing tests
-2. [ ] `pytest` passes with no failures
-3. [ ] `ruff check .` shows no errors
-4. [ ] `mypy .` shows no type errors
-5. [ ] Code is committed with meaningful message
-6. [ ] CURRENT_TASK.md updated with completion status
-```
-
-This creates a feedback loop: **Code → Test → Fail → Fix → Test → Pass**. The checklist forces the AI to close the loop before claiming completion.
-
-<KeyPoint title="Verification Prevents False Completion" accent="rose">
-Without explicit verification requirements, AI will often claim tasks are complete when they're not. The checklist makes verification mechanical: either all boxes are checked, or the task isn't done. No ambiguity, no "should be working" situations.
-</KeyPoint>
-
-### Visual Verification for UI Work
-
-For frontend work, test suites alone aren't enough. A test might pass while the UI looks broken. Modern tools can help: screenshot-based testing with Playwright or Puppeteer, visual regression tools, and even AI agents that can take screenshots and verify layouts.
-
-If you're doing UI work, consider adding visual verification steps to your checklists:
-
-```markdown
-## UI Feature Checklist (addition to standard checklist)
-
-1. [ ] Component renders without console errors
-2. [ ] Responsive at mobile/tablet/desktop breakpoints
-3. [ ] Visual comparison against design spec
-```
-
-The tooling here is evolving quickly. Vision-capable AI agents can now take screenshots and verify that UI matches expectations. This is a capability worth keeping an eye on as these tools mature.
-
----
-
-## Planning and Acceptance Criteria
-
-The `feature_list.json` file embodies a specific approach to planning: **define success before starting work**.
-
-Each feature has acceptance criteria: specific, testable statements about what "done" means. This isn't just documentation; it shapes how the AI works.
-
-**Without upfront criteria:**
-- "Implement the database layer"
-- AI decides what to build
-- Scope creep, over-engineering, or missing features
-- Ambiguous "is this done?" debates
-
-**With upfront criteria:**
-- "Can create a new database file" - testable
-- "Can add a todo item" - testable
-- "All operations have unit tests" - verifiable
-- Binary pass/fail, no ambiguity
-
-<Callout type="insight" title="The Dependencies Matter">
-Features have a `dependencies` field that explicitly declares what must be complete before work starts. This prevents circular dependencies and ensures the AI doesn't build feature C before the foundation (feature A) is solid.
-</Callout>
-
-The temptation is to skip this planning and just tell the AI what to build. For simple tasks, that works. For anything spanning multiple sessions, you'll spend more time debugging scope confusion than you saved by skipping planning.
-
-**The discipline is simple:** before the AI writes any code for a feature, the acceptance criteria must exist. Before the feature is marked complete, every criterion must pass. No exceptions.
-
----
-
-## The Workflow
-
-The Agentic Context System follows a simple loop:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     THE AGENTIC LOOP                             │
-│                                                                  │
-│   ┌─────────┐      ┌─────────┐      ┌─────────┐      ┌───────┐  │
-│   │  READ   │ ───▶ │  WORK   │ ───▶ │ VERIFY  │ ───▶ │UPDATE │  │
-│   │ Context │      │ On Task │      │ Quality │      │ Files │  │
-│   └─────────┘      └─────────┘      └─────────┘      └───────┘  │
-│        ▲                                                  │      │
-│        └──────────────────────────────────────────────────┘      │
-│                          (repeat)                                │
-└─────────────────────────────────────────────────────────────────┘
-```
-
-**Session Start:**
-1. AI reads CLAUDE.md, CURRENT_TASK.md, rules.md, lessons-learned.md
-2. AI understands where the project is and what needs to be done
-3. AI begins working on the current task
-
-**During Session:**
-1. AI makes small, incremental changes
-2. AI commits after each meaningful change
-3. AI updates CURRENT_TASK.md with progress
-
-**Session End:**
-1. AI runs verification checklist (tests, linting, type checking)
-2. AI commits all changes
-3. AI updates CURRENT_TASK.md status
-4. AI updates feature_list.json if task complete
-5. AI appends session summary to progress.txt
-
-<Callout type="info" title="The Session Start Prompt">
-Start every session with this prompt:
-
-*"Read my project files (CLAUDE.md, CURRENT_TASK.md, feature_list.json, and the .claude/ directory) and continue working on the current task."*
-
-The AI will read the files, understand the context, and pick up exactly where you left off.
-</Callout>
-
----
-
 ## A Real Session Walkthrough
 
-Here's how a session typically flows. We're building a todo CLI and working on the database layer.
+Here's how a session typically flows. We're building a todo API and working on the database layer.
 
-**Starting state:** CURRENT_TASK.md shows 2 of 6 acceptance criteria complete for CORE-001.
+**Starting state:** CURRENT_TASK.md shows Phase 1 complete, Phase 2 in progress at attempt 1/3.
 
 **You say:** "Read my project files and continue the current task."
 
 **What the AI does:**
 
-1. **Reads context**: CLAUDE.md (Python/Click/SQLite stack), CURRENT_TASK.md (2 done, 4 remaining), rules.md (commit frequently, test everything), lessons-learned.md (use context managers for SQLite)
+1. **Reads context**: CLAUDE.md (Bun/Hono/SQLite stack), Prompt.md (phase gates, attempt rules), CURRENT_TASK.md (Phase 2, 1/3 attempts), lessons-learned.md (Bun SQLite is sync)
 
-2. **Implements remaining criteria**: list_todos(), mark_complete(), delete(), with tests for each
+2. **Checks attempt log**: Previous attempt failed on type export. Fixes the export.
 
-3. **Verifies**: runs pytest (all pass), runs ruff (no errors)
+3. **Completes Phase 2**: Validation tests pass. Commits `[CORE-001] Phase 2: Validation`.
 
-4. **Updates files**: marks all checkboxes in CURRENT_TASK.md, sets `"passes": true` in feature_list.json, appends summary to progress.txt
+4. **Updates CURRENT_TASK.md**: Phase 2 → complete with commit hash. Phase 3 → in_progress. Attempts → 0/3.
 
-**Ending state:** Task complete. All tests passing. Next session can start CORE-002.
+5. **Starts Phase 3**: Implements CRUD queries. Tests pass. Commits `[CORE-001] Phase 3: Queries`.
 
-The key observation: the AI used the context manager pattern from lessons-learned.md *without being told*. It read the file, saw the note from a previous session, and applied the learning. That's the point of the system: accumulated knowledge that persists across sessions.
+6. **Continues through phases** until feature complete or session ends.
+
+**Ending state:** All phases complete. Feature passes. status_map updated. Ready for next feature.
+
+The key observation: the AI used the synchronous SQLite pattern from lessons-learned.md *without being told*. It checked the attempt log and fixed the specific issue. It committed after each phase. That's the point of the system: structured, verifiable progress.
 
 ---
 
@@ -575,9 +868,10 @@ git commit -m "chore: initialize agentic context system"
 
 # Customize for your project
 # 1. Edit CLAUDE.md with your project specs
-# 2. Edit feature_list.json with your features
-# 3. Edit .claude/static/checklists.md with your test commands
-# 4. Start your first session
+# 2. Edit features/index.json with your session plan
+# 3. Create features/active/FEATURE_ID.json for your first feature
+# 4. Edit .claude/static/checklists.md with your test commands
+# 5. Start your first session
 ```
 
 <Callout type="success" title="Clone and Go">
@@ -595,10 +889,10 @@ The template includes placeholder commands. Replace them with your stack-specifi
 <ComparisonTable
   headers={['Stack', 'Test Command', 'Type Check', 'Lint']}
   rows={[
-    { feature: 'Python', colA: 'pytest', colB: 'mypy .', colC: 'ruff check .' },
+    { feature: 'Bun', colA: 'bun test', colB: 'bun run typecheck', colC: 'bun run lint' },
     { feature: 'Node.js/TypeScript', colA: 'npm test', colB: 'tsc --noEmit', colC: 'eslint .' },
+    { feature: 'Python', colA: 'pytest', colB: 'mypy .', colC: 'ruff check .' },
     { feature: 'Go', colA: 'go test ./...', colB: 'go vet ./...', colC: 'golangci-lint run' },
-    { feature: 'Rust', colA: 'cargo test', colB: 'cargo check', colC: 'cargo clippy' },
   ]}
 />
 
@@ -606,55 +900,73 @@ Update `.claude/static/checklists.md` with your specific commands. The AI will u
 
 ### Project Type Customization
 
-**Web App:** Add API endpoints to CLAUDE.md, component patterns, state management approach.
+**REST API:** Add endpoint patterns, error response format, authentication approach, database schema.
+
+**Web App:** Add component patterns, state management, routing conventions.
 
 **CLI Tool:** Add command structure, argument parsing patterns, help text conventions.
 
 **Library:** Add public API documentation, versioning strategy, backward compatibility rules.
 
-**Microservice:** Add service boundaries, communication patterns, deployment configuration.
-
 ---
 
 ## Common Pitfalls
 
-<Callout type="warning" title="Pitfall #1: Skipping the Session End Checklist">
-The most common mistake is ending a session without running the verification checklist. The AI rushes to finish, skips tests, leaves uncommitted changes. The next session starts with a broken codebase.
+<Callout type="warning" title="Pitfall #1: Skipping Phase Gates">
+The most common mistake is letting the AI move to the next phase without committing. "I'll commit at the end" leads to massive commits, lost progress if the session crashes, and difficulty debugging what broke when.
 
-**Fix:** Always run the session end checklist. Make it a habit. The AI should never say "done" without `git status` showing clean.
+**Fix:** Enforce the phase gate rule. Every phase completion = commit. No exceptions.
 </Callout>
 
-<Callout type="warning" title="Pitfall #2: Vague Acceptance Criteria">
+<Callout type="warning" title="Pitfall #2: Not Logging Attempts">
+The AI fails a test, fixes it, and doesn't log the attempt. Later it fails three more times and you don't know what was already tried.
+
+**Fix:** Make attempt logging mandatory. The log should show timestamp, error, and what was attempted.
+</Callout>
+
+<Callout type="warning" title="Pitfall #3: Vague Acceptance Criteria">
 "Database works" is not a criterion. "Can add a todo item with title and description" is. Vague criteria lead to vague implementations and endless "is this done?" debates.
 
 **Fix:** Write criteria as specific, testable statements. If you can't verify it with a test or a command, it's too vague.
 </Callout>
 
-<Callout type="warning" title="Pitfall #3: Multiple Tasks at Once">
-The temptation to "quickly fix this other thing" while working on a task is strong. Resist it. Context switching creates partial work, merge conflicts, and confusion about what's actually done.
+<Callout type="warning" title="Pitfall #4: Skipping Handoffs">
+You spawn a new agent or start a new session without creating HANDOFF.md. The new context has no idea what was in progress, what decisions were made, or what files were modified.
 
-**Fix:** One task at a time. If you notice something else that needs fixing, add it as a new feature. Complete the current task first.
+**Fix:** Always create HANDOFF.md before context switches. It takes 30 seconds and saves 15 minutes of confusion.
 </Callout>
 
 ---
 
-## Why Files?
+## Why This Works
 
-Why not a database, or an API, or a purpose-built tool?
+The improved system works because it addresses the specific failure modes of AI coding:
 
-<KeyPoint title="Files Are the Universal Interface" accent="violet">
-Every AI coding assistant can read files. Every IDE can edit files. Every version control system can track files. Files require no authentication, no API keys, no subscriptions. They work offline. They work in 10 years. They work with any AI, any editor, any workflow.
+<KeyPoint title="Phase Gates Prevent False Progress" accent="violet">
+The AI can't claim "feature done" when only 3 of 6 phases are committed. The commit history proves what actually works.
 </KeyPoint>
 
-Files are the lowest common denominator in software development. Any tool can read them. Any human can understand them. They diff cleanly, merge reasonably, and survive tool changes. When you switch from Claude to GPT or from Cursor to VS Code, the files remain exactly the same.
+<KeyPoint title="Attempt Tracking Prevents Loops" accent="rose">
+Instead of trying the same failing approach 20 times, the AI stops at 3 and asks for help. The log shows what was tried.
+</KeyPoint>
+
+<KeyPoint title="Implementation Hints Prevent Guessing" accent="violet">
+Instead of the AI guessing where code should go, the plan explicitly lists files, patterns, and interfaces.
+</KeyPoint>
+
+<KeyPoint title="Handoffs Prevent Context Loss" accent="rose">
+New agents start with explicit state, not vague instructions. They know what's done, what's in progress, and what decisions were made.
+</KeyPoint>
 
 ---
 
 ## Conclusion
 
-AI coding assistants start every session from zero because there's nothing to remember from. The Agentic Context System provides that something: seven files that externalize your project's architecture, coding standards, progress, and accumulated lessons.
+AI coding assistants start every session from zero because there's nothing to remember from. The Agentic Context System provides that something: a structured set of files that externalize your project's architecture, coding standards, progress, and accumulated lessons.
 
-The AI reads these files at session start and updates them at session end. Context persists. Progress accumulates. Mistakes become documented lessons that prevent future repetition.
+The improved system adds accountability through **phase gates**, reliability through **attempt tracking**, clarity through **implementation hints**, and continuity through **handoff protocols**.
+
+The AI reads these files at session start and updates them at session end. Context persists. Progress accumulates. Mistakes become documented lessons. And you can trace exactly what happened, when, and why.
 
 <Verdict winner="violet" title="Getting Started">
 If you work with AI coding assistants on projects spanning multiple sessions, set up the Agentic Context System. Clone the template, customize the files for your project, and start your next session with context instead of explanations.
