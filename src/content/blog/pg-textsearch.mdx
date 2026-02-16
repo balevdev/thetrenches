@@ -1,0 +1,533 @@
+---
+title: "pg_textsearch: <em>BM25</em> Comes to Postgres in February"
+subtitle: "Industry-Standard Full-Text Search, Native in Your Database"
+description: "pg_textsearch brings BM25 ranking, 29+ languages, and blazing-fast full-text search to PostgreSQL. A deep dive into what this extension offers."
+pubDate: 2026-01-25
+category: "Database"
+readTime: "14 min"
+tags: ["postgresql", "search", "full-text-search", "bm25", "pgvector"]
+accent: "violet"
+heroImage: "https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/5079349c-a909-4223-9c0f-d46c598e2800/public"
+---
+
+import Callout from '../../components/blog/Callout.astro';
+import ComparisonTable from '../../components/blog/ComparisonTable.astro';
+import KeyPoint from '../../components/blog/KeyPoint.astro';
+import StatGrid from '../../components/blog/StatGrid.astro';
+import TechStack from '../../components/blog/TechStack.astro';
+import Card from '../../components/blog/Card.astro';
+import Verdict from '../../components/blog/Verdict.astro';
+
+Full-text search in PostgreSQL just got a major upgrade. **pg_textsearch** is a new extension from Tiger Data (formerly Timescale) that brings BM25 ranking, the same algorithm powering modern search engines, directly into Postgres.
+
+<StatGrid
+  columns={3}
+  stats={[
+    { value: "BM25", label: "Industry-Standard Ranking", accent: "violet" },
+    { value: "29+", label: "Supported Languages", accent: "primary" },
+    { value: "4x", label: "Faster Top-K Queries", accent: "success" },
+  ]}
+/>
+
+For teams already running PostgreSQL, this opens up new possibilities: advanced full-text search without leaving the database ecosystem. Let's explore what pg_textsearch brings to the table.
+
+<KeyPoint title="What's New" accent="violet">
+  pg_textsearch adds BM25 scoring, Block-Max WAND optimization, and native pgvector integration to PostgreSQL's full-text search capabilities.
+</KeyPoint>
+
+## What is pg_textsearch?
+
+**pg_textsearch** is a PostgreSQL extension that brings industry-standard BM25 ranking directly into Postgres. It's built by Tiger Data (formerly Timescale, the team behind TimescaleDB) and designed for developers who want powerful search capabilities through familiar SQL syntax.
+
+The API is straightforward:
+
+```sql
+SELECT * FROM products
+WHERE description <@> 'wireless bluetooth headphones'
+ORDER BY description <@> 'wireless bluetooth headphones'
+LIMIT 10;
+```
+
+The `<@>` operator returns negative BM25 scores (more negative means a better match). This design allows PostgreSQL's ascending index scans to return the most relevant results first.
+
+### Key Capabilities
+
+<ComparisonTable
+  headers={["Capability", "What It Means", "Why It Matters"]}
+  rows={[
+    { feature: "BM25 Ranking", batch: "Industry-standard relevance algorithm", stream: "Same ranking quality as dedicated search engines" },
+    { feature: "SQL Interface", batch: "Query with familiar syntax", stream: "No new query language to learn" },
+    { feature: "ACID Transactions", batch: "Search index updates are transactional", stream: "Data consistency guaranteed" },
+    { feature: "Native Joins", batch: "Join search results with other tables", stream: "No denormalization required" },
+    { feature: "pgvector Integration", batch: "Combine keyword + semantic search", stream: "Hybrid search in one query" },
+    { feature: "Partitioned Tables", batch: "Works with Postgres partitioning", stream: "Time-series and large table support" },
+  ]}
+/>
+
+<TechStack
+  title="pg_textsearch Features"
+  accent="violet"
+  items={[
+    { category: "Ranking", name: "BM25", description: "Industry-standard relevance" },
+    { category: "Languages", name: "29+", description: "Built-in stemming & stop words" },
+    { category: "Performance", name: "Block-Max WAND", description: "4x faster top-k queries" },
+    { category: "Architecture", name: "Memtable", description: "Fast writes, async merge" },
+    { category: "Integration", name: "pgvector", description: "Hybrid semantic search" },
+    { category: "Tables", name: "Partitioned", description: "Time-series friendly" },
+  ]}
+/>
+
+## Understanding BM25 Ranking
+
+BM25 (Best Matching 25) is the ranking algorithm that powers most modern search engines. It improves on simpler term-frequency approaches with three key innovations:
+
+1. **Length normalization**: A concise, focused document can outrank a lengthy document that happens to mention the term many times
+2. **Term saturation**: Diminishing returns on repeated terms prevent keyword stuffing from gaming results
+3. **Inverse document frequency (IDF)**: Rare, specific terms contribute more to relevance than common words
+
+Here's how this plays out in practice:
+
+```sql
+-- BM25 search with pg_textsearch
+SELECT title, body <@> 'postgresql' AS score
+FROM articles
+ORDER BY body <@> 'postgresql'
+LIMIT 10;
+
+-- Example results showing BM25's length normalization:
+-- "PostgreSQL Tutorial: Getting Started"            → -4.87  (concise, focused)
+-- "10,000 word article mentioning PostgreSQL often" → -1.24  (diluted relevance)
+```
+
+More negative scores indicate higher relevance. BM25 recognizes that a focused tutorial about PostgreSQL is likely more relevant than a lengthy document that merely mentions the term repeatedly.
+
+<KeyPoint title="BM25 Intuition" accent="primary">
+  BM25 asks: "How relevant is this term to THIS document compared to ALL documents?" It balances term frequency, document length, and how rare the term is across the entire corpus.
+</KeyPoint>
+
+### The BM25 Formula (Simplified)
+
+```
+score = IDF × (tf × (k1 + 1)) / (tf + k1 × (1 - b + b × docLen/avgDocLen))
+```
+
+- **IDF**: Rare terms score higher (inverse document frequency)
+- **tf**: Term frequency, but with saturation (diminishing returns)
+- **k1**: Controls saturation speed (default: 1.2)
+- **b**: Controls length normalization (default: 0.75)
+- **docLen/avgDocLen**: Penalizes unusually long documents
+
+## Installation & Setup
+
+<Callout type="warning" title="PostgreSQL 17+ Required">
+  pg_textsearch requires PostgreSQL 17 or later. Check your version with `SELECT version();` before proceeding.
+</Callout>
+
+### Using pgxman (Recommended)
+
+```bash
+# Install pgxman if you haven't
+curl -sfL https://pgxman.com/install.sh | sh
+
+# Install pg_textsearch
+pgxman install pg_textsearch
+```
+
+### From Source
+
+```bash
+git clone https://github.com/timescale/pg_textsearch.git
+cd pg_textsearch
+cargo pgrx install --release
+```
+
+### Enable the Extension
+
+```sql
+CREATE EXTENSION IF NOT EXISTS pg_textsearch;
+```
+
+## Basic Queries with `<@>` Operator
+
+Let's build a searchable product catalog:
+
+```sql
+-- Create table
+CREATE TABLE products (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    description TEXT,
+    category TEXT,
+    price NUMERIC(10, 2)
+);
+
+-- Insert sample data
+INSERT INTO products (name, description, category, price) VALUES
+('Sony WH-1000XM5', 'Industry-leading noise canceling wireless headphones with exceptional sound quality', 'Electronics', 349.99),
+('Apple AirPods Pro', 'Active noise cancellation, spatial audio, MagSafe charging case', 'Electronics', 249.99),
+('Bose QuietComfort', 'Wireless bluetooth headphones with world-class noise cancellation', 'Electronics', 329.99),
+('Audio-Technica ATH-M50x', 'Professional studio monitor headphones, wired, exceptional clarity', 'Electronics', 149.99),
+('JBL Tune 510BT', 'Wireless on-ear headphones, 40 hour battery, lightweight design', 'Electronics', 49.99);
+
+-- Create BM25 index on description
+CREATE INDEX idx_products_bm25 ON products
+USING bm25 (description)
+WITH (language = 'english');
+```
+
+Now search:
+
+```sql
+SELECT name, price, description <@> 'wireless noise canceling' AS score
+FROM products
+ORDER BY description <@> 'wireless noise canceling'
+LIMIT 5;
+```
+
+Expected output:
+
+```
+         name          |  price  |  score
+-----------------------+---------+---------
+ Sony WH-1000XM5       | 349.99  |  -5.42
+ Bose QuietComfort     | 329.99  |  -4.87
+ Apple AirPods Pro     | 249.99  |  -3.21
+ JBL Tune 510BT        |  49.99  |  -1.58
+(4 rows)
+```
+
+<KeyPoint title="Score Interpretation" accent="violet">
+  More negative = better match. The `<@>` operator returns negative BM25 scores so that PostgreSQL's ascending ORDER BY naturally returns the most relevant results first.
+</KeyPoint>
+
+### Multi-Column Search
+
+Search across multiple fields by creating a composite index:
+
+```sql
+-- Create index on multiple columns
+CREATE INDEX idx_products_multi ON products
+USING bm25 (name, description, category)
+WITH (language = 'english');
+
+-- Search across all indexed columns
+SELECT name, category,
+       (name, description, category) <@> 'professional studio' AS score
+FROM products
+ORDER BY (name, description, category) <@> 'professional studio'
+LIMIT 10;
+```
+
+## Index Tuning: k1 and b Parameters
+
+The default BM25 parameters work well for general text. But you can tune them:
+
+<ComparisonTable
+  headers={["Parameter", "Default", "Effect"]}
+  rows={[
+    { feature: "k1", batch: "1.2", stream: "Term saturation speed. Higher = more credit for repeated terms" },
+    { feature: "b", batch: "0.75", stream: "Length normalization. 0 = ignore length, 1 = full normalization" },
+  ]}
+/>
+
+### Tuning for Different Document Types
+
+```sql
+-- Short documents (tweets, titles): Less length normalization
+CREATE INDEX idx_short_docs ON tweets
+USING bm25 (content)
+WITH (k1 = 1.2, b = 0.3, language = 'english');
+
+-- Long documents (articles, manuals): Standard settings
+CREATE INDEX idx_long_docs ON articles
+USING bm25 (body)
+WITH (k1 = 1.2, b = 0.75, language = 'english');
+
+-- Very long documents (books): More aggressive normalization
+CREATE INDEX idx_books ON books
+USING bm25 (content)
+WITH (k1 = 1.5, b = 0.9, language = 'english');
+```
+
+<Callout type="insight" title="Start with Defaults">
+  The default k1=1.2 and b=0.75 work well for most use cases. Only tune after measuring relevance on your actual data.
+</Callout>
+
+### Language Configuration
+
+pg_textsearch supports 29+ languages with built-in stemming and stop words:
+
+```sql
+-- German product descriptions
+CREATE INDEX idx_products_de ON products_de
+USING bm25 (beschreibung)
+WITH (language = 'german');
+
+-- French articles
+CREATE INDEX idx_articles_fr ON articles_fr
+USING bm25 (contenu)
+WITH (language = 'french');
+
+-- Japanese (requires separate tokenizer)
+CREATE INDEX idx_products_ja ON products_ja
+USING bm25 (description)
+WITH (language = 'japanese');
+```
+
+## Hybrid Search with pgvector
+
+One of pg_textsearch's most powerful features is its integration with pgvector. This enables hybrid search: combining keyword matching (BM25) with semantic understanding (vector embeddings).
+
+<KeyPoint title="Keywords + Semantics" accent="primary">
+  BM25 finds exact keyword matches. Vector search finds conceptually similar content. Together, they can match both "wireless headphones" and "bluetooth earbuds", even when users don't use exact catalog terminology.
+</KeyPoint>
+
+```sql
+-- Enable both extensions
+CREATE EXTENSION IF NOT EXISTS pg_textsearch;
+CREATE EXTENSION IF NOT EXISTS vector;
+
+-- Add embedding column
+ALTER TABLE products ADD COLUMN embedding vector(1536);
+
+-- Create both indexes
+CREATE INDEX idx_products_bm25 ON products USING bm25 (description);
+CREATE INDEX idx_products_vector ON products USING hnsw (embedding vector_cosine_ops);
+
+-- Hybrid search with Reciprocal Rank Fusion (RRF)
+WITH bm25_results AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY description <@> 'noise canceling headphones') AS bm25_rank
+    FROM products
+    ORDER BY description <@> 'noise canceling headphones'
+    LIMIT 20
+),
+vector_results AS (
+    SELECT id, ROW_NUMBER() OVER (ORDER BY embedding <=> $query_embedding) AS vector_rank
+    FROM products
+    ORDER BY embedding <=> $query_embedding
+    LIMIT 20
+),
+rrf_scores AS (
+    SELECT
+        COALESCE(b.id, v.id) AS id,
+        COALESCE(1.0 / (60 + b.bm25_rank), 0) +
+        COALESCE(1.0 / (60 + v.vector_rank), 0) AS rrf_score
+    FROM bm25_results b
+    FULL OUTER JOIN vector_results v ON b.id = v.id
+)
+SELECT p.name, p.price, r.rrf_score
+FROM rrf_scores r
+JOIN products p ON p.id = r.id
+ORDER BY r.rrf_score DESC
+LIMIT 10;
+```
+
+<Callout type="success" title="Unified Search Stack">
+  Combining BM25 + pgvector + RRF provides hybrid search capabilities within PostgreSQL, maintaining ACID transactions and standard SQL querying throughout.
+</Callout>
+
+### Why Reciprocal Rank Fusion?
+
+RRF combines rankings without needing to normalize scores across different systems:
+
+```
+RRF_score = Σ 1 / (k + rank_i)
+```
+
+Where `k` is typically 60. This formula:
+- Rewards documents that rank highly in multiple systems
+- Doesn't require score normalization
+- Is robust to outliers
+
+## Performance Considerations
+
+### Block-Max WAND: 4x Faster Top-K
+
+pg_textsearch uses Block-Max WAND (Weak AND) algorithm for top-k queries. Instead of scoring every document, it skips blocks that can't possibly make the top results.
+
+```sql
+-- This is FAST even on millions of rows
+SELECT name, description <@> 'wireless headphones' AS score
+FROM products
+ORDER BY description <@> 'wireless headphones'
+LIMIT 10;  -- Block-Max WAND kicks in
+```
+
+<ComparisonTable
+  headers={["Dataset Size", "Full Scan", "Block-Max WAND"]}
+  rows={[
+    { feature: "10K rows", batch: "~50ms", stream: "~15ms" },
+    { feature: "100K rows", batch: "~400ms", stream: "~45ms" },
+    { feature: "1M rows", batch: "~3.5s", stream: "~120ms" },
+    { feature: "10M rows", batch: "~35s", stream: "~400ms" },
+  ]}
+/>
+
+<Callout type="insight" title="Performance Tip">
+  Block-Max WAND optimization activates when using ORDER BY + LIMIT together. Include both for optimal performance on large tables.
+</Callout>
+
+### Partitioned Table Support
+
+pg_textsearch works with PostgreSQL's native partitioning:
+
+```sql
+-- Create partitioned table for time-series logs
+CREATE TABLE logs (
+    id BIGSERIAL,
+    created_at TIMESTAMPTZ NOT NULL,
+    message TEXT,
+    level TEXT
+) PARTITION BY RANGE (created_at);
+
+-- Create monthly partitions
+CREATE TABLE logs_2026_01 PARTITION OF logs
+    FOR VALUES FROM ('2026-01-01') TO ('2026-02-01');
+CREATE TABLE logs_2026_02 PARTITION OF logs
+    FOR VALUES FROM ('2026-02-01') TO ('2026-03-01');
+
+-- Create BM25 index (automatically applies to all partitions)
+CREATE INDEX idx_logs_bm25 ON logs USING bm25 (message);
+
+-- Search with partition pruning
+SELECT * FROM logs
+WHERE created_at >= '2026-01-15'
+  AND created_at < '2026-01-20'
+ORDER BY message <@> 'connection timeout error'
+LIMIT 100;
+```
+
+## Best Practices
+
+<Callout type="success" title="Recommended Approaches">
+  - Start with default k1=1.2 and b=0.75 parameters; tune only after measuring relevance
+  - Always use ORDER BY + LIMIT to enable Block-Max WAND optimization
+  - Configure the correct language for your content (stemming matters)
+  - Create composite indexes for multi-field search scenarios
+  - Combine with pgvector using RRF for hybrid keyword + semantic search
+</Callout>
+
+<Callout type="warning" title="Things to Watch">
+  - Index selectively: BM25 indexes have write overhead, so don't index columns you won't search
+  - Match language config to content: English stemming on German text won't produce good results
+  - Test score thresholds on real queries: the right cutoff depends on your data
+  - Include LIMIT on large tables: Block-Max WAND optimization requires it
+</Callout>
+
+### Ideal Use Cases
+
+pg_textsearch works well for:
+- Product catalogs, content management, and documentation search
+- Applications requiring ACID consistency between data and search indexes
+- Teams comfortable with SQL who want to avoid learning specialized query DSLs
+- Hybrid search combining keywords with pgvector embeddings
+
+### Consider Alternatives When
+
+- You're working with 100M+ documents at scale
+- You need specialized aggregation or analytics features
+- Real-time log ingestion across distributed systems is the priority
+
+## The Search Landscape
+
+Different tools serve different needs. Here's where pg_textsearch fits in the broader ecosystem:
+
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-4); margin: var(--space-6) 0;">
+
+<Card variant="violet" title="pg_textsearch">
+
+**Strengths:**
+- BM25 ranking in PostgreSQL
+- ACID transactions
+- SQL interface
+- pgvector integration
+- Single database stack
+
+**Considerations:**
+- PostgreSQL 17+ required
+- Pre-GA (v0.5.0-dev)
+- Optimized for &lt;10M docs
+
+</Card>
+
+<Card title="Elasticsearch / OpenSearch">
+
+**Strengths:**
+- Proven at massive scale
+- Rich aggregation framework
+- Kibana/dashboards
+- Log analytics ecosystem
+
+**Considerations:**
+- Separate cluster to manage
+- Eventually consistent
+- Specialized query DSL
+
+</Card>
+
+<Card title="Typesense / Meilisearch">
+
+**Strengths:**
+- Typo tolerance built-in
+- Instant search focus
+- Simple to deploy
+- Great developer UX
+
+**Considerations:**
+- Separate service
+- Less SQL integration
+- Different feature set
+
+</Card>
+
+<Card title="PostgreSQL ts_rank">
+
+**Strengths:**
+- Zero dependencies
+- Already in Postgres
+- Simple to start
+
+**Considerations:**
+- Basic ranking
+- No BM25 features
+- Limited tuning options
+
+</Card>
+
+</div>
+
+## Production Readiness
+
+<Callout type="warning" title="Current Status: Pre-GA">
+  pg_textsearch is currently at **v0.5.0-dev**. Tiger Data expects GA release in **February 2026**. The API is stabilizing but may have breaking changes before 1.0.
+</Callout>
+
+### What to Do Now
+
+1. **Test in staging**: Evaluate on a copy of your production data
+2. **Benchmark your queries**: Measure against your current search solution
+3. **Follow the repo**: Watch for breaking changes before GA
+4. **Don't deploy to production yet**: Wait for the stable release
+
+<TechStack
+  title="Roadmap Items to Watch"
+  accent="primary"
+  items={[
+    { category: "Stability", name: "1.0 Release", description: "Expected Feb 2026" },
+    { category: "Feature", name: "Phrase Search", description: "Exact phrase matching" },
+    { category: "Feature", name: "Fuzzy Search", description: "Typo tolerance" },
+    { category: "Performance", name: "Parallel Scan", description: "Multi-core indexing" },
+    { category: "Integration", name: "pg_analytics", description: "Combined OLAP + search" },
+    { category: "Cloud", name: "Timescale Cloud", description: "Managed offering" },
+  ]}
+/>
+
+## Summary
+
+<Verdict winner="violet" title="pg_textsearch">
+  pg_textsearch brings a significant capability to PostgreSQL: industry-standard BM25 ranking without leaving your existing database. With 29+ languages, Block-Max WAND optimization, and native pgvector integration, it's a compelling option for teams that want powerful full-text search through familiar SQL. **The GA release is expected February 2026.** Worth evaluating now if you're planning search infrastructure for a PostgreSQL-based application.
+</Verdict>
+
+---
+
+*pg_textsearch is developed by Tiger Data (formerly Timescale). For the latest updates, follow the [GitHub repository](https://github.com/timescale/pg_textsearch).*
