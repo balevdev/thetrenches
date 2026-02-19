@@ -1,0 +1,3236 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Changers in the Data Engineering Space · The Trenches</title>
+<meta name="description" content="Fifteen tools that are quietly reshaping how we ingest, transform, stream, orchestrate, and serve data. A deep dive from the trenches by Boyan Balev.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   RESET & FOUNDATIONS
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* DARK THEME — Mustafar: volcanic obsidian + ember glow */
+  --bg-primary: #06080e;
+  --bg-secondary: #0c1019;
+  --bg-tertiary: #111724;
+  --bg-card: rgba(14, 20, 34, 0.85);
+  --bg-card-hover: rgba(20, 28, 48, 0.95);
+
+  --text-primary: #e4e8f1;
+  --text-secondary: #9aa3bc;
+  --text-muted: #5d6883;
+
+  /* Accent system — cinematic triadic */
+  --accent-gold: #d4a847;
+  --accent-gold-dim: rgba(212, 168, 71, 0.12);
+  --accent-gold-glow: rgba(212, 168, 71, 0.25);
+  --accent-ember: #c0503a;
+  --accent-ember-dim: rgba(192, 80, 58, 0.10);
+  --accent-blue: #4a7fd4;
+  --accent-blue-dim: rgba(74, 127, 212, 0.08);
+
+  --border: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(212, 168, 71, 0.18);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 60px rgba(212, 168, 71, 0.06);
+
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-body: 'Outfit', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --nav-height: 64px;
+  --content-width: 740px;
+  --wide-width: 960px;
+
+  --theme-transition: background 0.6s cubic-bezier(0.4,0,0.2,1),
+                       color 0.5s cubic-bezier(0.4,0,0.2,1),
+                       border-color 0.5s ease,
+                       box-shadow 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════
+   LIGHT THEME — Arrakis: desert warmth + parchment
+   ═══════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-primary: #f5f0e8;
+  --bg-secondary: #ede7db;
+  --bg-tertiary: #e3ddd1;
+  --bg-card: rgba(255, 252, 245, 0.9);
+  --bg-card-hover: rgba(255, 255, 255, 0.95);
+
+  --text-primary: #1a1714;
+  --text-secondary: #5a5347;
+  --text-muted: #8e867a;
+
+  --accent-gold: #9e7a2e;
+  --accent-gold-dim: rgba(158, 122, 46, 0.08);
+  --accent-gold-glow: rgba(158, 122, 46, 0.15);
+  --accent-ember: #a04030;
+  --accent-ember-dim: rgba(160, 64, 48, 0.06);
+  --accent-blue: #3a65a8;
+  --accent-blue-dim: rgba(58, 101, 168, 0.06);
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-accent: rgba(158, 122, 46, 0.20);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.10);
+  --shadow-glow: 0 0 40px rgba(158, 122, 46, 0.05);
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-gold-dim) var(--bg-primary);
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.85;
+  overflow-x: hidden;
+  transition: var(--theme-transition);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent-gold);
+  color: var(--bg-primary);
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT CANVAS
+   ═══════════════════════════════════════════ */
+#ambient-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+[data-theme="light"] #ambient-canvas { opacity: 0.15; }
+
+/* ═══════════════════════════════════════════
+   GRAIN & ATMOSPHERE
+   ═══════════════════════════════════════════ */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.025;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS BAR
+   ═══════════════════════════════════════════ */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-ember), var(--accent-gold), var(--accent-gold));
+  z-index: 1000;
+  transition: width 0.08s linear;
+}
+
+/* ═══════════════════════════════════════════
+   NAV
+   ═══════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  background: color-mix(in srgb, var(--bg-primary) 85%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), var(--theme-transition);
+}
+
+.nav-brand {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.nav-brand span { color: var(--accent-gold); }
+
+.nav-center {
+  display: flex;
+  gap: 1.8rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 400px);
+}
+
+.nav-center a {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-center a:hover { color: var(--accent-gold); }
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-accent);
+  border-radius: 100px;
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+.theme-toggle:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════ */
+.content {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.content-wide {
+  max-width: var(--wide-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.section {
+  position: relative;
+  z-index: 5;
+  padding: 6rem 0;
+}
+
+.section + .section {
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════ */
+.hero {
+  position: relative;
+  z-index: 5;
+  padding: calc(var(--nav-height) + 5rem) 2rem 5rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-orb {
+  position: absolute;
+  width: 700px;
+  height: 700px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  background: radial-gradient(circle, var(--accent-gold-dim) 0%, transparent 60%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme="light"] .hero-orb {
+  background: radial-gradient(circle, rgba(158, 122, 46, 0.05) 0%, transparent 55%);
+}
+
+.hero-eyebrow {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 2rem;
+  animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-title {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  margin-bottom: 1.8rem;
+  animation: fadeUp 1s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--accent-gold);
+}
+
+.hero-subtitle {
+  position: relative;
+  z-index: 1;
+  max-width: 580px;
+  margin: 0 auto 3rem;
+  font-size: 1.1rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  animation: fadeUp 1s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  gap: 2.5rem;
+  animation: fadeUp 1s 0.45s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-meta-item {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.hero-meta-item strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.hero-scroll-hint {
+  position: relative;
+  z-index: 1;
+  margin-top: 4rem;
+  animation: fadeUp 1s 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-scroll-hint span {
+  display: inline-block;
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--accent-gold), transparent);
+  animation: scrollPulse 2.5s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION HEADERS
+   ═══════════════════════════════════════════ */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.section-number {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  white-space: nowrap;
+}
+
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-accent), transparent);
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.5rem;
+}
+
+.section h2 em {
+  font-style: italic;
+  color: var(--accent-gold);
+}
+
+.section p {
+  color: var(--text-secondary);
+  font-size: 1.02rem;
+  margin-bottom: 1.2rem;
+}
+
+.section p strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* ═══════════════════════════════════════════
+   TOOL CARDS
+   ═══════════════════════════════════════════ */
+.tool-grid {
+  display: grid;
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.tool-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+  overflow: hidden;
+}
+
+.tool-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, var(--accent-gold-dim), transparent);
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+
+.tool-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.tool-card:hover::before { opacity: 1; }
+
+.tool-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.tool-card-number {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--accent-gold);
+}
+
+.tool-card-category {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 400;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  padding: 0.25rem 0.65rem;
+  border: 1px solid var(--border);
+  border-radius: 100px;
+}
+
+.tool-card-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  margin-bottom: 0.4rem;
+}
+
+.tool-card-tagline {
+  font-style: italic;
+  font-size: 0.95rem;
+  color: var(--accent-gold);
+  margin-bottom: 1.3rem;
+  font-family: var(--font-display);
+}
+
+.tool-card p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  margin-bottom: 1rem;
+}
+
+.tool-card p strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.tool-card-use {
+  margin-top: 1.5rem;
+  padding: 1.3rem 1.5rem;
+  background: var(--accent-gold-dim);
+  border-left: 2px solid var(--accent-gold);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+}
+
+.tool-card-use-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 0.6rem;
+}
+
+.tool-card-use p {
+  margin-bottom: 0;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+}
+
+/* ═══════════════════════════════════════════
+   PULL QUOTE
+   ═══════════════════════════════════════════ */
+.pull-quote {
+  padding: 4rem 0;
+  text-align: center;
+  max-width: 650px;
+  margin: 0 auto;
+}
+
+.pull-quote p {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.5vw, 1.7rem);
+  line-height: 1.55;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.pull-quote p em { color: var(--accent-gold); }
+
+.pull-quote cite {
+  display: block;
+  margin-top: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* ═══════════════════════════════════════════
+   COMPARISON TABLE
+   ═══════════════════════════════════════════ */
+.table-wrap {
+  overflow-x: auto;
+  margin: 2.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table-wrap th {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  text-align: left;
+  padding: 1rem 1.2rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.table-wrap td {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.table-wrap tr:last-child td { border-bottom: none; }
+
+/* ═══════════════════════════════════════════
+   COMBO BLOCKS
+   ═══════════════════════════════════════════ */
+.combo-block {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 2.5rem;
+  margin-bottom: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.combo-block:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow);
+}
+
+.combo-title {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
+}
+
+.combo-flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1.2rem 0;
+}
+
+.combo-node {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  padding: 0.4rem 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.combo-node.highlight {
+  background: var(--accent-gold-dim);
+  border-color: var(--border-accent);
+  color: var(--accent-gold);
+}
+
+.combo-arrow {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer {
+  padding: 4rem 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+  z-index: 5;
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 0.8rem;
+  color: var(--text-primary);
+}
+
+.footer-brand span { color: var(--accent-gold); }
+
+.footer p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ═══════════════════════════════════════════
+   BACK TO TOP
+   ═══════════════════════════════════════════ */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 99;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 1.2rem;
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.2; transform: scaleY(0.5); transform-origin: top; }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* stagger children */
+.reveal-stagger > .reveal:nth-child(1) { transition-delay: 0s; }
+.reveal-stagger > .reveal:nth-child(2) { transition-delay: 0.08s; }
+.reveal-stagger > .reveal:nth-child(3) { transition-delay: 0.16s; }
+
+/* ═══════════════════════════════════════════
+   ARCHITECTURAL DIAGRAMS
+   ═══════════════════════════════════════════ */
+.arch-diagram {
+  margin: 3rem 0;
+  padding: 2.5rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.arch-diagram .arch-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-gold);
+  margin-bottom: 2rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* ── Layer Stack ── */
+.layer-stack {
+  display: flex;
+  flex-direction: column;
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.layer-row {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+  padding: 0.95rem 1.5rem;
+  border: 1px solid var(--border);
+  background: var(--bg-secondary);
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+  position: relative;
+}
+
+.layer-row:first-child { border-radius: var(--radius-sm) var(--radius-sm) 0 0; }
+.layer-row:last-child { border-radius: 0 0 var(--radius-sm) var(--radius-sm); }
+.layer-row + .layer-row { border-top: none; }
+
+.layer-row:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  z-index: 1;
+}
+
+.layer-row::before {
+  content: '';
+  width: 3px;
+  height: 60%;
+  position: absolute;
+  left: 0;
+  top: 20%;
+  border-radius: 0 2px 2px 0;
+  transition: background 0.3s ease;
+}
+
+.layer-row:nth-child(1)::before { background: var(--accent-gold); opacity: 1; }
+.layer-row:nth-child(2)::before { background: var(--accent-ember); opacity: 0.8; }
+.layer-row:nth-child(3)::before { background: var(--accent-blue); opacity: 0.8; }
+.layer-row:nth-child(4)::before { background: var(--accent-gold); opacity: 0.6; }
+.layer-row:nth-child(5)::before { background: var(--accent-ember); opacity: 0.6; }
+
+.layer-marker {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--bg-primary);
+}
+
+.layer-marker svg {
+  width: 14px;
+  height: 14px;
+  stroke: var(--accent-gold);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.layer-name {
+  font-family: var(--font-body);
+  font-weight: 500;
+  font-size: 0.88rem;
+  color: var(--text-primary);
+  min-width: 130px;
+  letter-spacing: 0.01em;
+}
+
+.layer-tools {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.layer-tools .lt {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 400;
+  padding: 0.2rem 0.55rem;
+  background: var(--accent-gold-dim);
+  border-radius: 3px;
+  color: var(--accent-gold);
+  white-space: nowrap;
+  letter-spacing: 0.02em;
+}
+
+/* ── Pipeline Flow ── */
+.pipe-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+  padding: 0.5rem 0;
+}
+
+.pipe-node {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.9rem 1.1rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  min-width: 90px;
+  transition: all 0.3s ease;
+}
+
+.pipe-node:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-card-hover);
+}
+
+.pipe-node.gold {
+  background: var(--accent-gold-dim);
+  border-color: var(--border-accent);
+}
+
+.pipe-node .pn-title {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.pipe-node.gold .pn-title { color: var(--accent-gold); }
+
+.pipe-node .pn-sub {
+  font-family: var(--font-body);
+  font-size: 0.64rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.pipe-edge {
+  display: flex;
+  align-items: center;
+  padding: 0 0.35rem;
+  flex-shrink: 0;
+}
+
+.pipe-edge svg {
+  width: 28px;
+  height: 10px;
+  stroke: var(--accent-gold);
+  opacity: 0.35;
+  stroke-width: 1;
+  fill: none;
+}
+
+.pipe-edge-down {
+  display: flex;
+  justify-content: center;
+  padding: 0.2rem 0;
+  width: 100%;
+}
+
+.pipe-edge-down svg {
+  width: 10px;
+  height: 20px;
+  stroke: var(--accent-gold);
+  opacity: 0.3;
+  stroke-width: 1;
+  fill: none;
+}
+
+/* ── Three-Column Pattern Cards ── */
+.paradigm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+.paradigm-card {
+  padding: 1.8rem 1.5rem;
+  background: var(--bg-secondary);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.paradigm-card:hover { background: var(--bg-card-hover); }
+
+.paradigm-card .pc-number {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  margin-bottom: 1rem;
+}
+
+.paradigm-card .pc-icon {
+  width: 36px;
+  height: 36px;
+  margin: 0 auto 0.9rem;
+  border: 1px solid var(--border-accent);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.paradigm-card .pc-icon svg {
+  width: 16px;
+  height: 16px;
+  stroke: var(--accent-gold);
+  stroke-width: 1.5;
+  fill: none;
+}
+
+.paradigm-card .pc-name {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  color: var(--text-primary);
+  margin-bottom: 0.2rem;
+}
+
+.paradigm-card .pc-tool {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--accent-gold);
+  letter-spacing: 0.06em;
+  margin-bottom: 0.9rem;
+}
+
+.paradigm-card .pc-desc {
+  font-size: 0.78rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1.6;
+  margin-bottom: 1.2rem;
+}
+
+.paradigm-card .pc-flow {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+}
+
+.paradigm-card .pcf-node {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  padding: 0.3rem 0.65rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  color: var(--text-secondary);
+}
+
+.paradigm-card .pcf-edge {
+  width: 1px;
+  height: 10px;
+  background: var(--text-muted);
+  opacity: 0.25;
+}
+
+/* ── CDC Fan-out Diagram ── */
+.cdc-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.cdc-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.8rem 1.3rem;
+  text-align: center;
+}
+
+.cdc-stage .cs-box {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-secondary);
+}
+
+.cdc-stage .cs-box svg {
+  width: 18px;
+  height: 18px;
+  stroke: var(--text-muted);
+  stroke-width: 1.3;
+  fill: none;
+}
+
+.cdc-stage .cs-box.primary { border-color: var(--border-accent); }
+.cdc-stage .cs-box.primary svg { stroke: var(--accent-gold); }
+
+.cdc-stage .cs-name {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.cdc-stage .cs-sub {
+  font-size: 0.6rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  line-height: 1.3;
+}
+
+.cdc-edge {
+  padding: 0 0.15rem;
+  flex-shrink: 0;
+}
+
+.cdc-edge svg {
+  width: 24px;
+  height: 8px;
+  stroke: var(--accent-gold);
+  opacity: 0.3;
+  stroke-width: 1;
+  fill: none;
+}
+
+.cdc-fanout {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  padding-left: 0.5rem;
+}
+
+.cdc-fanout .cf-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  color: var(--text-secondary);
+  padding: 0.35rem 0.75rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  letter-spacing: 0.02em;
+}
+
+.cdc-fanout .cf-item .cf-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+
+/* ── Side-by-Side Compare ── */
+.arch-compare {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 1.5rem;
+  align-items: start;
+}
+
+.arch-col {
+  padding: 1.8rem 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.arch-col.accent-col { border-color: var(--border-accent); }
+
+.arch-col .ac-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 0.25rem;
+}
+
+.arch-col .ac-sub {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--accent-gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 1.2rem;
+  opacity: 0.8;
+}
+
+.arch-col .ac-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.arch-col .ac-node {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  text-align: center;
+  min-width: 140px;
+  letter-spacing: 0.02em;
+}
+
+.arch-col .ac-node.task-node { border-left: 2px solid var(--accent-ember); }
+.arch-col .ac-node.asset-node { border-left: 2px solid var(--accent-gold); }
+
+.arch-col .ac-edge {
+  width: 1px;
+  height: 12px;
+  background: var(--text-muted);
+  opacity: 0.2;
+}
+
+.arch-col .ac-footer {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 1.2rem;
+  letter-spacing: 0.04em;
+}
+
+.arch-vs {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 3.5rem;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.6;
+}
+
+/* ── Two-Column Decision Compare ── */
+.decision-compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.decision-col {
+  padding: 1.8rem 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+
+.decision-col.accent-col { border-color: var(--border-accent); }
+
+.decision-col .dc-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  text-align: center;
+  margin-bottom: 0.2rem;
+}
+
+.decision-col .dc-sub {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  color: var(--accent-gold);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  text-align: center;
+  margin-bottom: 1.2rem;
+  opacity: 0.8;
+}
+
+.decision-col .dc-chain {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.decision-col .dc-node {
+  font-family: var(--font-mono);
+  font-size: 0.64rem;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  text-align: center;
+  min-width: 160px;
+  letter-spacing: 0.02em;
+}
+
+.decision-col .dc-node.gold {
+  border-color: var(--border-accent);
+  color: var(--accent-gold);
+  background: var(--accent-gold-dim);
+}
+
+.decision-col .dc-edge {
+  width: 1px;
+  height: 12px;
+  background: var(--text-muted);
+  opacity: 0.2;
+}
+
+.decision-col .dc-footer {
+  font-family: var(--font-mono);
+  font-size: 0.56rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 1.2rem;
+  letter-spacing: 0.04em;
+  line-height: 1.6;
+}
+
+/* ── Iceberg Stack Diagram ── */
+.iceberg-stack {
+  max-width: 440px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.iceberg-engines {
+  display: flex;
+  gap: 0.6rem;
+  width: 100%;
+  justify-content: center;
+}
+
+.iceberg-engines .ie-node {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  text-align: center;
+  flex: 1;
+  max-width: 120px;
+  letter-spacing: 0.02em;
+}
+
+.iceberg-connector {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  padding: 0.3rem 0;
+}
+
+.iceberg-connector .ic-line {
+  width: 1px;
+  height: 14px;
+  background: var(--accent-gold);
+  opacity: 0.2;
+}
+
+.iceberg-connector .ic-label {
+  font-family: var(--font-mono);
+  font-size: 0.5rem;
+  color: var(--text-muted);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 0.2rem 0;
+}
+
+.iceberg-block {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 0.8rem 1.8rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  text-align: center;
+  width: 100%;
+  max-width: 360px;
+  letter-spacing: 0.02em;
+}
+
+.iceberg-block.gold {
+  border-color: var(--border-accent);
+  color: var(--accent-gold);
+  background: var(--accent-gold-dim);
+}
+
+.iceberg-block .ib-title { font-weight: 500; }
+
+.iceberg-block .ib-features {
+  font-size: 0.58rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+  font-weight: 300;
+  letter-spacing: 0.03em;
+}
+
+/* ── Combo Mini Diagrams ── */
+.combo-diagram {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+}
+
+.combo-pipe {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.combo-pipe .cp-node {
+  padding: 0.55rem 0.8rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  text-align: center;
+  min-width: 72px;
+}
+
+.combo-pipe .cp-node.gold {
+  background: var(--accent-gold-dim);
+  border-color: var(--border-accent);
+}
+
+.combo-pipe .cp-node .cpn-title {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.combo-pipe .cp-node.gold .cpn-title { color: var(--accent-gold); }
+
+.combo-pipe .cp-node .cpn-sub {
+  font-size: 0.55rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  margin-top: 0.15rem;
+}
+
+.combo-pipe .cp-edge {
+  padding: 0 0.2rem;
+  flex-shrink: 0;
+}
+
+.combo-pipe .cp-edge svg {
+  width: 20px;
+  height: 8px;
+  stroke: var(--accent-gold);
+  opacity: 0.3;
+  stroke-width: 1;
+  fill: none;
+}
+
+/* ── Hybrid Split Diagram ── */
+.hybrid-split {
+  display: flex;
+  gap: 1.2rem;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+}
+
+.hybrid-branch {
+  text-align: center;
+}
+
+.hybrid-branch .hb-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  margin-bottom: 0.6rem;
+}
+
+.hybrid-branch .hb-label.batch-label { color: var(--accent-gold); }
+.hybrid-branch .hb-label.stream-label { color: var(--accent-ember); }
+
+.hybrid-branch .hb-flow {
+  display: flex;
+  align-items: center;
+  gap: 0;
+}
+
+.hybrid-merge {
+  font-family: var(--font-display);
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--text-muted);
+  opacity: 0.5;
+}
+
+/* ── Serving Layer Diagram ── */
+.serve-flow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.serve-flow .sf-note {
+  font-size: 0.68rem;
+  font-weight: 300;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 1rem;
+  line-height: 1.5;
+}
+
+/* ── Inline comparison bars ── */
+.bar-compare {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  max-width: 520px;
+  margin: 0 auto;
+}
+
+.bar-row {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.bar-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  min-width: 120px;
+  text-align: right;
+  letter-spacing: 0.03em;
+}
+
+.bar-track {
+  flex: 1;
+  height: 24px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  overflow: hidden;
+  position: relative;
+}
+
+.bar-fill {
+  height: 100%;
+  border-radius: 3px;
+  display: flex;
+  align-items: center;
+  padding-left: 0.6rem;
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--bg-primary);
+  font-weight: 500;
+  transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+}
+
+.bar-fill.gold { background: var(--accent-gold); }
+.bar-fill.ember { background: var(--accent-ember); }
+.bar-fill.blue { background: var(--accent-blue); }
+.bar-fill.muted { background: var(--text-muted); }
+
+/* ── Timeline / Watermark Diagram ── */
+.timeline-diagram {
+  position: relative;
+  padding: 1.5rem 0;
+  max-width: 560px;
+  margin: 0 auto;
+}
+
+.timeline-track {
+  position: relative;
+  height: 4px;
+  background: var(--border);
+  border-radius: 2px;
+  margin: 2rem 1rem;
+}
+
+.timeline-track::before,
+.timeline-track::after {
+  position: absolute;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  top: -1.5rem;
+}
+
+.timeline-track::before {
+  content: attr(data-label-start);
+  left: 0;
+}
+
+.timeline-track::after {
+  content: attr(data-label-end);
+  right: 0;
+}
+
+.tl-event {
+  position: absolute;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--accent-gold);
+  border: 2px solid var(--bg-primary);
+  z-index: 2;
+}
+
+.tl-event.late {
+  background: var(--accent-ember);
+}
+
+.tl-event .tl-tip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-secondary);
+  background: var(--bg-card);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+}
+
+.tl-event .tl-tip-below {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--accent-ember);
+  background: var(--bg-card);
+  padding: 0.2rem 0.5rem;
+  border-radius: 3px;
+  border: 1px solid var(--accent-ember-dim);
+}
+
+.tl-watermark {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--accent-blue);
+  z-index: 1;
+}
+
+.tl-watermark .tl-wm-label {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--accent-blue);
+}
+
+/* ── Federation Hub Diagram ── */
+.fed-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.fed-sources {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.fed-source {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  padding: 0.45rem 0.85rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.fed-source .fed-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.fed-hub {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem 2rem;
+  margin: 0 1rem;
+  background: var(--accent-gold-dim);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  text-align: center;
+}
+
+.fed-hub .fed-hub-icon { font-size: 1.4rem; margin-bottom: 0.4rem; }
+
+.fed-hub .fed-hub-name {
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: var(--accent-gold);
+}
+
+.fed-hub .fed-hub-desc {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-top: 0.3rem;
+}
+
+.fed-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0 0.5rem;
+}
+
+.fed-line {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, var(--text-muted), var(--accent-gold));
+  opacity: 0.4;
+}
+
+.fed-output {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.2rem 1.5rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.fed-output .fed-out-icon { font-size: 1.1rem; }
+
+.fed-output .fed-out-name {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+}
+
+/* ── dbt DAG mini ── */
+.dbt-dag {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+.dbt-row {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  width: 100%;
+}
+
+.dbt-node {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  padding: 0.5rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text-secondary);
+  background: var(--bg-secondary);
+  text-align: center;
+  flex: 1;
+  max-width: 160px;
+}
+
+.dbt-node.source {
+  border-left: 3px solid var(--text-muted);
+}
+
+.dbt-node.staging {
+  border-left: 3px solid var(--accent-blue);
+}
+
+.dbt-node.mart {
+  border-left: 3px solid var(--accent-gold);
+  background: var(--accent-gold-dim);
+  color: var(--accent-gold);
+}
+
+.dbt-edges {
+  display: flex;
+  justify-content: center;
+  padding: 0.4rem 0;
+}
+
+.dbt-edge-line {
+  width: 1px;
+  height: 14px;
+  background: var(--text-muted);
+  opacity: 0.3;
+}
+
+.dbt-layer-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  color: var(--text-muted);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.4rem 0 0.2rem;
+  text-align: center;
+}
+
+/* ── ClickHouse Performance Viz ── */
+.perf-cards {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.perf-card {
+  padding: 1.2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: center;
+  transition: all 0.3s ease;
+}
+
+.perf-card:hover {
+  border-color: var(--border-accent);
+}
+
+.perf-card .perf-value {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--accent-gold);
+  line-height: 1.2;
+}
+
+.perf-card .perf-unit {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  color: var(--text-muted);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  margin-top: 0.2rem;
+}
+
+.perf-card .perf-label {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  margin-top: 0.5rem;
+  line-height: 1.4;
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE NAV DRAWER
+   ═══════════════════════════════════════════ */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+.mobile-menu-toggle:hover {
+  border-color: var(--accent-gold);
+  color: var(--accent-gold);
+}
+
+.mobile-nav-drawer {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  z-index: 200;
+  padding: 1.5rem;
+  transition: right 0.35s cubic-bezier(0.4,0,0.2,1), var(--theme-transition);
+  overflow-y: auto;
+}
+.mobile-nav-drawer.open { right: 0; }
+
+.mobile-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-nav-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  transition: color 0.2s;
+}
+.mobile-nav-close:hover { color: var(--accent-gold); }
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.mobile-nav-links a {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+.mobile-nav-links a:hover {
+  color: var(--accent-gold);
+  background: var(--accent-gold-dim);
+}
+
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.mobile-nav-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 768px) {
+  .nav { padding: 0 1.2rem; }
+  .nav-center { display: none; }
+  .mobile-menu-toggle { display: flex; }
+  .hero { padding: calc(var(--nav-height) + 4rem) 1.5rem 4rem; }
+  .hero-meta { flex-wrap: wrap; justify-content: center; gap: 1rem; }
+  .content, .content-wide { padding: 0 1.2rem; }
+  .section { padding: 4rem 0; }
+  .tool-card { padding: 1.8rem; }
+  .combo-block { padding: 1.8rem; }
+  .combo-flow { gap: 0.3rem; }
+  .combo-node { font-size: 0.65rem; padding: 0.3rem 0.6rem; }
+  .table-wrap { font-size: 0.8rem; }
+  .arch-diagram { padding: 1.5rem 1rem; }
+  .paradigm-grid { grid-template-columns: 1fr; gap: 0; }
+  .arch-compare { grid-template-columns: 1fr; gap: 1rem; }
+  .arch-vs { padding-top: 0; }
+  .decision-compare { grid-template-columns: 1fr; }
+  .cdc-diagram { flex-direction: column; align-items: center; }
+  .cdc-edge svg { transform: rotate(90deg); }
+  .layer-row { padding: 0.7rem 1rem; gap: 0.8rem; flex-wrap: wrap; }
+  .layer-name { min-width: 100px; font-size: 0.82rem; }
+  .pipe-flow {
+    flex-direction: column;
+    gap: 0;
+    align-items: center;
+  }
+  .pipe-edge svg { transform: rotate(90deg); }
+  .pipe-node { min-width: 140px; padding: 0.7rem 0.8rem; }
+  .iceberg-engines { flex-wrap: wrap; }
+  .combo-pipe { gap: 0.2rem; flex-direction: column; align-items: center; }
+  .combo-pipe .cp-node { min-width: 140px; }
+  .combo-pipe .cp-edge svg { transform: rotate(90deg); }
+  .hybrid-split { flex-direction: column; gap: 0.8rem; }
+  .perf-cards { grid-template-columns: 1fr; }
+  .fed-diagram { flex-direction: column; gap: 1rem; }
+  .fed-lines { flex-direction: row; padding: 0; }
+  .fed-line { width: 1px; height: 30px; background: linear-gradient(180deg, var(--text-muted), var(--accent-gold)); }
+  .fed-hub { margin: 0; }
+  .bar-label { min-width: 80px; font-size: 0.58rem; }
+  .dbt-row { gap: 0.5rem; }
+  .dbt-node { font-size: 0.58rem; padding: 0.4rem 0.6rem; }
+}
+
+@media (max-width: 1024px) and (min-width: 769px) {
+  .nav-center { gap: 1rem; }
+  .nav-center a { font-size: 0.68rem; }
+}
+
+@media (min-width: 1024px) {
+  .tool-grid-two {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+}
+
+/* Print */
+@media print {
+  .nav, .grain, .progress-bar, .back-to-top, .theme-toggle, #ambient-canvas, .hero-orb, .hero-scroll-hint, .mobile-menu-toggle, .mobile-nav-drawer, .mobile-nav-overlay { display: none !important; }
+  .hero { padding-top: 2rem; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  body { background: white; color: #111; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="ambient-canvas"></canvas>
+<div class="grain"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- ═══════════════════════════════ NAV ═══════════════════════════════ -->
+<nav class="nav" id="mainNav">
+  <a href="/blog/" class="nav-brand" style="text-decoration:none;color:inherit;">The <span>Trenches</span></a>
+  <div class="nav-center">
+    <a href="#intro">Prologue</a>
+    <a href="#ingestion">Ingestion</a>
+    <a href="#streaming">Streaming</a>
+    <a href="#transformation">Transform</a>
+    <a href="#orchestration">Orchestrate</a>
+    <a href="#serving">Serving</a>
+    <a href="#map">Map</a>
+    <a href="#combining">Stacks</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-tag">15 Tools</span>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☽</button>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation">☰</button>
+  </div>
+</nav>
+
+<!-- MOBILE NAV DRAWER -->
+<div class="mobile-nav-drawer" id="mobileNavDrawer">
+  <div class="mobile-nav-header">
+    <span class="nav-brand">The <span>Trenches</span></span>
+    <button class="mobile-nav-close" id="mobileNavClose" aria-label="Close navigation">✕</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="#intro">Prologue</a>
+    <a href="#ingestion">Ingestion</a>
+    <a href="#streaming">Streaming</a>
+    <a href="#transformation">Storage &amp; Transform</a>
+    <a href="#orchestration">Orchestration</a>
+    <a href="#serving">Serving</a>
+    <a href="#map">The Map</a>
+    <a href="#combining">Stacks</a>
+  </div>
+</div>
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+<!-- ═══════════════════════════════ HERO ═══════════════════════════════ -->
+<header class="hero">
+  <div class="hero-orb"></div>
+  <div class="hero-eyebrow">Architecture Trenches · 2025</div>
+  <h1 class="hero-title">Game Changers in the<br><em>Data Engineering</em> Space</h1>
+  <p class="hero-subtitle">Fifteen tools that are quietly reshaping how we ingest, transform, stream, orchestrate, and serve data at scale. No hype. Just what actually works in production.</p>
+  <div class="hero-meta">
+    <div class="hero-meta-item"><strong>Boyan Balev</strong></div>
+    <div class="hero-meta-item">22 min read</div>
+    <div class="hero-meta-item">~4,800 words</div>
+  </div>
+  <div class="hero-scroll-hint"><span></span></div>
+</header>
+
+<!-- ═══════════════════════════════ PROLOGUE ═══════════════════════════════ -->
+<section class="section" id="intro">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Prologue</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Landscape <em>Shifts</em></h2>
+    <p class="reveal">There is a moment in every engineer's career where the tools you trusted quietly become the bottleneck. Not all at once. Slowly, like sand swallowing a foundation you thought was solid. One morning you realize your batch pipeline runs for eleven hours, your Kafka cluster needs a team of three just to stay alive, and your orchestration layer has become a maze of YAML that nobody dares to touch.</p>
+    <p class="reveal">I have been there. Most of us have. And the honest truth is that the data engineering landscape in 2025 looks nothing like it did even three years ago. The tools have matured. The abstractions have sharpened. The community has collectively decided that certain problems should not require heroic engineering anymore.</p>
+    <p class="reveal">What follows is not a ranking. It is not a product comparison or a vendor evaluation. It is a field guide, written from the trenches, covering fifteen tools that I believe have fundamentally changed what is possible in data engineering today. Some are new. Some are battle tested veterans that quietly evolved into something far more capable than most people realize. All of them have earned their place here because they solve real problems in ways that actually survive contact with production.</p>
+    <p class="reveal">Paul Atreides did not conquer Arrakis by choosing the most popular weapon. He studied the terrain. He understood the forces at play. He adapted. The same principle applies to building data platforms. You do not pick tools because a blog post told you to. You pick them because you understand the forces acting on your data and you have found the right instrument for each one.</p>
+    <p class="reveal">By the end, we will combine these tools into three production-proven stacks: a modern lakehouse for analytics-first teams, a real-time engine for sub-second use cases, and a pragmatic hybrid for everyone in between. But first, let us walk through each layer together.</p>
+
+    <!-- DIAGRAM: Platform Layers -->
+    <div class="arch-diagram reveal" style="margin-top: 3rem;">
+      <div class="arch-label">The Five Layers of a Modern Data Platform</div>
+      <div class="layer-stack">
+        <div class="layer-row">
+          <div class="layer-marker"><svg viewBox="0 0 24 24"><path d="M12 3v18M5 10l7 7 7-7"/></svg></div>
+          <div class="layer-name">Ingestion</div>
+          <div class="layer-tools"><span class="lt">Airbyte</span><span class="lt">NiFi</span><span class="lt">Debezium</span></div>
+        </div>
+        <div class="layer-row">
+          <div class="layer-marker"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <div class="layer-name">Streaming</div>
+          <div class="layer-tools"><span class="lt">Kafka</span><span class="lt">Redpanda</span><span class="lt">Flink</span><span class="lt">ksqlDB</span></div>
+        </div>
+        <div class="layer-row">
+          <div class="layer-marker"><svg viewBox="0 0 24 24"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z"/></svg></div>
+          <div class="layer-name">Storage &amp; Transform</div>
+          <div class="layer-tools"><span class="lt">dbt</span><span class="lt">Iceberg</span><span class="lt">Trino</span><span class="lt">Spark</span><span class="lt">ClickHouse</span></div>
+        </div>
+        <div class="layer-row">
+          <div class="layer-marker"><svg viewBox="0 0 24 24"><path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/></svg></div>
+          <div class="layer-name">Orchestration</div>
+          <div class="layer-tools"><span class="lt">Airflow</span><span class="lt">Dagster</span><span class="lt">Prefect</span></div>
+        </div>
+        <div class="layer-row">
+          <div class="layer-marker"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div class="layer-name">Serving</div>
+          <div class="layer-tools"><span class="lt">Redis</span><span class="lt">ClickHouse</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART I: INGESTION ═══════════════════════════════ -->
+<section class="section" id="ingestion">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part I</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Ingestion</em> Layer</h2>
+    <p class="reveal">Everything begins with getting data from point A to point B. It sounds trivially simple, but ingestion is where most architectures quietly begin to rot. A missed schema change here. A silent failure there. Before you know it, you are debugging a pipeline at midnight because someone added a column to a Postgres table and nobody told the data team.</p>
+    <p class="reveal">Three tools have fundamentally changed this story.</p>
+
+    <!-- DIAGRAM: Three Ingestion Paradigms -->
+    <div class="arch-diagram reveal" style="margin-top: 2rem;">
+      <div class="arch-label">Three Ingestion Paradigms</div>
+      <div class="paradigm-grid">
+        <div class="paradigm-card">
+          <div class="pc-number">Paradigm I</div>
+          <div class="pc-icon"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg></div>
+          <div class="pc-name">Batch Pull</div>
+          <div class="pc-tool">Airbyte</div>
+          <div class="pc-desc">Scheduled extraction from APIs and databases. Handles the 80% of data that tolerates hourly refreshes.</div>
+          <div class="pc-flow">
+            <span class="pcf-node">SaaS APIs · Databases</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">Connector (CDK)</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">Warehouse / Lake</span>
+          </div>
+        </div>
+        <div class="paradigm-card">
+          <div class="pc-number">Paradigm II</div>
+          <div class="pc-icon"><svg viewBox="0 0 24 24"><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M4 4l17 17"/></svg></div>
+          <div class="pc-name">Flow Routing</div>
+          <div class="pc-tool">Apache NiFi</div>
+          <div class="pc-desc">Visual directed-graph processing. Excels when data arrives in unpredictable formats from many sources.</div>
+          <div class="pc-flow">
+            <span class="pcf-node">Heterogeneous Sources</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">Processor Graph</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">N Destinations</span>
+          </div>
+        </div>
+        <div class="paradigm-card">
+          <div class="pc-number">Paradigm III</div>
+          <div class="pc-icon"><svg viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg></div>
+          <div class="pc-name">Change Data Capture</div>
+          <div class="pc-tool">Debezium</div>
+          <div class="pc-desc">Real-time event streams from database transaction logs. No polling. No missed deletes.</div>
+          <div class="pc-flow">
+            <span class="pcf-node">DB Transaction Log</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">Debezium</span>
+            <span class="pcf-edge"></span>
+            <span class="pcf-node">Event Stream</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="tool-grid reveal-stagger">
+      <!-- Tool 1: Airbyte -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">01</span>
+          <span class="tool-card-category">Batch Ingestion</span>
+        </div>
+        <div class="tool-card-title">Airbyte</div>
+        <div class="tool-card-tagline">The open source EL that actually works.</div>
+        <p>For years, "just connect to the API" was the starting point of every data project, and the beginning of every data team's pain. Airbyte changed this by building a connector catalog so massive (350+ and counting) that it effectively commoditized the ingestion layer. Write a connector once in any language using the CDK, publish it, and it becomes everyone's connector.</p>
+        <p>But here is what makes Airbyte genuinely different: <strong>it is built on the principle that data extraction should not be a competitive advantage.</strong> It should be infrastructure. Like electricity. The value is in what you do with the data, not in how you extracted it.</p>
+        <p>The architecture is elegant in its simplicity. Each connector runs in its own container, producing records in a standardized protocol. Source and destination are decoupled. You can swap either without touching the other. It is the Unix philosophy applied to data movement.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Batch ingestion from SaaS APIs, databases, or file systems into your warehouse or lake. Particularly powerful when you have 10+ diverse sources and do not want to maintain custom scripts for each one. Not ideal for sub second latency requirements, that is a different paradigm entirely.</p>
+        </div>
+      </div>
+
+      <!-- Tool 2: Apache NiFi -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">02</span>
+          <span class="tool-card-category">Flow Based Routing</span>
+        </div>
+        <div class="tool-card-title">Apache NiFi</div>
+        <div class="tool-card-tagline">The Swiss Army knife of data routing.</div>
+        <p>NiFi is one of those tools that does not get the hype it deserves, probably because it came from the NSA and its UI looks like it was designed by government contractors (because it was). But beneath the dated aesthetics lies one of the most powerful data routing engines ever built.</p>
+        <p>The concept is beautifully simple. Data flows through a directed graph of processors. Each processor does one thing: fetch from an API, filter records, transform formats, route based on content, write to a destination. You compose them visually, like LEGO blocks for data.</p>
+        <p><strong>Where NiFi shines is in the messy middle,</strong> the scenarios where data arrives in unpredictable formats from unreliable sources and needs to be routed to multiple destinations with different requirements. It handles backpressure natively, retries gracefully, and provides data provenance tracking that can trace a single byte from source to destination.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Complex routing logic, government and enterprise environments with strict data provenance requirements, IoT data collection with heterogeneous sources, or any scenario where you need to fan out data to many destinations with different transformation rules. Overkill for simple A to B data movement.</p>
+        </div>
+      </div>
+
+      <!-- Tool 3: Debezium -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">03</span>
+          <span class="tool-card-category">Change Data Capture</span>
+        </div>
+        <div class="tool-card-title">Debezium</div>
+        <div class="tool-card-tagline">Your database's event stream, hiding in plain sight.</div>
+        <p>Here is a truth that took me embarrassingly long to internalize: <strong>every database is already an event stream.</strong> Every INSERT, UPDATE, and DELETE is an event. Debezium simply makes those events accessible.</p>
+        <p>It works by reading the database's transaction log (WAL in Postgres, binlog in MySQL, oplog in MongoDB) and converting each change into a structured event that gets published to Kafka or Redpanda. No polling. No "last modified" timestamp hacks. No missed deletes. Just a faithful reproduction of every change, in order, as it happens.</p>
+        <p>This sounds simple, but the implications are profound. With Debezium, your operational database becomes a source of truth that can feed real time analytics, cache invalidation, search index updates, and cross service data synchronization, all without modifying a single line of application code.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Real time replication from operational databases. Cache invalidation when paired with Redis. Event driven microservice architectures. Building a change log for auditing. Converting a monolith's database into an event driven system without rewriting the monolith.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- DIAGRAM: CDC Architecture -->
+  <div class="content-wide">
+    <div class="arch-diagram reveal" style="margin-top: 0;">
+      <div class="arch-label">Debezium CDC — From Transaction Log to Consumers</div>
+      <div class="cdc-diagram">
+        <div class="cdc-stage">
+          <div class="cs-box"><svg viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.66-4 3-9 3s-9-1.34-9-3"/><path d="M3 5v14c0 1.66 4 3 9 3s9-1.34 9-3V5"/></svg></div>
+          <div class="cs-name">Postgres / MySQL</div>
+          <div class="cs-sub">Operational DB</div>
+        </div>
+        <div class="cdc-edge"><svg viewBox="0 0 24 8"><line x1="0" y1="4" x2="20" y2="4"/><polyline points="17,1 20,4 17,7"/></svg></div>
+        <div class="cdc-stage">
+          <div class="cs-box"><svg viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="13" y2="17"/></svg></div>
+          <div class="cs-name">WAL / Binlog</div>
+          <div class="cs-sub">Transaction log</div>
+        </div>
+        <div class="cdc-edge"><svg viewBox="0 0 24 8"><line x1="0" y1="4" x2="20" y2="4"/><polyline points="17,1 20,4 17,7"/></svg></div>
+        <div class="cdc-stage">
+          <div class="cs-box primary"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg></div>
+          <div class="cs-name">Debezium</div>
+          <div class="cs-sub">Reads &amp; emits events</div>
+        </div>
+        <div class="cdc-edge"><svg viewBox="0 0 24 8"><line x1="0" y1="4" x2="20" y2="4"/><polyline points="17,1 20,4 17,7"/></svg></div>
+        <div class="cdc-stage">
+          <div class="cs-box primary"><svg viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg></div>
+          <div class="cs-name">Kafka / Redpanda</div>
+          <div class="cs-sub">Event backbone</div>
+        </div>
+        <div class="cdc-edge"><svg viewBox="0 0 24 8"><line x1="0" y1="4" x2="20" y2="4"/><polyline points="17,1 20,4 17,7"/></svg></div>
+        <div class="cdc-fanout">
+          <div class="cf-item"><span class="cf-dot"></span>Analytics · ClickHouse</div>
+          <div class="cf-item"><span class="cf-dot"></span>Search · Elasticsearch</div>
+          <div class="cf-item"><span class="cf-dot"></span>Cache · Redis</div>
+          <div class="cf-item"><span class="cf-dot"></span>Downstream services</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PULL QUOTE ═══════════════════════════════ -->
+<section class="section" style="padding: 2rem 0;">
+  <div class="pull-quote reveal">
+    <p>"The spice must flow" is not just a line from a novel. In data engineering, the flow is everything. The moment your pipeline stops, your business is flying blind. <em>Every tool you choose is a bet on continuity.</em></p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART II: STREAMING ═══════════════════════════════ -->
+<section class="section" id="streaming">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part II</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Streaming</em> Layer</h2>
+    <p class="reveal">Batch processing got us far. But there is a class of problems where waiting for the next scheduled run is simply not acceptable. Fraud detection. Real time personalization. Operational monitoring. These problems demand that data moves continuously, like blood through a circulatory system.</p>
+    <p class="reveal">On Arrakis, the spice harvesters had minutes to extract melange before a sandworm arrived. There was no luxury of a scheduled run. You moved fast or you were consumed. The same urgency applies to streaming data. When the business depends on sub second decisions, batch is not slow — it is a liability.</p>
+    <p class="reveal">Three tools define this space today.</p>
+
+    <!-- DIAGRAM: Streaming Architecture -->
+    <div class="arch-diagram reveal" style="margin-top: 2rem;">
+      <div class="arch-label">Streaming Data Architecture</div>
+      <div class="pipe-flow">
+        <div class="pipe-node">
+          <div class="pn-title">Producers</div>
+          <div class="pn-sub">Apps, CDC, IoT devices</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node gold">
+          <div class="pn-title">Kafka / Redpanda</div>
+          <div class="pn-sub">Durable event log</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node">
+          <div class="pn-title">Flink / ksqlDB</div>
+          <div class="pn-sub">Process &amp; enrich</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node">
+          <div class="pn-title">Sinks</div>
+          <div class="pn-sub">ClickHouse, Redis, S3</div>
+        </div>
+      </div>
+      <div style="display:flex; justify-content:center; gap:3rem; margin-top:1.4rem; flex-wrap:wrap;">
+        <div style="text-align:center; max-width:200px;">
+          <div style="font-family:var(--font-mono); font-size:0.58rem; color:var(--accent-gold); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.3rem;">Flink</div>
+          <div style="font-size:0.7rem; font-weight:300; color:var(--text-muted); line-height:1.5;">Complex event processing, event-time windows, exactly-once semantics</div>
+        </div>
+        <div style="text-align:center; max-width:200px;">
+          <div style="font-family:var(--font-mono); font-size:0.58rem; color:var(--accent-gold); letter-spacing:0.1em; text-transform:uppercase; margin-bottom:0.3rem;">ksqlDB</div>
+          <div style="font-size:0.7rem; font-weight:300; color:var(--text-muted); line-height:1.5;">SQL-native streaming: filters, aggregations, materialized views</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="tool-grid reveal-stagger">
+      <!-- Tool 4: Kafka / Redpanda -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">04</span>
+          <span class="tool-card-category">Event Backbone</span>
+        </div>
+        <div class="tool-card-title">Kafka / Redpanda</div>
+        <div class="tool-card-tagline">The central nervous system of modern data.</div>
+        <p>Kafka invented the category. It proved that you could build a distributed, durable, high throughput event log that decouples producers from consumers and lets you replay history. That insight changed everything.</p>
+        <p>But Kafka also comes with baggage. ZooKeeper management (finally being replaced with KRaft, but slowly). JVM tuning nightmares. A complexity tax that makes small teams hesitate. This is where Redpanda enters the conversation.</p>
+        <p><strong>Redpanda is a Kafka compatible streaming platform written in C++</strong> that runs without the JVM, without ZooKeeper, and with tail latencies that are consistently lower. It speaks the Kafka protocol, so your existing producers, consumers, Kafka Connect integrations, and client libraries all work without changes. You just point them at Redpanda instead.</p>
+        <p>For large organizations already running Kafka successfully, migration might not be worth the effort. But for new projects or teams without dedicated Kafka expertise, Redpanda removes an entire category of operational headaches while delivering the same (often better) performance.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Any architecture that needs durable, ordered event streaming. Microservice communication, CDC event transport, real time analytics ingestion, or any scenario where you need a reliable backbone between data producers and consumers. Kafka for large, established deployments. Redpanda for everything else.</p>
+        </div>
+      </div>
+
+      <!-- Tool 5: Apache Flink -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">05</span>
+          <span class="tool-card-category">Stream Processing</span>
+        </div>
+        <div class="tool-card-title">Apache Flink</div>
+        <div class="tool-card-tagline">Where time becomes a first class citizen.</div>
+        <p>Flink does something that most data tools only pretend to do: it treats time correctly. Not wall clock time. Not processing time. <strong>Event time,</strong> the actual moment something happened in the real world.</p>
+        <p>This matters more than most engineers realize. When you are computing a 5 minute window of transactions, do you mean the 5 minutes when your system processed them, or the 5 minutes when the transactions actually occurred? Late arriving data, out of order events, network delays: these are not edge cases, they are the normal state of distributed systems. Flink handles all of them through its watermark mechanism.</p>
+        <p>The programming model gives you exactly once processing guarantees with checkpoint based fault tolerance. If a node fails, Flink rolls back to the last consistent checkpoint and replays from there. No duplicate processing. No lost events. For anyone who has tried to build this manually, you know how valuable that guarantee is.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Complex event processing, real time aggregations, streaming ETL, fraud detection, and any scenario where event time semantics and exactly once processing matter. The learning curve is steep, but the payoff is enormous for the right use case.</p>
+        </div>
+      </div>
+
+      <!-- Tool 6: ksqlDB -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">06</span>
+          <span class="tool-card-category">Streaming SQL</span>
+        </div>
+        <div class="tool-card-title">ksqlDB</div>
+        <div class="tool-card-tagline">SQL that never stops running.</div>
+        <p>Not every streaming use case needs the full power of Flink. Sometimes you just want to filter, aggregate, or join streams using SQL. That is exactly what ksqlDB provides.</p>
+        <p>Think of it as a SQL engine where your queries do not return results and terminate. They run continuously, processing every new event as it arrives on a Kafka topic and producing results to another topic. A "SELECT count(*) FROM orders WHERE status = 'failed' GROUP BY region" does not give you a snapshot. It gives you a living, breathing materialized view that updates in real time.</p>
+        <p>The sweet spot for ksqlDB is in teams that have strong SQL skills but limited experience with distributed stream processing frameworks. It lets you build streaming applications without writing Java or Scala, using a language your analysts already know.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Streaming aggregations, event filtering, stream to stream joins, and materialized views over Kafka topics. Ideal when your team speaks SQL fluently and the processing logic is not so complex that it demands Flink's full programming model.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART III: STORAGE & TRANSFORMATION ═══════════════════════════════ -->
+<section class="section" id="transformation">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part III</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">Storage and <em>Transformation</em></h2>
+    <p class="reveal">Data at rest is only valuable if you can shape it and query it efficiently. This layer is where raw signals become actionable knowledge. And it is where, frankly, the most interesting architectural battles of 2025 are being fought.</p>
+    <p class="reveal">The Fremen did not simply collect spice. They refined it, processed it, understood its molecular structure before they could wield its true power. The engineers who build lasting data platforms are the ones who deeply understand how their storage and transformation layers actually work under the hood — not just the interfaces, but the mechanics.</p>
+  </div>
+
+  <div class="content-wide">
+    <div class="tool-grid reveal-stagger">
+      <!-- Tool 7: dbt -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">07</span>
+          <span class="tool-card-category">Transformation</span>
+        </div>
+        <div class="tool-card-title">dbt</div>
+        <div class="tool-card-tagline">Software engineering discipline, applied to SQL.</div>
+        <p>Before dbt, SQL transformations lived in one of two places: stored procedures maintained by a DBA who left two years ago, or Python scripts buried in an orchestrator that nobody fully understood. dbt changed this by bringing version control, testing, documentation, and dependency management to SQL transformations.</p>
+        <p>The core insight is powerful. <strong>SQL is the right language for transforming tabular data.</strong> What it lacked was not expressiveness, but engineering discipline. dbt provides that discipline without asking you to abandon SQL for Python or Spark. You write SELECT statements. dbt handles the DDL, materializes the results, runs tests, generates documentation, and manages the dependency graph.</p>
+        <p>The result is transformations that are readable, testable, and maintainable by anyone who can write SQL. That is not a small thing. It means your analytics engineer can own the transformation layer end to end, without needing a data engineer to babysit every deployment.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Any warehouse or lakehouse transformation pipeline. Particularly valuable when multiple people need to collaborate on transformation logic, when you need lineage tracking, or when your transformations have grown beyond what a single script can maintain.</p>
+        </div>
+      </div>
+
+      <!-- Tool 8: Apache Iceberg -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">08</span>
+          <span class="tool-card-category">Table Format</span>
+        </div>
+        <div class="tool-card-title">Apache Iceberg</div>
+        <div class="tool-card-tagline">The table format that freed data from the warehouse.</div>
+        <p>Iceberg solves a problem so fundamental that most engineers do not even realize it exists until they hit it: <strong>how do you give warehouse level reliability to data sitting on object storage?</strong></p>
+        <p>Traditional data lakes on S3 or GCS are just files in folders. No transactions. No schema enforcement. No time travel. No concurrent write safety. Iceberg adds all of these capabilities through a metadata layer that sits between your query engine and your Parquet files.</p>
+        <p>The practical impact is enormous. With Iceberg, you can run Trino, Spark, Flink, and Presto against the same data simultaneously. You get ACID transactions on object storage. You get schema evolution without rewriting data. You get partition evolution that lets you change your partitioning strategy without migration. And because the data is just Parquet files on S3, you are never locked into a vendor.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Building a lakehouse on object storage. Multi engine environments (Spark for ETL, Trino for interactive queries, Flink for streaming). Any scenario where you want warehouse grade reliability without warehouse grade vendor lock in.</p>
+        </div>
+      </div>
+
+      <!-- DIAGRAM: Iceberg Lakehouse -->
+      <div class="arch-diagram reveal" style="margin-top: 0.5rem;">
+        <div class="arch-label">Apache Iceberg — Open Lakehouse Architecture</div>
+        <div class="iceberg-stack">
+          <div class="iceberg-engines">
+            <div class="ie-node">Trino</div>
+            <div class="ie-node">Spark</div>
+            <div class="ie-node">Flink</div>
+          </div>
+          <div class="iceberg-connector">
+            <div class="ic-line"></div>
+            <div class="ic-label">all engines read the same tables</div>
+            <div class="ic-line"></div>
+          </div>
+          <div class="iceberg-block gold">
+            <div class="ib-title">Iceberg Metadata Layer</div>
+            <div class="ib-features">ACID transactions · Schema evolution · Time travel · Partition evolution</div>
+          </div>
+          <div class="iceberg-connector">
+            <div class="ic-line"></div>
+          </div>
+          <div class="iceberg-block">
+            <div class="ib-title">Parquet Files on S3 / GCS</div>
+            <div class="ib-features">Open format · No vendor lock-in · ~10:1 compression</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tool 9: Trino -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">09</span>
+          <span class="tool-card-category">Query Federation</span>
+        </div>
+        <div class="tool-card-title">Trino</div>
+        <div class="tool-card-tagline">One query engine to rule them all.</div>
+        <p>Trino (formerly PrestoSQL) is a distributed SQL query engine that can query data wherever it lives. Iceberg tables on S3, MySQL, PostgreSQL, Elasticsearch, Cassandra, Redis, even Google Sheets. You write one SQL query, and Trino federates across sources, pushes down predicates, and returns results in seconds.</p>
+        <p>The beauty of Trino is that it separates compute from storage entirely. Your data stays where it is. Trino just queries it. This means you can upgrade your query infrastructure without migrating a single byte of data. And because it scales horizontally, you can add workers to handle peak loads and remove them when demand drops.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Interactive analytics over lakehouse data (Iceberg + Trino is a killer combination). Cross source queries when data lives in multiple systems. Ad hoc exploration where you need sub minute response times on terabyte scale datasets.</p>
+        </div>
+      </div>
+
+      <!-- Tool 10: Apache Spark -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">10</span>
+          <span class="tool-card-category">Distributed Compute</span>
+        </div>
+        <div class="tool-card-title">Apache Spark</div>
+        <div class="tool-card-tagline">The gravitational center of large scale data processing.</div>
+        <p>Spark needs no introduction, but it deserves a more nuanced one. Spark in 2025 is far beyond the MapReduce successor many still picture. Structured Streaming is a viable continuous processing engine. The Catalyst optimizer improves with every release. Spark Connect has decoupled the client from the cluster entirely.</p>
+        <p><strong>Where Spark truly shines is in complex, multi stage transformations</strong> that would be painful in SQL alone: ML feature pipelines, graph processing, large scale ETL with custom business logic. For simple SQL transforms, dbt on Trino will do. For everything else, Spark remains the gravitational center.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Large scale batch ETL (hundreds of GB to PB). ML feature engineering. Complex transformations beyond SQL. Overkill for simple analytics queries.</p>
+        </div>
+      </div>
+
+      <!-- Tool 11: ClickHouse -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">11</span>
+          <span class="tool-card-category">Analytical Database</span>
+        </div>
+        <div class="tool-card-title">ClickHouse</div>
+        <div class="tool-card-tagline">The speed demon that rewrites your assumptions about query performance.</div>
+        <p>The first time you run a query on ClickHouse and it returns results in 50 milliseconds on a dataset that takes your warehouse 30 seconds, something shifts in your brain. You start to question every architectural assumption you have made about acceptable query latency. (The <a href="https://benchmark.clickhouse.com/" style="color: var(--accent-gold); text-decoration: none; border-bottom: 1px solid var(--accent-gold-dim);">ClickBench</a> results bear this out across dozens of analytical queries.)</p>
+        <p>ClickHouse achieves this through a combination of columnar storage, aggressive vectorized execution, and a storage engine (MergeTree) that is purpose built for analytical workloads. It compresses data so efficiently that many deployments see 10:1 compression ratios, which means your storage costs drop dramatically while your query performance improves.</p>
+        <p><strong>The catch:</strong> ClickHouse is opinionated. It is built for append heavy, analytical workloads. Frequent updates, heavy joins across large tables, and OLTP style access patterns are not its strength. But within its sweet spot, nothing else comes close.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Real time analytics dashboards, log analytics, time series data at scale, and any scenario where you need sub second query latency on billions of rows. Pairs beautifully with Kafka/Redpanda as a real time analytics sink.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PULL QUOTE ═══════════════════════════════ -->
+<section class="section" style="padding: 2rem 0;">
+  <div class="pull-quote reveal">
+    <p>The best engineers approach new tools the way the Fremen approach the desert: with humility, patience, and a willingness to learn its rhythms before trying to bend it to theirs. <em>Master the tool's language before you impose your own.</em></p>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART IV: ORCHESTRATION ═══════════════════════════════ -->
+<section class="section" id="orchestration">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part IV</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Orchestration</em> Layer</h2>
+    <p class="reveal">Having great tools means nothing if you cannot coordinate them. Orchestration is the invisible hand that ensures your ingestion runs before your transformation, your models refresh before your dashboards update, and when something fails at 3 AM, you know about it before your stakeholders do.</p>
+    <p class="reveal">This is the layer where discipline separates amateurs from professionals.</p>
+
+    <!-- DIAGRAM: Orchestration Mental Models -->
+    <div class="arch-diagram reveal" style="margin-top: 2rem;">
+      <div class="arch-label">Two Mental Models for Orchestration</div>
+      <div class="arch-compare">
+        <div class="arch-col">
+          <div class="ac-title">Task-Centric</div>
+          <div class="ac-sub">Airflow · Prefect</div>
+          <div class="ac-chain">
+            <div class="ac-node task-node">extract_api_data</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node task-node">load_to_staging</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node task-node">transform_data</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node task-node">run_tests</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node task-node">publish_to_prod</div>
+          </div>
+          <div class="ac-footer">"Did task X succeed?"</div>
+        </div>
+        <div class="arch-vs">vs</div>
+        <div class="arch-col accent-col">
+          <div class="ac-title">Asset-Centric</div>
+          <div class="ac-sub">Dagster</div>
+          <div class="ac-chain">
+            <div class="ac-node asset-node">raw_api_data</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node asset-node">clean_events</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node asset-node">user_metrics</div>
+            <div class="ac-edge"></div>
+            <div class="ac-node asset-node">dashboard_feed</div>
+          </div>
+          <div class="ac-footer">"Is asset Y fresh?"</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="tool-grid reveal-stagger">
+      <!-- Tool 12: Airflow -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">12</span>
+          <span class="tool-card-category">Workflow Engine</span>
+        </div>
+        <div class="tool-card-title">Apache Airflow</div>
+        <div class="tool-card-tagline">The orchestrator that defined the category.</div>
+        <p>Airflow created the modern concept of data orchestration. DAGs (Directed Acyclic Graphs) as code. Pluggable operators. A web UI for monitoring and debugging. An ecosystem so vast that there is an operator for nearly everything. For all its warts, Airflow remains the most battle tested, widely deployed, and well understood orchestrator in the ecosystem.</p>
+        <p>The honest assessment: Airflow is showing its age in places. The scheduler can be slow with thousands of DAGs. Testing DAGs locally is more painful than it should be. Dynamic task generation feels bolted on rather than native. But Airflow 2.x addressed many early complaints, and the sheer size of the community means answers, patterns, and integrations exist for nearly every scenario.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Production data orchestration at any scale. Especially if your team already knows it, the switching cost to alternatives is real. New projects might prefer Dagster or Prefect, but Airflow remains the safe, proven choice for organizations that value stability over novelty.</p>
+        </div>
+      </div>
+
+      <!-- Tool 13: Dagster -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">13</span>
+          <span class="tool-card-category">Asset Orchestration</span>
+        </div>
+        <div class="tool-card-title">Dagster</div>
+        <div class="tool-card-tagline">Orchestration reimagined around data assets.</div>
+        <p>Dagster takes a fundamentally different approach from Airflow. Instead of defining workflows as sequences of tasks, you define your data assets and the dependencies between them. The orchestrator figures out what needs to run and in what order.</p>
+        <p>This asset centric model changes how you think about pipelines. Instead of asking "did task X succeed?" you ask "is asset Y fresh?" Instead of debugging a chain of task failures, you look at which assets are stale and why. It is a subtle but powerful shift that aligns orchestration with how data consumers actually think about data.</p>
+        <p><strong>The developer experience is genuinely excellent.</strong> Type checked resources, built in testing, local development that mirrors production, and a UI that makes Airflow's look dated. The tradeoff is a smaller ecosystem and a steeper initial learning curve for teams coming from Airflow.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>New data platforms being built from scratch. Teams that value developer experience and testing. Organizations where data freshness and asset health are primary concerns. Pairs exceptionally well with dbt.</p>
+        </div>
+      </div>
+
+      <!-- Tool 14: Prefect -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">14</span>
+          <span class="tool-card-category">Modern Workflow</span>
+        </div>
+        <div class="tool-card-title">Prefect</div>
+        <div class="tool-card-tagline">Orchestration that gets out of your way.</div>
+        <p>Prefect's philosophy is simple: you should not have to learn a new paradigm to orchestrate your code. Just decorate your Python functions, and Prefect handles the rest. Scheduling, retries, logging, alerting, and a clean UI for monitoring.</p>
+        <p>Where Prefect 2.x really shines is in hybrid deployments. Your orchestration control plane can be fully managed (Prefect Cloud), while your code runs on your own infrastructure. This separation is elegant: you get the operational simplicity of a managed service without sending your data or code to a third party.</p>
+        <p>The learning curve is the shallowest of any orchestrator on this list. If your team writes Python and wants orchestration without the cognitive overhead of Airflow's operator model or Dagster's asset framework, Prefect is the path of least resistance.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Python heavy teams that want fast time to value. Workflows that mix data pipelines with ML training, API calls, and general automation. Teams that want managed orchestration without vendor lock in on the compute side.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART V: SERVING ═══════════════════════════════ -->
+<section class="section" id="serving">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part V</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Serving</em> Layer</h2>
+    <p class="reveal">Data that cannot be served quickly is data that cannot drive decisions. The serving layer is the final bridge between your carefully engineered pipeline and the applications and humans that depend on it.</p>
+
+    <!-- DIAGRAM: Serving Pattern -->
+    <div class="arch-diagram reveal" style="margin-top: 2rem;">
+      <div class="arch-label">The Hot / Cold Serving Pattern</div>
+      <div class="pipe-flow">
+        <div class="pipe-node">
+          <div class="pn-title">Pipeline Output</div>
+          <div class="pn-sub">Batch or streaming</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node">
+          <div class="pn-title">Pre-compute</div>
+          <div class="pn-sub">Aggregations, features, metrics</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node gold">
+          <div class="pn-title">Redis</div>
+          <div class="pn-sub">&lt; 1 ms · Hot 1% of data</div>
+        </div>
+        <div class="pipe-edge"><svg viewBox="0 0 28 10"><line x1="2" y1="5" x2="22" y2="5"/><polyline points="19,2 22,5 19,8"/></svg></div>
+        <div class="pipe-node">
+          <div class="pn-title">Application</div>
+          <div class="pn-sub">User-facing reads</div>
+        </div>
+      </div>
+      <div style="text-align:center; margin-top:1.2rem; font-size:0.72rem; font-weight:300; color:var(--text-muted); line-height:1.6;">
+        Cold data remains in ClickHouse or the lakehouse for ad-hoc queries.<br>Hot data is promoted to Redis for sub-millisecond serving.
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="tool-grid">
+      <!-- Tool 15: Redis -->
+      <div class="tool-card reveal">
+        <div class="tool-card-header">
+          <span class="tool-card-number">15</span>
+          <span class="tool-card-category">In Memory Serving</span>
+        </div>
+        <div class="tool-card-title">Redis</div>
+        <div class="tool-card-tagline">The sub millisecond layer between your data and your users.</div>
+        <p>In the data engineering context, Redis plays one critical role: it makes pre computed results available to applications with sub millisecond latency. Your pipeline computes aggregations, features, or derived metrics and writes them to Redis. Your application reads from Redis instead of hitting the warehouse. Response times in microseconds, not seconds.</p>
+        <p>What was once just a cache has evolved into a versatile serving platform. <strong>Redis Streams</strong> add lightweight event streaming for use cases where Kafka is too heavy. <strong>Redis Search</strong> provides full text search over cached data. <strong>Redis TimeSeries</strong> handles time series with built in aggregation. The discipline is in what you store — Redis is expensive per gigabyte, so use it for the hot 1% of your dataset that serves 99% of traffic.</p>
+        <div class="tool-card-use">
+          <div class="tool-card-use-label">When to reach for it</div>
+          <p>Feature serving for ML models. Session data. Real time leaderboards. Rate limiting. Any scenario where your application needs data in under a millisecond.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART VI: THE MAP ═══════════════════════════════ -->
+<section class="section" id="map">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part VI</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Map</em></h2>
+    <p class="reveal">Every tool has a sweet spot and a danger zone. The trick is matching the tool to the problem, not the other way around.</p>
+
+    <!-- DIAGRAM: Batch vs Streaming Decision -->
+    <div class="arch-diagram reveal" style="margin-top: 2rem;">
+      <div class="arch-label">Batch vs. Streaming — Architecture Decision Guide</div>
+      <div class="decision-compare">
+        <div class="decision-col">
+          <div class="dc-title">Batch Stack</div>
+          <div class="dc-sub">Minutes to hours latency</div>
+          <div class="dc-chain">
+            <div class="dc-node">Airbyte / NiFi</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">S3 / GCS</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node gold">Iceberg</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">dbt + Trino / Spark</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">Airflow / Dagster</div>
+          </div>
+          <div class="dc-footer">Simpler · Lower cost · Easier to debug</div>
+        </div>
+        <div class="decision-col accent-col">
+          <div class="dc-title">Streaming Stack</div>
+          <div class="dc-sub">Milliseconds to seconds latency</div>
+          <div class="dc-chain">
+            <div class="dc-node">Debezium / Producers</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node gold">Kafka / Redpanda</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">Flink / ksqlDB</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">ClickHouse / Redis</div>
+            <div class="dc-edge"></div>
+            <div class="dc-node">Always-on (K8s)</div>
+          </div>
+          <div class="dc-footer">Real-time · Event-driven · Sub-second</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Layer</th>
+            <th>Batch Stack</th>
+            <th>Streaming Stack</th>
+            <th>Key Tradeoff</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Ingestion</td>
+            <td>Airbyte, NiFi, custom scripts</td>
+            <td>Debezium CDC, direct producers</td>
+            <td>Connector breadth vs. latency</td>
+          </tr>
+          <tr>
+            <td>Transport</td>
+            <td>Object storage (S3, GCS)</td>
+            <td>Kafka / Redpanda</td>
+            <td>Cost vs. real time capability</td>
+          </tr>
+          <tr>
+            <td>Storage</td>
+            <td>Iceberg, ClickHouse, Trino</td>
+            <td>Kafka (event log), ClickHouse</td>
+            <td>Query flexibility vs. write speed</td>
+          </tr>
+          <tr>
+            <td>Transformation</td>
+            <td>dbt, Spark, SQL</td>
+            <td>Flink, ksqlDB, Spark Streaming</td>
+            <td>Simplicity vs. latency</td>
+          </tr>
+          <tr>
+            <td>Orchestration</td>
+            <td>Airflow, Dagster, Prefect</td>
+            <td>Always on (K8s, managed Flink)</td>
+            <td>Control vs. operational overhead</td>
+          </tr>
+          <tr>
+            <td>Serving</td>
+            <td>Warehouse queries, caching</td>
+            <td>Pre computed views in Redis/ClickHouse</td>
+            <td>Freshness vs. cost</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ PART VII: COMBINING ═══════════════════════════════ -->
+<section class="section" id="combining">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part VII</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Art of <em>Combination</em></h2>
+    <p class="reveal">Individual tools are interesting. Combinations are where the magic happens. Here are the stacks I have seen work in production, and when each one makes sense.</p>
+  </div>
+
+  <div class="content-wide">
+    <!-- Combo 1 -->
+    <div class="combo-block reveal">
+      <div class="combo-title">The Modern Lakehouse</div>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">Best for: Analytics first organizations, 10 to 100 TB range, SQL heavy teams</p>
+      <div class="combo-flow">
+        <span class="combo-node">Airbyte</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">Iceberg on S3</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">dbt</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">Trino</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">Dagster</span>
+      </div>
+      <p>This is the stack I recommend most often. Airbyte handles extraction from dozens of sources. Data lands in Iceberg tables on S3, open format, no lock in. dbt transforms raw data into clean models with testing and documentation. Trino provides the interactive query layer. Dagster orchestrates everything and keeps the asset graph healthy. Total infrastructure cost for a mid size company: roughly $500 to $2,000/month on bare metal or Hetzner — a fraction of equivalent managed warehouse pricing, assuming your team can handle the ops overhead.</p>
+      <div class="combo-diagram">
+        <div class="combo-pipe">
+          <div class="cp-node"><div class="cpn-title">Sources</div><div class="cpn-sub">APIs, DBs, files</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node gold"><div class="cpn-title">Airbyte</div><div class="cpn-sub">Extract</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node"><div class="cpn-title">Iceberg / S3</div><div class="cpn-sub">Store</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node gold"><div class="cpn-title">dbt → Trino</div><div class="cpn-sub">Transform &amp; query</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node"><div class="cpn-title">Dagster</div><div class="cpn-sub">Orchestrate</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Combo 2 -->
+    <div class="combo-block reveal">
+      <div class="combo-title">The Real Time Analytics Engine</div>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">Best for: Product analytics, user facing dashboards, sub second query requirements</p>
+      <div class="combo-flow">
+        <span class="combo-node">Debezium</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">Redpanda</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">Flink</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">ClickHouse</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">Redis</span>
+      </div>
+      <p>When latency matters, this is the stack. Debezium captures changes from your operational database in real time. Redpanda provides the durable event backbone with predictable latency. Flink processes, enriches, and aggregates the stream. ClickHouse stores the results for ad hoc analytics. Redis serves the hottest metrics to your application with sub millisecond reads. End to end latency from database change to dashboard: under 5 seconds.</p>
+      <div class="combo-diagram">
+        <div class="combo-pipe">
+          <div class="cp-node"><div class="cpn-title">DB Changes</div><div class="cpn-sub">INSERT, UPDATE</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node gold"><div class="cpn-title">Debezium</div><div class="cpn-sub">CDC</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node"><div class="cpn-title">Redpanda</div><div class="cpn-sub">Event log</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node gold"><div class="cpn-title">Flink</div><div class="cpn-sub">Process</div></div>
+          <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="cp-node"><div class="cpn-title">ClickHouse + Redis</div><div class="cpn-sub">Serve &lt; 5 s</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Combo 3 -->
+    <div class="combo-block reveal">
+      <div class="combo-title">The Pragmatist's Hybrid</div>
+      <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1rem;">Best for: Most organizations, growing data needs, teams that value simplicity</p>
+      <div class="combo-flow">
+        <span class="combo-node">Airbyte + Debezium</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">Redpanda</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">Iceberg</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node highlight">dbt + Trino</span>
+        <span class="combo-arrow">→</span>
+        <span class="combo-node">Prefect</span>
+      </div>
+      <p>The reality is that most organizations need both batch and streaming, but at different levels of urgency. This hybrid approach uses Airbyte for the 80% of data that can tolerate hourly or daily refreshes, and Debezium plus Redpanda for the 20% that needs real time delivery. All data lands in Iceberg for unified querying through Trino. dbt handles the transformation layer. Prefect keeps it all running without the operational overhead of Airflow.</p>
+      <div class="combo-diagram">
+        <div class="hybrid-split">
+          <div class="hybrid-branch">
+            <div class="hb-label batch-label">80% Batch</div>
+            <div class="hb-flow">
+              <div class="combo-pipe">
+                <div class="cp-node"><div class="cpn-title">Airbyte</div></div>
+                <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+                <div class="cp-node"><div class="cpn-title">Iceberg</div></div>
+              </div>
+            </div>
+          </div>
+          <div class="hybrid-merge">+</div>
+          <div class="hybrid-branch">
+            <div class="hb-label stream-label">20% Real-time</div>
+            <div class="hb-flow">
+              <div class="combo-pipe">
+                <div class="cp-node"><div class="cpn-title">Debezium</div></div>
+                <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+                <div class="cp-node gold"><div class="cpn-title">Redpanda</div></div>
+                <div class="cp-edge"><svg viewBox="0 0 20 8"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+                <div class="cp-node"><div class="cpn-title">Iceberg</div></div>
+              </div>
+            </div>
+          </div>
+          <div style="display:flex; align-items:center; padding:0 0.2rem;"><svg width="20" height="8" viewBox="0 0 20 8" stroke="var(--accent-gold)" stroke-width="1" fill="none" style="opacity:0.3;"><line x1="1" y1="4" x2="16" y2="4"/><polyline points="13,1 16,4 13,7"/></svg></div>
+          <div class="hybrid-branch">
+            <div class="hb-label batch-label">Unified query</div>
+            <div class="hb-flow">
+              <div class="combo-pipe">
+                <div class="cp-node gold"><div class="cpn-title">dbt + Trino</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ CLOSING ═══════════════════════════════ -->
+<section class="section">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Epilogue</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">Choosing <em>Wisely</em></h2>
+    <p class="reveal">The data engineering landscape in 2025 is richer, more mature, and more accessible than it has ever been. The tools on this list are not theoretical. They are running in production, at scale, right now. Many of them are open source. Most of them can be deployed on modest hardware. All of them reward the engineer who takes the time to understand them deeply.</p>
+    <p class="reveal">If there is one lesson that Paul Atreides teaches us, it is this: <strong>power without understanding is destruction.</strong> He studied the ecology of Arrakis before he attempted to lead. He learned the language of the Fremen before he asked them to follow. The same applies to data platforms. The engineer who grabs the flashiest tool without understanding the forces it must withstand will build a system that collapses under its own weight.</p>
+    <p class="reveal">Start with the problem. Understand the forces. Then choose the tool that fits. Add complexity only when the pain demands it. And always, always, read the documentation before the blog post.</p>
+    <p class="reveal" style="color: var(--text-muted); margin-top: 2.5rem; font-style: italic;">See you in the trenches.</p>
+
+    <!-- Notable Omissions -->
+    <div class="reveal" style="margin-top: 4rem; padding: 2rem; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-lg);">
+      <div style="font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-gold); margin-bottom: 1rem;">Notable Omissions</div>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.8; margin-bottom: 0.8rem;"><strong style="color: var(--text-primary); font-weight: 500;">Delta Lake and Hudi</strong> are serious open table formats that compete with Iceberg. Iceberg won this list because of its broader engine support and momentum in 2025, but both are production-worthy.</p>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.8; margin-bottom: 0.8rem;"><strong style="color: var(--text-primary); font-weight: 500;">Snowflake, BigQuery, and Databricks</strong> are deliberately excluded. This guide focuses on tools you can self-host and compose freely. Managed platforms are a valid choice, but they represent a different philosophy.</p>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.8; margin-bottom: 0.8rem;"><strong style="color: var(--text-primary); font-weight: 500;">Materialize and RisingWave</strong> are fascinating streaming databases that blur the line between stream processing and materialized views. They did not make the cut because their production footprint is still growing, but they are worth watching closely.</p>
+      <p style="color: var(--text-secondary); font-size: 0.92rem; line-height: 1.8; margin-bottom: 0;"><strong style="color: var(--text-primary); font-weight: 500;">dbt Cloud vs. dbt Core:</strong> this guide covers dbt as a concept. Whether you run it open source or managed is an operational decision, not an architectural one.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ ABOUT ═══════════════════════════════ -->
+<section class="section" style="padding: 3rem 0;">
+  <div class="content">
+    <div class="reveal" style="display: flex; gap: 2rem; align-items: flex-start; flex-wrap: wrap;">
+      <div style="flex: 1; min-width: 280px;">
+        <div style="font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-gold); margin-bottom: 1rem;">About the Author</div>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1rem;"><strong style="color: var(--text-primary); font-weight: 500;">Boyan Balev</strong> is a Senior Full Stack Engineer with 8+ years building data systems across outsourcing, startups, and enterprise environments. He currently works on MandateWire, a platform that tracks institutional investment mandates, where he recently reduced query times from seconds to 50ms through architectural refactoring and closure table patterns.</p>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.2rem;">He writes about system design, infrastructure economics, and the pragmatic side of engineering at <strong style="color: var(--text-primary); font-weight: 500;">The Trenches</strong>.</p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="https://medium.com/@boyanbalev" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-gold); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px; transition: all 0.2s ease;" onmouseover="this.style.background='var(--accent-gold-dim)'" onmouseout="this.style.background='transparent'">Medium</a>
+          <a href="https://linkedin.com/in/boyanbalev" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-gold); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px; transition: all 0.2s ease;" onmouseover="this.style.background='var(--accent-gold-dim)'" onmouseout="this.style.background='transparent'">LinkedIn</a>
+          <a href="https://github.com/boyanbalev" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-gold); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px; transition: all 0.2s ease;" onmouseover="this.style.background='var(--accent-gold-dim)'" onmouseout="this.style.background='transparent'">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ═══════════════════════════════ FOOTER ═══════════════════════════════ -->
+<footer class="footer">
+  <div class="content">
+    <div class="footer-brand">The <span>Trenches</span></div>
+    <p>© 2025 Boyan Balev. Written from the trenches, with respect for the craft.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.7rem;"><a href="https://medium.com/@boyanbalev" style="color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border);">Read more on Medium</a></p>
+  </div>
+</footer>
+
+<!-- BACK TO TOP -->
+<button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
+
+<!-- ═══════════════════════════════ SCRIPTS ═══════════════════════════════ -->
+<script>
+// ═══════════════════════════════
+// AMBIENT PARTICLES
+// ═══════════════════════════════
+(function() {
+  const canvas = document.getElementById('ambient-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height, particles = [], animId;
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+
+  function createParticles() {
+    particles = [];
+    const count = Math.min(Math.floor(width * height / 25000), 50);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.15,
+        vy: (Math.random() - 0.5) * 0.15,
+        r: Math.random() * 1.5 + 0.5,
+        o: Math.random() * 0.3 + 0.05
+      });
+    }
+  }
+
+  function getColor() {
+    return document.documentElement.getAttribute('data-theme') === 'light'
+      ? '120, 100, 60'
+      : '180, 160, 100';
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    const col = getColor();
+    const maxDist = 12000;
+
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx;
+      p.y += p.vy;
+      if (p.x < 0) p.x = width;
+      if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height;
+      if (p.y > height) p.y = 0;
+
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${col}, ${p.o})`;
+      ctx.fill();
+    }
+
+    // Draw connections — capped for performance
+    const len = particles.length;
+    for (let i = 0; i < len; i++) {
+      let connections = 0;
+      for (let j = i + 1; j < len; j++) {
+        if (connections >= 3) break;
+        const dx = particles[i].x - particles[j].x;
+        const dy = particles[i].y - particles[j].y;
+        const dist = dx * dx + dy * dy;
+        if (dist < maxDist) {
+          ctx.beginPath();
+          ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(${col}, ${0.03 * (1 - dist / maxDist)})`;
+          ctx.stroke();
+          connections++;
+        }
+      }
+    }
+
+    animId = requestAnimationFrame(draw);
+  }
+
+  resize();
+  createParticles();
+  draw();
+
+  let resizeTimer;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      resize();
+      createParticles();
+    }, 200);
+  });
+})();
+
+// ═══════════════════════════════
+// SCROLL REVEAL
+// ═══════════════════════════════
+const reveals = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+      revealObserver.unobserve(entry.target);
+    }
+  });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+
+reveals.forEach(el => revealObserver.observe(el));
+
+// ═══════════════════════════════
+// PROGRESS BAR
+// ═══════════════════════════════
+const progressBar = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  progressBar.style.width = ((scrollTop / docHeight) * 100) + '%';
+}, { passive: true });
+
+// ═══════════════════════════════
+// NAV HIDE ON SCROLL
+// ═══════════════════════════════
+let lastScroll = 0;
+const nav = document.getElementById('mainNav');
+window.addEventListener('scroll', () => {
+  const current = window.scrollY;
+  if (current > lastScroll && current > 140) {
+    nav.style.transform = 'translateY(-100%)';
+  } else {
+    nav.style.transform = 'translateY(0)';
+  }
+  lastScroll = current;
+}, { passive: true });
+
+// ═══════════════════════════════
+// SMOOTH NAV LINKS
+// ═══════════════════════════════
+document.querySelectorAll('.nav-center a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) {
+      target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  });
+});
+
+// ═══════════════════════════════
+// BACK TO TOP
+// ═══════════════════════════════
+const backToTop = document.getElementById('backToTop');
+window.addEventListener('scroll', () => {
+  if (window.scrollY > 700) {
+    backToTop.classList.add('visible');
+  } else {
+    backToTop.classList.remove('visible');
+  }
+}, { passive: true });
+
+backToTop.addEventListener('click', () => {
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
+
+// ═══════════════════════════════
+// THEME TOGGLE
+// ═══════════════════════════════
+const themeToggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+
+function setTheme(theme) {
+  html.setAttribute('data-theme', theme);
+  themeToggle.textContent = theme === 'dark' ? '☽' : '☀';
+  localStorage.setItem('theme-trenches', theme);
+}
+
+const saved = localStorage.getItem('theme-trenches');
+if (saved) setTheme(saved);
+
+themeToggle.addEventListener('click', () => {
+  const current = html.getAttribute('data-theme');
+  setTheme(current === 'dark' ? 'light' : 'dark');
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 't' || e.key === 'T') {
+    const tag = e.target.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || e.target.isContentEditable) return;
+    const current = html.getAttribute('data-theme');
+    setTheme(current === 'dark' ? 'light' : 'dark');
+  }
+});
+
+// ═══════════════════════════════
+// MOBILE NAV DRAWER
+// ═══════════════════════════════
+const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+const mobileNavClose = document.getElementById('mobileNavClose');
+const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+
+function openMobileNav() {
+  mobileNavDrawer.classList.add('open');
+  mobileNavOverlay.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeMobileNav() {
+  mobileNavDrawer.classList.remove('open');
+  mobileNavOverlay.classList.remove('open');
+  document.body.style.overflow = '';
+}
+
+mobileMenuToggle.addEventListener('click', openMobileNav);
+mobileNavClose.addEventListener('click', closeMobileNav);
+mobileNavOverlay.addEventListener('click', closeMobileNav);
+
+document.querySelectorAll('.mobile-nav-links a').forEach(link => {
+  link.addEventListener('click', (e) => {
+    e.preventDefault();
+    closeMobileNav();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) {
+      setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+    }
+  });
+});
+</script>
+
+</body>
+</html>

@@ -67,12 +67,13 @@ const latestPosts = posts.slice(0, 6);
             <ArticleCard
               title={post.data.title}
               description={post.data.description}
-              href={`/blog/${post.slug}`}
+              href={post.data.format === 'story' && post.data.storyUrl ? post.data.storyUrl : `/blog/${post.slug}`}
               pubDate={post.data.pubDate}
               category={post.data.category}
               readTime={post.data.readTime}
               tags={post.data.tags}
               heroImage={post.data.heroImage}
+              format={post.data.format}
             />
           ))}
         </div>

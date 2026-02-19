@@ -21,6 +21,8 @@ const blog = defineCollection({
     ogImage: z.string().optional(),
     accent: z.enum(['orange', 'blue', 'purple', 'pink', 'violet']).default('orange'),
     draft: z.boolean().default(false),
+    format: z.enum(['article', 'story']).default('article'),
+    storyUrl: z.string().optional(),
   }),
 });
 
