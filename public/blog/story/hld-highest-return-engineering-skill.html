@@ -1,0 +1,2144 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>High-Level Design · The Trenches</title>
+<meta name="description" content="High-Level Design is the engineering skill with the highest return on time. A practical framework for writing HLDs that actually remove uncertainty, with a full walkthrough. By Boyan Balev.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Serif+Display:ital@0;1&family=JetBrains+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════
+   RESET & FOUNDATIONS
+   ═══════════════════════════════════════════ */
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+:root {
+  /* DARK THEME · Warm editorial: deep graphite + amber */
+  --bg-primary: #0B0A08;
+  --bg-secondary: #15120D;
+  --bg-tertiary: #1E1A12;
+  --bg-card: rgba(21, 18, 13, 0.85);
+  --bg-card-hover: rgba(32, 27, 18, 0.95);
+
+  --text-primary: #F6F1E7;
+  --text-secondary: #D4C9B3;
+  --text-muted: #938774;
+
+  /* Accent system · amber primary, blue/teal supporting */
+  --accent-amber: #E8943A;
+  --accent-amber-dim: rgba(232, 148, 58, 0.10);
+  --accent-amber-glow: rgba(232, 148, 58, 0.20);
+  --accent-blue: #4A90D9;
+  --accent-blue-dim: rgba(74, 144, 217, 0.10);
+  --accent-teal: #2CB5A0;
+  --accent-teal-dim: rgba(44, 181, 160, 0.10);
+
+  /* Primary accent alias (so existing component classes keep working) */
+  --accent-primary: var(--accent-amber);
+  --accent-primary-dim: var(--accent-amber-dim);
+  --accent-primary-glow: var(--accent-amber-glow);
+
+  --border: rgba(255, 255, 255, 0.06);
+  --border-accent: rgba(232, 148, 58, 0.22);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.4);
+  --shadow-md: 0 4px 24px rgba(0,0,0,0.5);
+  --shadow-lg: 0 12px 48px rgba(0,0,0,0.6);
+  --shadow-glow: 0 0 60px rgba(232, 148, 58, 0.06);
+
+  --font-display: 'DM Serif Display', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  --radius-sm: 6px;
+  --radius-md: 12px;
+  --radius-lg: 20px;
+
+  --nav-height: 64px;
+  --content-width: 740px;
+  --wide-width: 960px;
+
+  --theme-transition: background 0.6s cubic-bezier(0.4,0,0.2,1),
+                       color 0.5s cubic-bezier(0.4,0,0.2,1),
+                       border-color 0.5s ease,
+                       box-shadow 0.5s ease;
+}
+
+/* ═══════════════════════════════════════════
+   LIGHT THEME · Warm paper
+   ═══════════════════════════════════════════ */
+[data-theme="light"] {
+  --bg-primary: #FAF6EE;
+  --bg-secondary: #F2EBDB;
+  --bg-tertiary: #E8DFC9;
+  --bg-card: rgba(255, 252, 245, 0.9);
+  --bg-card-hover: rgba(255, 252, 245, 0.98);
+
+  --text-primary: #1C1812;
+  --text-secondary: #4A4232;
+  --text-muted: #857A63;
+
+  --accent-amber: #B4691C;
+  --accent-amber-dim: rgba(180, 105, 28, 0.08);
+  --accent-amber-glow: rgba(180, 105, 28, 0.15);
+  --accent-blue: #2E6DB4;
+  --accent-blue-dim: rgba(46, 109, 180, 0.06);
+  --accent-teal: #1F8F7E;
+  --accent-teal-dim: rgba(31, 143, 126, 0.06);
+
+  --border: rgba(0, 0, 0, 0.08);
+  --border-accent: rgba(180, 105, 28, 0.22);
+
+  --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+  --shadow-md: 0 4px 20px rgba(0,0,0,0.08);
+  --shadow-lg: 0 12px 40px rgba(0,0,0,0.10);
+  --shadow-glow: 0 0 40px rgba(180, 105, 28, 0.06);
+}
+
+html {
+  scroll-behavior: smooth;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-amber-dim) var(--bg-primary);
+}
+
+body {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-body);
+  font-weight: 300;
+  line-height: 1.85;
+  overflow-x: hidden;
+  transition: var(--theme-transition);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+::selection {
+  background: var(--accent-amber);
+  color: var(--bg-primary);
+}
+
+/* ═══════════════════════════════════════════
+   AMBIENT CANVAS
+   ═══════════════════════════════════════════ */
+#ambient-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.45;
+}
+[data-theme="light"] #ambient-canvas { opacity: 0.15; }
+
+/* ═══════════════════════════════════════════
+   GRAIN
+   ═══════════════════════════════════════════ */
+.grain {
+  position: fixed;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
+  opacity: 0.03;
+  background: url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* ═══════════════════════════════════════════
+   PROGRESS BAR
+   ═══════════════════════════════════════════ */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  width: 0%;
+  background: linear-gradient(90deg, var(--accent-teal), var(--accent-amber), var(--accent-amber));
+  z-index: 1000;
+  transition: width 0.08s linear;
+}
+
+/* ═══════════════════════════════════════════
+   NAV
+   ═══════════════════════════════════════════ */
+.nav {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  height: var(--nav-height);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 2.5rem;
+  background: color-mix(in srgb, var(--bg-primary) 85%, transparent);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  transition: transform 0.4s cubic-bezier(0.4,0,0.2,1), var(--theme-transition);
+}
+
+.nav-brand {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  letter-spacing: 0.02em;
+}
+
+.nav-brand span { color: var(--accent-amber); }
+
+.nav-center {
+  display: flex;
+  gap: 1.8rem;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: calc(100% - 400px);
+}
+
+.nav-center a {
+  font-size: 0.75rem;
+  font-weight: 400;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+.nav-center a:hover { color: var(--accent-amber); }
+
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-tag {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--border-accent);
+  border-radius: 100px;
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+  font-size: 0.9rem;
+}
+.theme-toggle:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════ */
+.content {
+  max-width: var(--content-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.content-wide {
+  max-width: var(--wide-width);
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+.section {
+  position: relative;
+  z-index: 5;
+  padding: 6rem 0;
+}
+
+.section + .section {
+  border-top: 1px solid var(--border);
+}
+
+/* ═══════════════════════════════════════════
+   HERO
+   ═══════════════════════════════════════════ */
+.hero {
+  position: relative;
+  z-index: 5;
+  padding: calc(var(--nav-height) + 5rem) 2rem 5rem;
+  text-align: center;
+  overflow: hidden;
+}
+
+.hero-orb {
+  position: absolute;
+  width: 720px;
+  height: 720px;
+  border-radius: 50%;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -55%);
+  background: radial-gradient(circle, var(--accent-amber-dim) 0%, transparent 60%);
+  filter: blur(40px);
+  pointer-events: none;
+  z-index: 0;
+}
+[data-theme="light"] .hero-orb {
+  background: radial-gradient(circle, rgba(180, 105, 28, 0.05) 0%, transparent 55%);
+}
+
+.hero-eyebrow {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 400;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 2rem;
+  animation: fadeUp 1s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-title {
+  position: relative;
+  z-index: 1;
+  font-family: var(--font-display);
+  font-size: clamp(2.8rem, 6.5vw, 5.5rem);
+  font-weight: 400;
+  line-height: 1.08;
+  letter-spacing: -0.015em;
+  color: var(--text-primary);
+  margin-bottom: 1.8rem;
+  animation: fadeUp 1s 0.15s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-title em {
+  font-style: italic;
+  color: var(--accent-amber);
+}
+
+.hero-subtitle {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+  margin: 0 auto 3rem;
+  font-size: 1.1rem;
+  font-weight: 300;
+  line-height: 1.75;
+  color: var(--text-secondary);
+  animation: fadeUp 1s 0.3s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-meta {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.85rem 1.75rem;
+  animation: fadeUp 1s 0.45s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-meta-item {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+}
+
+.hero-meta-item strong {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.hero-author-photo {
+  display: block;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-accent);
+  flex-shrink: 0;
+  align-self: center;
+}
+
+.about-author-block {
+  display: flex;
+  gap: 1.8rem;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.about-author-photo {
+  width: 96px;
+  height: 96px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid var(--border-accent);
+  flex-shrink: 0;
+}
+
+.about-author-copy {
+  flex: 1;
+  min-width: 240px;
+}
+
+.hero-scroll-hint {
+  position: relative;
+  z-index: 1;
+  margin-top: 4rem;
+  animation: fadeUp 1s 0.6s cubic-bezier(0.16,1,0.3,1) both;
+}
+
+.hero-scroll-hint span {
+  display: inline-block;
+  width: 1px;
+  height: 40px;
+  background: linear-gradient(to bottom, var(--accent-amber), transparent);
+  animation: scrollPulse 2.5s ease-in-out infinite;
+}
+
+/* ═══════════════════════════════════════════
+   SECTION HEADERS
+   ═══════════════════════════════════════════ */
+.section-divider {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 3rem;
+}
+
+.section-number {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  white-space: nowrap;
+}
+
+.section-line {
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, var(--border-accent), transparent);
+}
+
+.section h2 {
+  font-family: var(--font-display);
+  font-size: clamp(2rem, 4vw, 3.2rem);
+  font-weight: 400;
+  line-height: 1.15;
+  letter-spacing: -0.01em;
+  margin-bottom: 1.5rem;
+}
+
+.section h2 em {
+  font-style: italic;
+  color: var(--accent-amber);
+}
+
+.section h3 {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-weight: 400;
+  line-height: 1.3;
+  margin: 2.5rem 0 1rem;
+  color: var(--text-primary);
+}
+
+.section h3 em {
+  font-style: italic;
+  color: var(--accent-amber);
+}
+
+.section p {
+  color: var(--text-secondary);
+  font-size: 1.02rem;
+  margin-bottom: 1.2rem;
+}
+
+.section p strong {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.section blockquote {
+  margin: 2rem 0;
+  padding: 1.4rem 1.8rem;
+  border-left: 2px solid var(--accent-amber);
+  background: var(--accent-amber-dim);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+  font-style: italic;
+}
+
+/* ═══════════════════════════════════════════
+   PULL QUOTE
+   ═══════════════════════════════════════════ */
+.pull-quote {
+  padding: 4rem 0;
+  text-align: center;
+  max-width: 680px;
+  margin: 0 auto;
+}
+
+.pull-quote p {
+  font-family: var(--font-display);
+  font-size: clamp(1.3rem, 2.5vw, 1.7rem);
+  line-height: 1.55;
+  color: var(--text-primary);
+  font-weight: 400;
+}
+
+.pull-quote p em { color: var(--accent-amber); }
+
+.pull-quote cite {
+  display: block;
+  margin-top: 1.2rem;
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  font-style: normal;
+}
+
+/* ═══════════════════════════════════════════
+   TABLE
+   ═══════════════════════════════════════════ */
+.table-wrap {
+  overflow-x: auto;
+  margin: 2.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.table-wrap table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.table-wrap th {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  text-align: left;
+  padding: 1rem 1.2rem;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border);
+}
+
+.table-wrap td {
+  padding: 0.9rem 1.2rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  vertical-align: top;
+}
+
+.table-wrap td strong { color: var(--text-primary); }
+
+.table-wrap tr:last-child td { border-bottom: none; }
+
+/* ═══════════════════════════════════════════
+   ARCH DIAGRAM WRAPPER
+   ═══════════════════════════════════════════ */
+.arch-diagram {
+  margin: 3rem 0;
+  padding: 2.5rem 2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  overflow-x: auto;
+}
+
+.arch-diagram .arch-label {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 2rem;
+  text-align: center;
+  opacity: 0.85;
+}
+
+/* ═══════════════════════════════════════════
+   PHASE CARDS
+   ═══════════════════════════════════════════ */
+.phase-grid {
+  display: grid;
+  gap: 1.2rem;
+  margin: 2.5rem 0;
+}
+
+.phase-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--radius-md);
+  padding: 2rem 2.2rem;
+  transition: all 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+.phase-card:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--border-accent);
+  border-left-color: var(--accent-amber);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.phase-card-header {
+  display: flex;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.8rem;
+}
+
+.phase-card-number {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+}
+
+.phase-card-title {
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  color: var(--text-primary);
+  line-height: 1.25;
+}
+
+.phase-card p {
+  font-size: 0.95rem;
+  margin-bottom: 0.8rem;
+}
+
+.phase-card p:last-child { margin-bottom: 0; }
+
+/* ═══════════════════════════════════════════
+   CALLOUT BOX (key def / problem def)
+   ═══════════════════════════════════════════ */
+.callout {
+  margin: 2.5rem 0;
+  padding: 2rem 2.2rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+}
+
+.callout-label {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 1rem;
+}
+
+.callout-row {
+  display: grid;
+  grid-template-columns: 140px 1fr;
+  gap: 1.2rem;
+  padding: 0.8rem 0;
+  border-top: 1px dashed var(--border);
+}
+
+.callout-row:first-of-type { border-top: none; padding-top: 0; }
+.callout-row:last-of-type { padding-bottom: 0; }
+
+.callout-row-key {
+  font-family: var(--font-mono);
+  font-size: 0.68rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  padding-top: 0.15rem;
+}
+
+.callout-row-val {
+  font-size: 0.95rem;
+  color: var(--text-secondary);
+  line-height: 1.65;
+}
+
+.callout-row-val strong { color: var(--text-primary); font-weight: 500; }
+
+/* ═══════════════════════════════════════════
+   CODE-STYLE FLOW BOX
+   ═══════════════════════════════════════════ */
+.flow-box {
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  line-height: 1.75;
+  padding: 1.8rem 2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  color: var(--text-secondary);
+  white-space: pre-wrap;
+  overflow-x: auto;
+}
+
+.flow-box .c-amber { color: var(--accent-amber); }
+.flow-box .c-teal { color: var(--accent-teal); }
+.flow-box .c-blue { color: var(--accent-blue); }
+.flow-box .c-muted { color: var(--text-muted); }
+.flow-box .c-primary { color: var(--text-primary); font-weight: 500; }
+
+/* ═══════════════════════════════════════════
+   DECISION COMPARE · 3-column option table
+   ═══════════════════════════════════════════ */
+.options-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  margin: 2rem 0;
+  border: 1px solid var(--border);
+}
+
+.option-col {
+  background: var(--bg-secondary);
+  padding: 1.8rem 1.6rem;
+  transition: all 0.3s ease;
+}
+
+.option-col:hover { background: var(--bg-card-hover); }
+
+.option-col.chosen {
+  background: var(--accent-amber-dim);
+  position: relative;
+}
+
+.option-col.chosen::before {
+  content: 'RECOMMENDED';
+  position: absolute;
+  top: 0.8rem;
+  right: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: 0.52rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  color: var(--accent-amber);
+  padding: 0.2rem 0.5rem;
+  border: 1px solid var(--border-accent);
+  border-radius: 100px;
+}
+
+.option-col .opt-label {
+  font-family: var(--font-mono);
+  font-size: 0.58rem;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 0.6rem;
+}
+
+.option-col .opt-title {
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  color: var(--text-primary);
+  margin-bottom: 1rem;
+  line-height: 1.3;
+}
+
+.option-col .opt-section {
+  margin-top: 1rem;
+}
+
+.option-col .opt-section-label {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin-bottom: 0.35rem;
+}
+
+.option-col .opt-section-body {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.option-col.chosen .opt-section-body { color: var(--text-primary); }
+
+/* ═══════════════════════════════════════════
+   FAILURE LIST (pre-mortem)
+   ═══════════════════════════════════════════ */
+.failure-list {
+  display: grid;
+  gap: 1rem;
+  margin: 2rem 0;
+}
+
+.failure-item {
+  display: grid;
+  grid-template-columns: 38px 1fr;
+  gap: 1rem;
+  padding: 1.3rem 1.5rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 2px solid var(--accent-teal);
+  border-radius: var(--radius-sm);
+  transition: all 0.3s ease;
+}
+
+.failure-item:hover {
+  border-color: var(--border-accent);
+  border-left-color: var(--accent-amber);
+}
+
+.failure-num {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: var(--accent-teal);
+  padding-top: 0.15rem;
+}
+
+.failure-item:hover .failure-num { color: var(--accent-amber); }
+
+.failure-body .failure-what {
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  margin-bottom: 0.3rem;
+}
+
+.failure-body .failure-fix {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  line-height: 1.65;
+}
+
+.failure-body .failure-fix::before {
+  content: '→ ';
+  color: var(--accent-amber);
+  margin-right: 0.2rem;
+}
+
+/* ═══════════════════════════════════════════
+   TLDR STRIP
+   ═══════════════════════════════════════════ */
+.tldr {
+  margin: 3rem auto 0;
+  max-width: var(--wide-width);
+  padding: 0 2rem;
+}
+
+.tldr-card {
+  display: grid;
+  grid-template-columns: 180px 1fr;
+  gap: 2.4rem;
+  padding: 2rem 2.4rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--accent-amber);
+  border-radius: var(--radius-md);
+  align-items: start;
+}
+
+.tldr-label {
+  font-family: var(--font-mono);
+  font-size: 0.65rem;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  padding-top: 0.4rem;
+}
+
+.tldr-label .tldr-sub {
+  display: block;
+  color: var(--text-muted);
+  margin-top: 0.4rem;
+  font-size: 0.6rem;
+  letter-spacing: 0.12em;
+}
+
+.tldr-body {
+  color: var(--text-secondary);
+  font-size: 0.98rem;
+  line-height: 1.75;
+}
+
+.tldr-body strong { color: var(--text-primary); font-weight: 500; }
+
+.tldr-body ol {
+  margin: 0.6rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.tldr-body ol li { margin-bottom: 0.2rem; }
+
+@media (max-width: 720px) {
+  .tldr-card { grid-template-columns: 1fr; gap: 1rem; padding: 1.6rem 1.4rem; }
+}
+
+/* ═══════════════════════════════════════════
+   STAT STRIP
+   ═══════════════════════════════════════════ */
+.stat-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  margin: 2.4rem 0;
+}
+
+.stat-cell {
+  padding: 1.6rem 1.4rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  text-align: left;
+}
+
+.stat-cell .stat-num {
+  font-family: var(--font-display);
+  font-size: 2.4rem;
+  line-height: 1;
+  color: var(--accent-amber);
+  font-style: italic;
+}
+
+.stat-cell .stat-label {
+  margin-top: 0.6rem;
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.stat-cell .stat-label strong { color: var(--text-primary); font-weight: 500; }
+
+@media (max-width: 720px) {
+  .stat-strip { grid-template-columns: 1fr; }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE TIMELINE
+   ═══════════════════════════════════════════ */
+.phase-timeline {
+  margin: 2.4rem 0 3rem;
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.6rem;
+}
+
+.phase-step {
+  padding: 1rem 0.9rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-top: 2px solid var(--accent-amber);
+  border-radius: var(--radius-sm);
+}
+
+.phase-step .ps-num {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  letter-spacing: 0.14em;
+  color: var(--accent-amber);
+  text-transform: uppercase;
+  margin-bottom: 0.3rem;
+}
+
+.phase-step .ps-name {
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  line-height: 1.3;
+}
+
+@media (max-width: 900px) {
+  .phase-timeline { grid-template-columns: repeat(3, 1fr); }
+}
+@media (max-width: 520px) {
+  .phase-timeline { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ═══════════════════════════════════════════
+   PHASE BLOCK (per-phase wrapper)
+   ═══════════════════════════════════════════ */
+.phase-block {
+  margin: 3rem 0;
+  padding: 2rem 0 0;
+  border-top: 1px solid var(--border);
+}
+
+.phase-block .pb-meta {
+  font-family: var(--font-mono);
+  font-size: 0.62rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 0.6rem;
+}
+
+.phase-block h3 {
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1.25;
+  color: var(--text-primary);
+  margin-bottom: 0.6rem;
+}
+
+.phase-block h3 em { color: var(--accent-amber); font-style: italic; }
+
+.phase-block .pb-lede {
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.7;
+  margin-bottom: 1.2rem;
+}
+
+.phase-block .pb-lede strong { color: var(--text-primary); font-weight: 500; }
+
+/* ═══════════════════════════════════════════
+   TEMPLATE BOX
+   ═══════════════════════════════════════════ */
+.template-box {
+  margin: 2rem 0;
+  padding: 2rem 2.2rem;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  font-family: var(--font-mono);
+  font-size: 0.82rem;
+  line-height: 2;
+}
+
+.template-row {
+  display: grid;
+  grid-template-columns: 28px 140px 1fr;
+  gap: 0.8rem;
+  color: var(--text-secondary);
+}
+
+.template-row .tr-num {
+  color: var(--accent-amber);
+  font-weight: 500;
+}
+
+.template-row .tr-name {
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.template-row .tr-arrow {
+  color: var(--text-muted);
+  padding-right: 0.5rem;
+}
+
+/* ═══════════════════════════════════════════
+   WALKTHROUGH BLOCK
+   ═══════════════════════════════════════════ */
+.walkthrough {
+  margin: 2.5rem 0;
+  padding: 2.5rem 2.8rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-top: 3px solid var(--accent-amber);
+  border-radius: var(--radius-lg);
+}
+
+.walkthrough .wt-doctype {
+  font-family: var(--font-mono);
+  font-size: 0.6rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 0.8rem;
+}
+
+.walkthrough .wt-title {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  color: var(--text-primary);
+  line-height: 1.2;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.walkthrough h4 {
+  font-family: var(--font-mono);
+  font-size: 0.7rem;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin: 2rem 0 0.8rem;
+}
+
+.walkthrough h4:first-of-type { margin-top: 0; }
+
+.walkthrough p {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+  line-height: 1.75;
+  margin-bottom: 1rem;
+}
+
+.walkthrough p strong { color: var(--text-primary); }
+
+.walkthrough ul {
+  margin: 0.8rem 0 1.2rem 0;
+  padding-left: 1.2rem;
+}
+
+.walkthrough li {
+  color: var(--text-secondary);
+  font-size: 0.92rem;
+  line-height: 1.75;
+  margin-bottom: 0.4rem;
+}
+
+.walkthrough li strong { color: var(--text-primary); font-weight: 500; }
+
+/* ═══════════════════════════════════════════
+   PRACTICE CARDS
+   ═══════════════════════════════════════════ */
+.practice-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.2rem;
+  margin: 2rem 0;
+}
+
+.practice-card {
+  padding: 1.8rem 1.6rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  transition: all 0.3s ease;
+}
+
+.practice-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-glow);
+  transform: translateY(-2px);
+}
+
+.practice-card .pr-num {
+  font-family: var(--font-mono);
+  font-size: 0.55rem;
+  font-weight: 500;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--accent-amber);
+  margin-bottom: 0.7rem;
+}
+
+.practice-card .pr-title {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--text-primary);
+  line-height: 1.3;
+  margin-bottom: 0.8rem;
+}
+
+.practice-card .pr-body {
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+/* ═══════════════════════════════════════════
+   FOOTER
+   ═══════════════════════════════════════════ */
+.footer {
+  padding: 4rem 0;
+  border-top: 1px solid var(--border);
+  text-align: center;
+  position: relative;
+  z-index: 5;
+}
+
+.footer-brand {
+  font-family: var(--font-display);
+  font-size: 1.3rem;
+  margin-bottom: 0.8rem;
+  color: var(--text-primary);
+}
+
+.footer-brand span { color: var(--accent-amber); }
+
+.footer p {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* ═══════════════════════════════════════════
+   BACK TO TOP
+   ═══════════════════════════════════════════ */
+.back-to-top {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 99;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: var(--bg-card);
+  color: var(--text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transform: translateY(10px);
+  transition: all 0.3s ease;
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 1.2rem;
+}
+
+.back-to-top.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.back-to-top:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+/* ═══════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════ */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(28px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes scrollPulse {
+  0%, 100% { opacity: 0.2; transform: scaleY(0.5); transform-origin: top; }
+  50% { opacity: 1; transform: scaleY(1); }
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(32px);
+  transition: opacity 0.8s cubic-bezier(0.16,1,0.3,1), transform 0.8s cubic-bezier(0.16,1,0.3,1);
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ═══════════════════════════════════════════
+   MOBILE NAV DRAWER
+   ═══════════════════════════════════════════ */
+.mobile-menu-toggle {
+  display: none;
+  background: none;
+  border: 1px solid var(--border);
+  color: var(--text-muted);
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+  transition: all 0.3s ease;
+}
+.mobile-menu-toggle:hover {
+  border-color: var(--accent-amber);
+  color: var(--accent-amber);
+}
+
+.mobile-nav-drawer {
+  position: fixed;
+  top: 0;
+  right: -300px;
+  width: 280px;
+  height: 100vh;
+  background: var(--bg-secondary);
+  border-left: 1px solid var(--border);
+  z-index: 200;
+  padding: 1.5rem;
+  transition: right 0.35s cubic-bezier(0.4,0,0.2,1), var(--theme-transition);
+  overflow-y: auto;
+}
+.mobile-nav-drawer.open { right: 0; }
+
+.mobile-nav-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.mobile-nav-close {
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.3rem;
+  transition: color 0.2s;
+}
+.mobile-nav-close:hover { color: var(--accent-amber); }
+
+.mobile-nav-links {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+.mobile-nav-links a {
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 400;
+  color: var(--text-secondary);
+  text-decoration: none;
+  padding: 0.7rem 0.8rem;
+  border-radius: var(--radius-sm);
+  transition: all 0.2s ease;
+}
+.mobile-nav-links a:hover {
+  color: var(--accent-amber);
+  background: var(--accent-amber-dim);
+}
+
+.mobile-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 199;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+.mobile-nav-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+   ═══════════════════════════════════════════ */
+@media (max-width: 820px) {
+  .nav { padding: 0 1.2rem; }
+  .nav-center { display: none; }
+  .mobile-menu-toggle { display: flex; }
+  .hero { padding: calc(var(--nav-height) + 4rem) 1.5rem 4rem; }
+  .hero-meta { gap: 0.65rem 1.1rem; }
+  .content, .content-wide { padding: 0 1.2rem; }
+  .section { padding: 4rem 0; }
+  .phase-card { padding: 1.6rem 1.8rem; }
+  .callout { padding: 1.6rem 1.7rem; }
+  .callout-row { grid-template-columns: 1fr; gap: 0.3rem; }
+  .options-grid { grid-template-columns: 1fr; }
+  .practice-grid { grid-template-columns: 1fr; }
+  .walkthrough { padding: 1.8rem 1.8rem; }
+  .walkthrough .wt-title { font-size: 1.4rem; }
+  .flow-box { font-size: 0.7rem; padding: 1.3rem 1.4rem; }
+  .template-row { grid-template-columns: 24px 110px 1fr; }
+  .table-wrap { font-size: 0.8rem; }
+  .arch-diagram { padding: 1.5rem 1rem; }
+}
+
+@media print {
+  .nav, .grain, .progress-bar, .back-to-top, .theme-toggle, #ambient-canvas, .hero-orb, .hero-scroll-hint, .mobile-menu-toggle, .mobile-nav-drawer, .mobile-nav-overlay { display: none !important; }
+  .hero { padding-top: 2rem; }
+  .reveal { opacity: 1 !important; transform: none !important; }
+  body { background: white; color: #111; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="ambient-canvas"></canvas>
+<div class="grain"></div>
+<div class="progress-bar" id="progressBar"></div>
+
+<!-- NAV -->
+<nav class="nav" id="mainNav">
+  <a href="/blog/" class="nav-brand" style="text-decoration:none;color:inherit;">The <span>Trenches</span></a>
+  <div class="nav-center">
+    <a href="#what-it-is">What &amp; Why</a>
+    <a href="#phases">Six Phases</a>
+    <a href="#template">Template</a>
+    <a href="#review">Review</a>
+    <a href="#walkthrough">Walkthrough</a>
+    <a href="#practice">Practice</a>
+  </div>
+  <div class="nav-right">
+    <span class="nav-tag">Craft</span>
+    <button class="theme-toggle" id="themeToggle" aria-label="Toggle theme">☽</button>
+    <button class="mobile-menu-toggle" id="mobileMenuToggle" aria-label="Open navigation">☰</button>
+  </div>
+</nav>
+
+<!-- MOBILE NAV DRAWER -->
+<div class="mobile-nav-drawer" id="mobileNavDrawer">
+  <div class="mobile-nav-header">
+    <span class="nav-brand">The <span>Trenches</span></span>
+    <button class="mobile-nav-close" id="mobileNavClose" aria-label="Close navigation">✕</button>
+  </div>
+  <div class="mobile-nav-links">
+    <a href="#prologue">Prologue</a>
+    <a href="#what-it-is">What &amp; Why</a>
+    <a href="#phases">The Six Phases</a>
+    <a href="#template">Template</a>
+    <a href="#review">The Review</a>
+    <a href="#walkthrough">Walkthrough</a>
+    <a href="#practice">Practice</a>
+  </div>
+</div>
+<div class="mobile-nav-overlay" id="mobileNavOverlay"></div>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-orb"></div>
+  <div class="hero-eyebrow">Craft Trenches · April 2026</div>
+  <h1 class="hero-title">High-Level<br><em>Design</em></h1>
+  <p class="hero-subtitle">The engineering skill with the highest return on time. Six phases, one template, one full walkthrough. Steal it and ship better systems by next sprint.</p>
+  <div class="hero-meta">
+    <img class="hero-author-photo" src="https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/43ac6880-5dd9-4c94-0eb3-1d066564e700/public" alt="" width="36" height="36" decoding="async">
+    <div class="hero-meta-item"><strong>Boyan Balev</strong></div>
+    <div class="hero-meta-item">10 min read</div>
+    <div class="hero-meta-item">April 9, 2026</div>
+  </div>
+  <div class="hero-scroll-hint"><span></span></div>
+</header>
+
+<!-- TL;DR STRIP -->
+<div class="tldr reveal">
+  <div class="tldr-card">
+    <div class="tldr-label">The Whole Article<span class="tldr-sub">In ten seconds</span></div>
+    <div class="tldr-body">
+      An HLD is a 2 to 4 page document that answers <strong>"how will we build this, and why this way?"</strong> before code is written. Run the six phases below, fill the seven section template, run a 30 minute review with two people, then build. Skipping it costs weeks. Doing it well is the highest leverage habit on the team.
+    </div>
+  </div>
+</div>
+
+<!-- PROLOGUE -->
+<section class="section" id="prologue">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Prologue</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Wall at <em>Fifteen People</em></h2>
+    <p class="reveal">Every engineering organization above roughly fifteen people hits the same wall. Features that should take weeks take months, not because the engineers are slow, but because nobody agreed on <em>how</em> to build the thing before building started. Rework, mismatched assumptions, and silent conflicts between services eat the calendar.</p>
+    <p class="reveal">High-Level Design documents exist to prevent this. Done right, they compress weeks of ambiguity into a few pages of shared understanding. Done wrong, they are five pages of polished nothing.</p>
+
+    <div class="stat-strip reveal">
+      <div class="stat-cell">
+        <div class="stat-num">2&ndash;4</div>
+        <div class="stat-label"><strong>pages.</strong> If it is longer, scope is too wide or the author is hiding uncertainty behind volume.</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">1</div>
+        <div class="stat-label"><strong>question answered.</strong> "Given what we need and what we have, what is the build path?"</div>
+      </div>
+      <div class="stat-cell">
+        <div class="stat-num">30<span style="font-size:1.4rem;">min</span></div>
+        <div class="stat-label"><strong>review.</strong> Two reviewers, 24 hours of lead time, then ship.</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PART I: WHAT AN HLD IS & WHY NOW -->
+<section class="section" id="what-it-is">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part I</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">What an HLD Is, and Why It Matters <em>Right Now</em></h2>
+    <p class="reveal">An HLD sits between the product spec (which says <em>what</em> to build) and the code (which is the build itself). It is the document that names <em>how</em>, and it defends the choice against the obvious alternatives.</p>
+
+    <div class="arch-diagram reveal">
+      <div class="arch-label">Where the HLD lives</div>
+      <div class="flow-box"><span class="c-muted">Product Spec          HLD                    Code</span>
+<span class="c-muted">─────────────        ─────────────          ─────────────</span>
+<span class="c-primary">WHAT</span> to build   →    <span class="c-amber">HOW</span> to build it   →    The build itself
+Features, UX         Architecture,          Implementation
+Requirements         Tradeoffs, Phases      details</div>
+    </div>
+
+    <p class="reveal">A useful HLD is <strong>short</strong> (two to four pages), <strong>decision-forward</strong> (it names rejected options and explains why), and <strong>actionable</strong> (every engineer can answer "what do I build tomorrow?" without another meeting).</p>
+
+    <p class="reveal">This is where AI-assisted development changes the math. The implementation layer is now cheap. The remaining moat is deciding <em>what code should exist</em>. The HLD is the artifact where that decision lives, and the difference in agent output is dramatic.</p>
+
+    <div class="arch-diagram reveal">
+      <div class="arch-label">Two briefs, two outcomes</div>
+      <div class="flow-box"><span class="c-muted">Without HLD</span> → "Add LLM analysis to the pipeline"
+  Result: generic integration, wrong abstraction,
+          no timeout handling, duplicates existing
+          NLP service.
+
+<span class="c-amber">With HLD</span>    → <span class="c-primary">"AnalysisService, async via SQS,</span>
+             <span class="c-primary"> 3x retry w/ backoff, rule-based fallback,</span>
+             <span class="c-primary"> reuse NormalizationModule."</span>
+  Result: focused implementation that fits the system.</div>
+    </div>
+
+    <p class="reveal">Engineers who can produce HLDs direct entire systems. Engineers who cannot implement other people's designs. AI has widened that gap from a career advantage to a career defining split.</p>
+  </div>
+</section>
+
+<!-- PART II: THE SIX PHASES -->
+<section class="section" id="phases">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part II</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Process: <em>Six Phases</em></h2>
+    <p class="reveal">A sequence, not a template. Run each phase in order. Each one forces a question you cannot defer.</p>
+
+    <div class="phase-timeline reveal">
+      <div class="phase-step"><div class="ps-num">01</div><div class="ps-name">Problem Definition</div></div>
+      <div class="phase-step"><div class="ps-num">02</div><div class="ps-name">Current Survey</div></div>
+      <div class="phase-step"><div class="ps-num">03</div><div class="ps-name">Quantify</div></div>
+      <div class="phase-step"><div class="ps-num">04</div><div class="ps-name">Minimize</div></div>
+      <div class="phase-step"><div class="ps-num">05</div><div class="ps-name">Decide Visibly</div></div>
+      <div class="phase-step"><div class="ps-num">06</div><div class="ps-name">Pre-mortem</div></div>
+    </div>
+
+    <!-- PHASE 1 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 01</div>
+      <h3 id="phase-1">Problem <em>Definition</em></h3>
+      <p class="pb-lede">The most common failure in design is solving the wrong problem precisely. Invest here disproportionately. Four components, every time.</p>
+    </div>
+
+    <div class="callout reveal">
+      <div class="callout-label">Problem Definition</div>
+      <div class="callout-row">
+        <div class="callout-row-key">Problem</div>
+        <div class="callout-row-val">Checkout P95 latency is <strong>900ms</strong>. Target: under <strong>200ms</strong>.</div>
+      </div>
+      <div class="callout-row">
+        <div class="callout-row-key">Audience</div>
+        <div class="callout-row-val">End users on the purchase flow. <strong>Not</strong> internal ops tools.</div>
+      </div>
+      <div class="callout-row">
+        <div class="callout-row-key">Non-goals</div>
+        <div class="callout-row-val">InventoryService refactor, payment provider migration, checkout UI redesign, back-office tooling improvements.</div>
+      </div>
+      <div class="callout-row">
+        <div class="callout-row-key">Cost of inaction</div>
+        <div class="callout-row-val">At current latency, checkout abandonment is ~12%. Each 100ms reduction correlates with ~1.5% recovery based on industry data.</div>
+      </div>
+    </div>
+
+    <p class="reveal"><strong>Non-goals</strong> are the most underrated line item. They prevent scope creep before design begins. <strong>Cost of inaction</strong> forces you to justify the work itself. Some features should not be built at all, and this section catches them early.</p>
+
+    <!-- PHASE 2 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 02</div>
+      <h3 id="phase-2">Current System <em>Survey</em></h3>
+      <p class="pb-lede">Document what already exists before proposing anything new. Most bad designs come from authors who skipped this step and proposed solutions that duplicate, conflict with, or break existing systems.</p>
+    </div>
+
+    <div class="arch-diagram reveal">
+      <div class="arch-label">Current state, checkout path</div>
+      <div class="flow-box"><span class="c-amber">PaymentService</span> <span class="c-muted">(owns checkout flow)</span>
+├── Synchronous call to InventoryService  <span class="c-muted">(~120ms)</span>
+├── Synchronous call to PricingService    <span class="c-muted">(~80ms)</span>
+├── Synchronous call to FraudCheck        <span class="c-amber">(~400ms)  ← bottleneck</span>
+└── Synchronous call to PaymentGateway    <span class="c-muted">(~200ms)</span>
+
+<span class="c-muted">Existing retry logic:</span> none
+<span class="c-muted">Existing caching:</span>     PricingService has 60s TTL
+<span class="c-muted">Teams consuming PaymentService events:</span>
+├── Analytics        <span class="c-teal">(async, Kafka)</span>
+├── Notifications    <span class="c-teal">(async, SQS)</span>
+└── Fulfillment      <span class="c-amber">(sync REST) ← will break if API changes</span></div>
+    </div>
+
+    <p class="reveal">The survey answers three questions: <strong>what already works</strong> (do not duplicate it), <strong>what are the real constraints</strong> (not theoretical, the things actually slow or fragile or at capacity), and <strong>who depends on this</strong> (every downstream consumer is a coordination cost).</p>
+
+    <!-- PHASE 3 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 03</div>
+      <h3 id="phase-3">Quantify <em>Requirements</em></h3>
+      <p class="pb-lede">Vague requirements produce wrong architectures. Translate words into numbers. The translation is where most design quality is won or lost.</p>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Vague requirement</th>
+            <th>Quantified version</th>
+            <th>Design implication</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>"Fast"</strong></td><td>P95 under 200ms</td><td>Need to parallelize FraudCheck or make it async</td></tr>
+          <tr><td><strong>"Scalable"</strong></td><td>Handle 3x current load (15k RPS) within 6 months</td><td>Current single-instance FraudCheck will not scale; need horizontal scaling or a queue</td></tr>
+          <tr><td><strong>"Reliable"</strong></td><td>99.95% uptime (4.4h downtime/year)</td><td>Requires redundancy on the payment path, no single points of failure</td></tr>
+          <tr><td><strong>"Many users"</strong></td><td>10M DAU, 5k RPS peak</td><td>Connection pooling, read replicas, caching layer needed</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="content">
+    <p class="reveal">Quantification turns opinion debates into arithmetic. The 200ms target from Phase 1 reappears here as a hard constraint, and it will later eliminate caching as an option in Phase 5 (caching only helps repeat buyers, so it cannot meet the target for <em>all</em> users). One number, one decision closed.</p>
+    <p class="reveal">The architectures for 100, 10,000, and 10 million users are different systems. I once watched a team spend six weeks building a Kafka pipeline for a service handling 200 requests per day. A Postgres table with a polling job would have worked for two years. Designing for the wrong number is equally expensive in both directions.</p>
+
+    <!-- PHASE 4 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 04</div>
+      <h3 id="phase-4">Minimize <em>Components</em></h3>
+      <p class="pb-lede">Start with the fewest possible moving parts. Justify each addition against a specific quantified requirement from Phase 3. The burden of proof sits on addition, not on simplicity.</p>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="table-wrap reveal">
+      <table>
+        <thead>
+          <tr>
+            <th>Question</th>
+            <th>Yes</th>
+            <th>No</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Does a quantified requirement demand async processing?</strong></td>
+            <td>Add a message queue. Reference the requirement by number.</td>
+            <td>Do not add a queue. Synchronous is simpler to debug, deploy, and monitor.</td>
+          </tr>
+          <tr>
+            <td><strong>Is there an organizational boundary (separate team owns this domain)?</strong></td>
+            <td>Separate service is justified on ownership grounds alone.</td>
+            <td>Can the existing service absorb this logic?</td>
+          </tr>
+          <tr>
+            <td><strong>Does the existing service's resource profile (CPU, memory, latency budget) support the additional load?</strong></td>
+            <td>Keep it in the existing service. One fewer deployment target.</td>
+            <td>Justify separation with the load numbers from Phase 3.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="content">
+    <p class="reveal">Every component is a new failure mode, a new deployment dependency, and a new thing to monitor at 3am.</p>
+
+    <!-- PHASE 5 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 05</div>
+      <h3 id="phase-5">Make Decisions <em>Visible</em></h3>
+      <p class="pb-lede">Every HLD has two or three defining architectural choices. They need explicit side by side treatment, not a mention. Always include "do nothing" as a real option, and always name the downside of the chosen one.</p>
+    </div>
+  </div>
+
+  <div class="content-wide">
+    <div class="reveal" style="margin: 2rem 0;">
+      <div class="arch-label" style="font-family: var(--font-mono); font-size: 0.6rem; font-weight: 500; letter-spacing: 0.18em; text-transform: uppercase; color: var(--accent-amber); margin-bottom: 1.2rem; text-align: center; opacity: 0.85;">Decision · How to handle the FraudCheck bottleneck</div>
+      <div class="options-grid">
+        <div class="option-col">
+          <div class="opt-label">Option A</div>
+          <div class="opt-title">Do nothing</div>
+          <div class="opt-section">
+            <div class="opt-section-label">Pros</div>
+            <div class="opt-section-body">No risk. No engineering work.</div>
+          </div>
+          <div class="opt-section">
+            <div class="opt-section-label">Cons</div>
+            <div class="opt-section-body">Checkout latency stays at 900ms. Abandonment stays at ~12%.</div>
+          </div>
+        </div>
+        <div class="option-col chosen">
+          <div class="opt-label">Option B</div>
+          <div class="opt-title">Make FraudCheck async</div>
+          <div class="opt-section">
+            <div class="opt-section-label">Pros</div>
+            <div class="opt-section-body">Cuts 400ms from the critical path. Meets the 200ms target. Fastest win.</div>
+          </div>
+          <div class="opt-section">
+            <div class="opt-section-label">Cons</div>
+            <div class="opt-section-body">Orders proceed before fraud verdict. Need a compensation flow for flagged orders. ~2 days of extra work.</div>
+          </div>
+        </div>
+        <div class="option-col">
+          <div class="opt-label">Option C</div>
+          <div class="opt-title">Cache fraud verdicts</div>
+          <div class="opt-section">
+            <div class="opt-section-label">Pros</div>
+            <div class="opt-section-body">Keeps sync flow. Lower risk than full async.</div>
+          </div>
+          <div class="opt-section">
+            <div class="opt-section-label">Cons</div>
+            <div class="opt-section-body">Only helps repeat buyers. ~30% hit rate estimated. Does not meet target for new users.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="content">
+    <!-- PHASE 6 -->
+    <div class="phase-block reveal">
+      <div class="pb-meta">Phase 06</div>
+      <h3 id="phase-6">Design for Failure <em>(Pre-mortem)</em></h3>
+      <p class="pb-lede">Assume the system has already failed. Work backwards. Try it now: spend sixty seconds on a project you shipped recently and ask <em>"how would I guarantee this breaks?"</em> The question activates a different mental model than "how will this work" and consistently surfaces risks optimistic planning misses.</p>
+    </div>
+
+    <div class="failure-list reveal">
+      <div class="failure-item">
+        <div class="failure-num">01</div>
+        <div class="failure-body">
+          <div class="failure-what">FraudCheck queue backs up during a flash sale</div>
+          <div class="failure-fix">Dead letter queue + alert at 1000 depth + automatic fallback to rule-based scoring</div>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-num">02</div>
+        <div class="failure-body">
+          <div class="failure-what">Payment gateway returns 500s for 10 minutes</div>
+          <div class="failure-fix">Circuit breaker (open after 5 failures in 30s), retry with exponential backoff, user-facing "try again in 2 minutes" instead of silent failure</div>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-num">03</div>
+        <div class="failure-body">
+          <div class="failure-what">Async fraud verdict arrives after order is shipped</div>
+          <div class="failure-fix">Hold shipment for 60s window. If no verdict, proceed + flag for manual review. Accept ~0.1% false-positive cost</div>
+        </div>
+      </div>
+      <div class="failure-item">
+        <div class="failure-num">04</div>
+        <div class="failure-body">
+          <div class="failure-what">Schema migration on FraudCheck table locks writes</div>
+          <div class="failure-fix">Online migration (pt-online-schema-change or pg_repack). Zero-downtime deploy requirement documented</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PULL QUOTE -->
+<section class="section" style="padding: 2rem 0;">
+  <div class="pull-quote reveal">
+    <p>"The six phases are not a template to fill in mechanically. They are a sequence of questions that, taken seriously, <em>surface problems while they are still cheap to fix</em>."</p>
+  </div>
+</section>
+
+<!-- PART III: THE TEMPLATE -->
+<section class="section" id="template">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part III</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The <em>Template</em></h2>
+    <p class="reveal">Seven sections. Scale each to its actual complexity. Most HLDs skip the optional phases section entirely.</p>
+
+    <div class="template-box reveal">
+      <div class="template-row"><span class="tr-num">1.</span><span class="tr-name">Context</span><span><span class="tr-arrow">→</span>One paragraph. The world today + the problem.</span></div>
+      <div class="template-row"><span class="tr-num">2.</span><span class="tr-name">Goals / Non-goals</span><span><span class="tr-arrow">→</span>What this will and will not do.</span></div>
+      <div class="template-row"><span class="tr-num">3.</span><span class="tr-name">Design overview</span><span><span class="tr-arrow">→</span>One-paragraph summary before going deep.</span></div>
+      <div class="template-row"><span class="tr-num">4.</span><span class="tr-name">Detailed design</span><span><span class="tr-arrow">→</span>Components, data flow, tech choices, tradeoffs, diagrams.</span></div>
+      <div class="template-row"><span class="tr-num">5.</span><span class="tr-name">Alternatives</span><span><span class="tr-arrow">→</span>Every serious option + why rejected.</span></div>
+      <div class="template-row"><span class="tr-num">6.</span><span class="tr-name">Cross-cutting</span><span><span class="tr-arrow">→</span>Security, observability, privacy. Brief.</span></div>
+      <div class="template-row"><span class="tr-num">7.</span><span class="tr-name">Phases</span><span><span class="tr-arrow">→</span>Only if rollout is complex. Otherwise omit.</span></div>
+    </div>
+  </div>
+</section>
+
+<!-- PART IV: THE REVIEW -->
+<section class="section" id="review">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part IV</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Review, Where Most HLDs <em>Die</em></h2>
+    <p class="reveal">Writing the document is half the work. The other half is getting useful feedback without devolving into bike-shedding about naming conventions or diagram alignment.</p>
+
+    <div class="phase-grid reveal">
+      <div class="phase-card">
+        <div class="phase-card-header">
+          <div class="phase-card-number">01 · Roster</div>
+        </div>
+        <div class="phase-card-title">Who should review</div>
+        <p>Two or three people, maximum. One senior engineer who can validate structural decisions. One owner of a downstream dependency you touch. Optionally, one domain expert on the new technology. More than three and the feedback becomes contradictory noise.</p>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-card-header">
+          <div class="phase-card-number">02 · Signal</div>
+        </div>
+        <div class="phase-card-title">What good feedback looks like</div>
+        <p>Useful feedback does one of three things: names a failure mode you missed, challenges an assumption with data, or proposes a simpler alternative. <em>"I would use Kafka instead of SQS"</em> without a reason tied to your requirements is a preference statement. Acknowledge and move on.</p>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-card-header">
+          <div class="phase-card-number">03 · Meeting</div>
+        </div>
+        <div class="phase-card-title">How to run the review</div>
+        <p>Thirty minutes, not sixty. Share the doc 24 hours ahead. Open with five minutes flagging the two or three decisions you want scrutiny on. Discussion, not presentation. If anyone says <em>"I haven't read it yet"</em>, reschedule. An uninformed review is worse than none.</p>
+      </div>
+
+      <div class="phase-card">
+        <div class="phase-card-header">
+          <div class="phase-card-number">04 · Exit</div>
+        </div>
+        <div class="phase-card-title">When to stop iterating</div>
+        <p>An HLD is a decision document, not a consensus document. If two of three reviewers are aligned and dissent is non-critical, publish, note the dissent, ship. Waiting for unanimous agreement is how docs sit in review for three weeks while the team builds nothing.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PART V: WALKTHROUGH -->
+<section class="section" id="walkthrough">
+  <div class="content-wide">
+    <div class="section-divider reveal">
+      <span class="section-number">Part V</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal" style="max-width: 740px; margin-left: auto; margin-right: auto;">The Checkout <em>Latency HLD</em></h2>
+    <p class="reveal" style="max-width: 740px; margin-left: auto; margin-right: auto;">Six phases applied to the checkout problem threaded through this article. This is what a finished HLD looks like in practice. Steal the structure.</p>
+
+    <div class="walkthrough reveal">
+      <div class="wt-doctype">High-Level Design · Draft</div>
+      <div class="wt-title">Checkout Latency Reduction</div>
+
+      <h4>Context</h4>
+      <p>Our checkout flow has a P95 latency of <strong>900ms</strong>, driven primarily by a synchronous FraudCheck call that takes 400ms on average. Checkout abandonment is approximately 12%, and industry data suggests each 100ms reduction correlates with a 1.5% recovery in completion rate. This design proposes making FraudCheck asynchronous to bring checkout P95 under <strong>200ms</strong>.</p>
+
+      <h4>Goals</h4>
+      <ul>
+        <li>Reduce checkout P95 latency to under 200ms.</li>
+        <li>Maintain fraud detection accuracy at current levels.</li>
+        <li>Ship within one sprint (two weeks) with zero downtime.</li>
+      </ul>
+
+      <h4>Non-goals</h4>
+      <ul>
+        <li>Refactoring InventoryService or PricingService.</li>
+        <li>Migrating payment providers.</li>
+        <li>Redesigning the checkout UI.</li>
+        <li>Improving back-office tooling latency.</li>
+      </ul>
+
+      <h4>Design overview</h4>
+      <p>Move FraudCheck off the synchronous checkout path. Orders are submitted immediately after payment confirmation. FraudCheck runs asynchronously via SQS, with a 60-second hold window before shipment. Orders not cleared within the window proceed and are flagged for manual review.</p>
+
+      <h4>Detailed design</h4>
+      <p><strong>Current path</strong> (sync, ~900ms total):</p>
+      <div class="flow-box" style="margin: 0.5rem 0 1.2rem;">User → PaymentService → InventoryService   <span class="c-muted">(120ms)</span>
+                      → PricingService     <span class="c-muted">(80ms)</span>
+                      → FraudCheck         <span class="c-amber">(400ms)</span>
+                      → PaymentGateway     <span class="c-muted">(200ms)</span>
+                      → Response</div>
+
+      <p><strong>Proposed path</strong> (async FraudCheck, ~500ms on the critical path):</p>
+      <div class="flow-box" style="margin: 0.5rem 0 1.2rem;">User → PaymentService → InventoryService   <span class="c-muted">(120ms)</span>
+                      → PricingService     <span class="c-muted">(80ms, cached)</span>
+                      → PaymentGateway     <span class="c-muted">(200ms)</span>
+                      → <span class="c-amber">Response (order confirmed)</span>
+                              ↓
+                      → <span class="c-teal">SQS → FraudCheckWorker</span>
+                              ↓
+                      → <span class="c-teal">Verdict stored → Fulfillment hold window</span></div>
+
+      <p><strong>Key components.</strong></p>
+      <ul>
+        <li><strong>SQS queue</strong> for FraudCheck jobs. Standard queue, not FIFO (ordering is not required). Dead letter queue after 3 failed attempts.</li>
+        <li><strong>FraudCheckWorker</strong> consumes from SQS, calls existing FraudCheck logic, writes verdict to the orders table.</li>
+        <li><strong>Shipment hold</strong> in FulfillmentService: 60-second window. If verdict arrives, apply it. If not, release shipment and flag for manual review.</li>
+      </ul>
+
+      <p><strong>Tech choices.</strong></p>
+      <ul>
+        <li><strong>SQS over Kafka</strong> because we do not need replay, ordering, or fan-out. SQS is already in our infrastructure. Kafka would add operational overhead for no benefit at this scale.</li>
+        <li><strong>Verdict stored in existing orders table</strong> (new <code>fraud_status</code> column: <code>pending</code>, <code>cleared</code>, <code>flagged</code>, <code>manual_review</code>) rather than a separate table, to avoid cross-table consistency issues.</li>
+      </ul>
+
+      <h4>Alternatives considered</h4>
+      <ul>
+        <li><strong>Do nothing.</strong> Checkout abandonment stays at 12%. Cost: roughly $X/month in lost conversions.</li>
+        <li><strong>Cache fraud verdicts.</strong> Only helps repeat buyers (~30% hit rate). Does not meet the 200ms target for new users. Stale verdicts introduce risk with no clear expiration policy.</li>
+        <li><strong>Parallelize all calls.</strong> Reduces latency but FraudCheck at 400ms still dominates. Best case ~420ms, still above target. Added complexity for insufficient gain.</li>
+      </ul>
+
+      <h4>Cross-cutting concerns</h4>
+      <ul>
+        <li><strong>Security.</strong> Fraud verdicts are sensitive. SQS messages encrypted at rest (AWS default). Worker IAM role scoped to orders table only.</li>
+        <li><strong>Observability.</strong> New CloudWatch metrics on queue depth, processing latency, and manual review rate. Alert if queue depth exceeds 1000 or manual review rate exceeds 0.5%.</li>
+        <li><strong>Privacy.</strong> No new PII stored. Fraud verdicts reference order IDs, not user data directly.</li>
+      </ul>
+
+      <h4>Failure modes and mitigations</h4>
+      <ul>
+        <li><strong>Queue backup during flash sale:</strong> fallback to synchronous rule-based scoring (degraded accuracy, maintained latency).</li>
+        <li><strong>Payment gateway 500s:</strong> circuit breaker, exponential backoff, user-facing retry message.</li>
+        <li><strong>Late verdict after shipment:</strong> accept ~0.1% false-positive cost, flag for post-shipment review.</li>
+        <li><strong>Schema migration on orders table:</strong> pg_repack for zero-downtime column addition.</li>
+      </ul>
+
+      <h4>Rollout phases</h4>
+      <ul>
+        <li><strong>Week 1:</strong> Deploy FraudCheckWorker and SQS queue. Run in shadow mode (async check runs but does not affect the sync path). Compare verdicts.</li>
+        <li><strong>Week 2:</strong> Cut over. Route checkout through async path. Monitor queue depth and manual review rate for 48 hours before declaring stable.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- PART VI: PRACTICE -->
+<section class="section" id="practice">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Part VI</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">Building the Skill <em>Without a Project</em></h2>
+    <p class="reveal">No HLD to write at work right now? Three ways to build the muscle.</p>
+
+    <div class="practice-grid reveal">
+      <div class="practice-card">
+        <div class="pr-num">Approach 01</div>
+        <div class="pr-title">Reverse-engineer your own work</div>
+        <div class="pr-body">Take something you already built. Write the HLD after the fact. You will find decisions you made by accident that should have been deliberate. Judgment sharpens fastest here, because you already know how the story ends.</div>
+      </div>
+      <div class="practice-card">
+        <div class="pr-num">Approach 02</div>
+        <div class="pr-title">Design against open source</div>
+        <div class="pr-body">Pick a project you use (Postgres, Redis, Next.js). Find a feature request. Write the HLD for it across all six phases. Public issue discussion gives you a built-in review.</div>
+      </div>
+      <div class="practice-card">
+        <div class="pr-num">Approach 03</div>
+        <div class="pr-title">Review someone else's design</div>
+        <div class="pr-body">Find an RFC or ADR in any open source project and write a review. What is missing? What assumptions are unstated? What failure mode did they miss? Reviewing teaches pattern recognition faster than writing.</div>
+      </div>
+    </div>
+
+    <p class="reveal">For published examples, the Google, Stripe, and Uber engineering blogs describe decisions in HLD style. Pay attention to how they handle "alternatives considered". It is almost always the most revealing part of any design doc.</p>
+  </div>
+</section>
+
+<!-- EPILOGUE -->
+<section class="section">
+  <div class="content">
+    <div class="section-divider reveal">
+      <span class="section-number">Epilogue</span>
+      <span class="section-line"></span>
+    </div>
+    <h2 class="reveal">The Thinking the Artifact <em>Forces</em></h2>
+    <p class="reveal">An HLD outlives the sprint. It outlives the quarter. It becomes the institutional memory that stops the next team from repeating the same mistakes.</p>
+    <p class="reveal">But the real leverage is not the artifact. It is the thinking the artifact forces: a sequence of questions that surface problems while they are still cheap to fix. Before the pull request. Before the deployment. Before the 3am page.</p>
+    <p class="reveal">The highest leverage thing you can do this week is not write more code. It is write one clear document that makes the next three months of work obvious to everyone involved, get two people to poke holes in it, then build with confidence.</p>
+    <p class="reveal" style="color: var(--text-muted); margin-top: 2.5rem; font-style: italic;">See you in the trenches.</p>
+  </div>
+</section>
+
+<!-- ABOUT -->
+<section class="section" style="padding: 3rem 0;">
+  <div class="content">
+    <div class="reveal about-author-block">
+      <img class="about-author-photo" src="https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/43ac6880-5dd9-4c94-0eb3-1d066564e700/public" alt="Boyan Balev" width="96" height="96" loading="lazy" decoding="async">
+      <div class="about-author-copy">
+        <div style="font-family: var(--font-mono); font-size: 0.65rem; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent-amber); margin-bottom: 1rem;">About the Author</div>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1rem;"><strong style="color: var(--text-primary);">I'm Boyan Balev,</strong> a Senior Engineer with 7 years building data systems across outsourcing, startups, and enterprise environments. Currently working on MandateWire revamp.</p>
+        <p style="color: var(--text-secondary); font-size: 0.95rem; line-height: 1.8; margin-bottom: 1.2rem;">I write about system design, infrastructure economics, and the pragmatic side of engineering at <strong style="color: var(--text-primary);">The Trenches</strong>.</p>
+        <div style="display: flex; gap: 1rem; flex-wrap: wrap;">
+          <a href="https://medium.com/@balevdev" rel="noopener noreferrer" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-amber); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px;">Medium</a>
+          <a href="https://www.linkedin.com/in/boyan-balev/" rel="noopener noreferrer" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-amber); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px;">LinkedIn</a>
+          <a href="https://github.com/balevdev" rel="noopener noreferrer" style="font-family: var(--font-mono); font-size: 0.7rem; color: var(--accent-amber); text-decoration: none; padding: 0.4rem 0.8rem; border: 1px solid var(--border-accent); border-radius: 100px;">GitHub</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="footer">
+  <div class="content">
+    <div class="footer-brand">The <span>Trenches</span></div>
+    <p>© 2026 Boyan Balev. Written from the trenches, with respect for the craft.</p>
+    <p style="margin-top: 0.5rem; font-size: 0.7rem;"><a href="https://medium.com/@balevdev" rel="noopener noreferrer" style="color: var(--text-muted); text-decoration: none; border-bottom: 1px solid var(--border);">Read more on Medium</a></p>
+  </div>
+</footer>
+
+<button class="back-to-top" id="backToTop" aria-label="Back to top">↑</button>
+
+<!-- SCRIPTS -->
+<script>
+(function() {
+  const canvas = document.getElementById('ambient-canvas');
+  const ctx = canvas.getContext('2d');
+  let width, height, particles = [];
+
+  function resize() {
+    width = canvas.width = window.innerWidth;
+    height = canvas.height = window.innerHeight;
+  }
+
+  function createParticles() {
+    particles = [];
+    const count = Math.min(Math.floor(width * height / 25000), 50);
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x: Math.random() * width, y: Math.random() * height,
+        vx: (Math.random() - 0.5) * 0.15, vy: (Math.random() - 0.5) * 0.15,
+        r: Math.random() * 1.5 + 0.5, o: Math.random() * 0.3 + 0.05
+      });
+    }
+  }
+
+  function getColor() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? '150, 85, 20' : '220, 150, 70';
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, width, height);
+    const col = getColor();
+    for (let i = 0; i < particles.length; i++) {
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      if (p.x < 0) p.x = width; if (p.x > width) p.x = 0;
+      if (p.y < 0) p.y = height; if (p.y > height) p.y = 0;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(${col}, ${p.o})`; ctx.fill();
+    }
+    const len = particles.length;
+    for (let i = 0; i < len; i++) {
+      let connections = 0;
+      for (let j = i + 1; j < len; j++) {
+        if (connections >= 3) break;
+        const dx = particles[i].x - particles[j].x, dy = particles[i].y - particles[j].y;
+        const dist = dx * dx + dy * dy;
+        if (dist < 12000) {
+          ctx.beginPath(); ctx.moveTo(particles[i].x, particles[i].y);
+          ctx.lineTo(particles[j].x, particles[j].y);
+          ctx.strokeStyle = `rgba(${col}, ${0.03 * (1 - dist / 12000)})`; ctx.stroke();
+          connections++;
+        }
+      }
+    }
+    requestAnimationFrame(draw);
+  }
+
+  resize(); createParticles(); draw();
+  let resizeTimer;
+  window.addEventListener('resize', () => { clearTimeout(resizeTimer); resizeTimer = setTimeout(() => { resize(); createParticles(); }, 200); });
+})();
+
+const reveals = document.querySelectorAll('.reveal');
+const revealObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => { if (entry.isIntersecting) { entry.target.classList.add('visible'); revealObserver.unobserve(entry.target); } });
+}, { threshold: 0.1, rootMargin: '0px 0px -30px 0px' });
+reveals.forEach(el => revealObserver.observe(el));
+
+const progressBar = document.getElementById('progressBar');
+window.addEventListener('scroll', () => {
+  progressBar.style.width = ((window.scrollY / (document.documentElement.scrollHeight - window.innerHeight)) * 100) + '%';
+}, { passive: true });
+
+let lastScroll = 0;
+const nav = document.getElementById('mainNav');
+window.addEventListener('scroll', () => {
+  const current = window.scrollY;
+  nav.style.transform = current > lastScroll && current > 140 ? 'translateY(-100%)' : 'translateY(0)';
+  lastScroll = current;
+}, { passive: true });
+
+document.querySelectorAll('.nav-center a[href^="#"]').forEach(anchor => {
+  anchor.addEventListener('click', function(e) {
+    e.preventDefault();
+    const target = document.querySelector(this.getAttribute('href'));
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+const backToTop = document.getElementById('backToTop');
+window.addEventListener('scroll', () => {
+  backToTop.classList.toggle('visible', window.scrollY > 700);
+}, { passive: true });
+backToTop.addEventListener('click', () => { window.scrollTo({ top: 0, behavior: 'smooth' }); });
+
+const themeToggle = document.getElementById('themeToggle');
+const html = document.documentElement;
+function setTheme(theme) {
+  html.setAttribute('data-theme', theme);
+  themeToggle.textContent = theme === 'dark' ? '☽' : '☀';
+  localStorage.setItem('theme-trenches', theme);
+}
+const saved = localStorage.getItem('theme-trenches');
+if (saved) setTheme(saved);
+themeToggle.addEventListener('click', () => { setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+document.addEventListener('keydown', (e) => {
+  if ((e.key === 't' || e.key === 'T') && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && !e.target.isContentEditable)
+    setTheme(html.getAttribute('data-theme') === 'dark' ? 'light' : 'dark');
+});
+
+const mobileMenuToggle = document.getElementById('mobileMenuToggle');
+const mobileNavDrawer = document.getElementById('mobileNavDrawer');
+const mobileNavClose = document.getElementById('mobileNavClose');
+const mobileNavOverlay = document.getElementById('mobileNavOverlay');
+function openMobileNav() { mobileNavDrawer.classList.add('open'); mobileNavOverlay.classList.add('open'); document.body.style.overflow = 'hidden'; }
+function closeMobileNav() { mobileNavDrawer.classList.remove('open'); mobileNavOverlay.classList.remove('open'); document.body.style.overflow = ''; }
+mobileMenuToggle.addEventListener('click', openMobileNav);
+mobileNavClose.addEventListener('click', closeMobileNav);
+mobileNavOverlay.addEventListener('click', closeMobileNav);
+document.querySelectorAll('.mobile-nav-links a').forEach(link => {
+  link.addEventListener('click', (e) => { e.preventDefault(); closeMobileNav();
+    const target = document.querySelector(link.getAttribute('href'));
+    if (target) setTimeout(() => target.scrollIntoView({ behavior: 'smooth', block: 'start' }), 300);
+  });
+});
+</script>
+</body>
+</html>
