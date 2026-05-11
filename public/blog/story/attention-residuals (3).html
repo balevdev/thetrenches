@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Attention Residuals · The Trenches</title>
+<meta name="description" content="Why every transformer ever built carries a structural flaw from 2015, and how the Kimi team fixed it by recognizing a pattern we already solved.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #faf9f7;
+  --bg-alt: #f2f0ec;
+  --bg-diagram: #f6f5f2;
+  --text: #1a1a1a;
+  --text-secondary: #4a4a4a;
+  --text-muted: #7a7a72;
+  --accent: #1a7a6d;
+  --accent-hover: #15665a;
+  --accent-light: #e6f4f1;
+  --accent-dim: rgba(26,122,109,0.06);
+  --border: #ddd8d0;
+  --border-light: #eae7e1;
+  --red: #c4453a;
+  --red-soft: rgba(196,69,58,0.12);
+  --orange: #d4922a;
+  --orange-soft: rgba(212,146,42,0.12);
+  --blue: #3d72a8;
+  --blue-soft: rgba(61,114,168,0.12);
+  --code-bg: #1e1e1e;
+  --code-text: #d4d4d4;
+  --font-display: 'Fraunces', Georgia, serif;
+  --font-body: 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', monospace;
+  --max-w: 700px;
+  --gutter: 2rem;
+}
+
+[data-theme="dark"] {
+  --bg: #111110;
+  --bg-alt: #1a1a18;
+  --bg-diagram: #161614;
+  --text: #e5e3dd;
+  --text-secondary: #b8b5ad;
+  --text-muted: #85837a;
+  --accent: #3cc9b5;
+  --accent-hover: #4dd9c5;
+  --accent-light: #172b28;
+  --accent-dim: rgba(60,201,181,0.06);
+  --border: #2a2a26;
+  --border-light: #222220;
+  --red: #e06b62;
+  --red-soft: rgba(224,107,98,0.12);
+  --orange: #f0b84a;
+  --orange-soft: rgba(240,184,74,0.12);
+  --blue: #5e9fd4;
+  --blue-soft: rgba(94,159,212,0.12);
+  --code-bg: #0a0a09;
+  --code-text: #c8c6c0;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font-body);
+  font-size: 17px;
+  line-height: 1.75;
+  color: var(--text);
+  background: var(--bg);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+
+::selection { background: var(--accent); color: #fff; }
+
+/* ── Progress bar ── */
+.progress-bar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--accent);
+  width: 0%;
+  z-index: 200;
+  transition: width 0.1s linear;
+}
+
+/* ── Header ── */
+.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.9rem var(--gutter);
+  background: var(--bg);
+  border-bottom: 1px solid var(--border);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+}
+
+.site-logo {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  text-decoration: none;
+  letter-spacing: 0.02em;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 1.2rem;
+}
+
+.header-nav {
+  display: flex;
+  gap: 0.2rem;
+}
+
+.header-nav a {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  text-decoration: none;
+  padding: 0.35rem 0.6rem;
+  border-radius: 4px;
+  transition: color 0.2s, background 0.2s;
+}
+
+.header-nav a:hover, .header-nav a.active {
+  color: var(--accent);
+  background: var(--accent-dim);
+}
+
+.theme-toggle {
+  background: none;
+  border: 1px solid var(--border);
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  color: var(--text-muted);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s, color 0.2s;
+}
+.theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Hero ── */
+.hero {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 4.5rem var(--gutter) 2.5rem;
+}
+
+.hero-kicker {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin-bottom: 1.2rem;
+}
+
+h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.6rem, 5.5vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  margin-bottom: 1.5rem;
+}
+
+h1 em { font-style: italic; color: var(--accent); }
+
+.hero-deck {
+  font-size: 1.08rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+  max-width: 600px;
+}
+
+.hero-meta {
+  margin-top: 2.2rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.hero-meta strong { color: var(--text); font-weight: 600; }
+.hero-meta a { color: var(--accent); text-decoration: none; }
+.hero-meta a:hover { text-decoration: underline; }
+
+/* ── TLDR box ── */
+.tldr {
+  max-width: var(--max-w);
+  margin: 0 auto 3rem;
+  padding: 0 var(--gutter);
+}
+
+.tldr-box {
+  background: var(--bg-alt);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 1.6rem 1.8rem;
+}
+
+.tldr-title {
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  margin-bottom: 0.7rem;
+}
+
+.tldr-box p {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.tldr-box p strong { color: var(--text); }
+
+/* ── Article ── */
+.article {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 0 var(--gutter) 5rem;
+}
+
+.article p { margin-bottom: 1.5rem; }
+
+.article h2 {
+  font-family: var(--font-display);
+  font-size: 1.75rem;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.015em;
+  margin: 0 0 1.2rem;
+}
+
+.article h2 em { font-style: italic; color: var(--accent); }
+
+.article h3 {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 2.5rem 0 0.8rem;
+}
+
+.article strong { font-weight: 600; }
+
+.article a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1px;
+}
+
+/* ── Section dividers ── */
+.section-break {
+  margin: 4rem 0 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-break .part-num {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.section-break .part-line {
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+/* ── Callout ── */
+.callout {
+  background: var(--accent-dim);
+  border-left: 3px solid var(--accent);
+  padding: 1.3rem 1.6rem;
+  margin: 2rem 0;
+  border-radius: 0 8px 8px 0;
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--text-secondary);
+}
+
+.callout strong { color: var(--text); }
+
+/* ── Standalone emphasis line ── */
+.punch {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 600;
+  line-height: 1.55;
+  margin: 2rem 0;
+  padding-left: 1.2rem;
+  border-left: 3px solid var(--accent);
+  color: var(--text);
+}
+
+/* ── Diagrams ── */
+.diagram-wrap {
+  margin: 2.5rem 0;
+  background: var(--bg-diagram);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.diagram-label {
+  padding: 0.75rem 1.3rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-alt);
+}
+
+.diagram-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  padding: 1.2rem 0.6rem;
+}
+
+/* ── Stats grid ── */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1px;
+  background: var(--border);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  margin: 2rem 0;
+}
+
+.stat-cell {
+  background: var(--bg-alt);
+  padding: 1.3rem 1.5rem;
+}
+
+.stat-cell .val {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: var(--accent);
+  letter-spacing: -0.02em;
+  display: block;
+  margin-bottom: 0.15rem;
+}
+
+.stat-cell .desc {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+/* ── Code block ── */
+.code-block {
+  background: var(--code-bg);
+  color: var(--code-text);
+  padding: 1.4rem 1.6rem;
+  border-radius: 10px;
+  font-family: var(--font-mono);
+  font-size: 0.8rem;
+  line-height: 1.75;
+  overflow-x: auto;
+  margin: 2rem 0;
+  white-space: pre;
+  border: 1px solid var(--border);
+}
+
+.c-cmt { color: #6a9955; }
+.c-kw { color: #c586c0; }
+.c-fn { color: #dcdcaa; }
+.c-str { color: #ce9178; }
+.c-num { color: #b5cea8; }
+
+/* ── Comparison table ── */
+.compare-table {
+  margin: 2rem 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-row:last-child { border-bottom: none; }
+
+.compare-row.header {
+  background: var(--bg-alt);
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.compare-cell {
+  padding: 0.9rem 1.2rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.compare-cell + .compare-cell {
+  border-left: 1px solid var(--border);
+}
+
+.compare-cell.old { background: var(--red-soft); }
+.compare-cell.new { background: var(--accent-dim); }
+
+/* ── Footer ── */
+.article-footer {
+  max-width: var(--max-w);
+  margin: 0 auto;
+  padding: 2rem var(--gutter) 4rem;
+  border-top: 1px solid var(--border);
+}
+
+.footer-links {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.footer-links a {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--accent);
+  text-decoration: none;
+  padding: 0.4rem 0.9rem;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  transition: background 0.2s, color 0.2s;
+}
+
+.footer-links a:hover {
+  background: var(--accent);
+  color: #fff;
+}
+
+.footer-note {
+  margin-top: 1.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+/* ── Scroll reveals ── */
+.reveal {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* ── Responsive ── */
+@media (max-width: 700px) {
+  :root { --gutter: 1.4rem; }
+  body { font-size: 16px; }
+  .hero { padding-top: 3rem; }
+  .header-nav { display: none; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .compare-cell { font-size: 0.82rem; padding: 0.7rem 0.9rem; }
+  .diagram-wrap svg { padding: 0.8rem 0.3rem; }
+}
+
+@media (max-width: 440px) {
+  .stats-grid { grid-template-columns: 1fr; }
+  h1 { font-size: 2.2rem; }
+}
+</style>
+</head>
+<body>
+
+<div class="progress-bar" id="progressBar"></div>
+
+<header class="site-header">
+  <a href="https://www.hundredsunited.com/blog/" class="site-logo">The Trenches</a>
+  <div class="header-right">
+    <nav class="header-nav">
+      <a href="#problem">Problem</a>
+      <a href="#parallel">Parallel</a>
+      <a href="#fix">Fix</a>
+      <a href="#scale">Scale</a>
+      <a href="#results">Results</a>
+      <a href="#implications">Why</a>
+    </nav>
+    <button class="theme-toggle" onclick="toggleTheme()" aria-label="Toggle theme">☽</button>
+  </div>
+</header>
+
+<section class="hero">
+  <div class="hero-kicker">Architecture Trenches · April 2026</div>
+  <h1>Attention <em>Residuals</em></h1>
+  <p class="hero-deck">
+    Every transformer ever built assumes that the best way to pass information between layers is a simple addition with equal weights. That assumption is a structural flaw. The Kimi team diagnosed it, recognized a pattern the field already solved once, and applied the same fix in a new dimension.
+  </p>
+  <div class="hero-meta">
+    <span><strong>Boyan Balev</strong></span>
+    <span>10 min read</span>
+    <span>Paper: <a href="https://arxiv.org/abs/2603.15031" target="_blank">arXiv 2603.15031</a></span>
+    <span>Code: <a href="https://github.com/MoonshotAI/Attention-Residuals" target="_blank">GitHub</a></span>
+  </div>
+</section>
+
+<div class="tldr">
+  <div class="tldr-box">
+    <div class="tldr-title">The whole article in ten seconds</div>
+    <p>Residual connections add every layer's output with a fixed weight of 1. As models grow deeper, early layers get buried under the cumulative pile and lose their influence. <strong>Attention Residuals replace this fixed accumulation with learned, input dependent attention over depth</strong>, letting each layer selectively retrieve what it needs from any previous layer. Block AttnRes makes this practical at scale by grouping layers into ~8 blocks and attending over block summaries. The result: 1.25x better compute efficiency, +7.5 points on graduate level reasoning, under 4% training overhead. Drop in replacement for any transformer.</p>
+  </div>
+</div>
+
+<article class="article">
+
+  <!-- ═══════ PART I ═══════ -->
+  <div class="section-break reveal" id="problem">
+    <span class="part-num">Part I</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">The Flaw Hiding in <em>Every</em> Transformer</h2>
+
+  <p class="reveal">Every modern language model is a stack of sequential layers. GPT, Gemini, Claude, Llama, DeepSeek. Data enters at the bottom, passes through dozens or hundreds of these layers, and exits at the top as a prediction. Each layer performs a different transformation, progressively refining the representation from raw token patterns toward abstract reasoning.</p>
+
+  <p class="reveal">This depth is only possible because of an idea from 2015 called residual connections. Before residual connections, training deep networks was practically impossible. The learning signal, which flows backward through the network during training, would shrink to nearly zero by the time it reached the early layers. This is the vanishing gradient problem. The fix was elegant: let the input to each layer skip past it and get added directly to the output. This creates a highway for information and gradients to pass through unimpeded.</p>
+
+  <p class="reveal">That single idea unlocked modern deep learning. We went from networks with a few dozen layers to networks with hundreds. Every transformer architecture since 2017 uses this design. It is foundational.</p>
+
+  <p class="punch reveal">And it has a critical flaw.</p>
+
+  <p class="reveal">Because every layer's output gets added together with equal weight of 1, the cumulative signal grows without bound as depth increases. By layer 100, the hidden state is a massive pile of accumulated contributions from every previous layer. The contribution of any single layer, especially early ones, becomes statistically invisible.</p>
+
+  <div class="diagram-wrap reveal">
+    <div class="diagram-label">The Signal Dilution Problem</div>
+    <svg viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+      <defs>
+        <marker id="arw" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="var(--text-muted)"/>
+        </marker>
+        <marker id="arwAccent" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto">
+          <polygon points="0 0, 7 2.5, 0 5" fill="var(--accent)"/>
+        </marker>
+      </defs>
+
+      <!-- Title annotation -->
+      <text x="340" y="28" text-anchor="middle" fill="var(--text-muted)" font-size="10.5" font-weight="500">Each layer adds its output with weight = 1. The pile grows, early signals vanish.</text>
+
+      <!-- The growing signal bar -->
+      <rect x="50" y="55" width="40" height="20" rx="3" fill="var(--accent)" opacity="0.9"/>
+      <text x="70" y="69" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">L1</text>
+
+      <rect x="110" y="55" width="60" height="20" rx="3" fill="var(--accent)" opacity="0.7"/>
+      <text x="140" y="69" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">L1+L2</text>
+
+      <rect x="190" y="55" width="90" height="20" rx="3" fill="var(--accent)" opacity="0.55"/>
+      <text x="235" y="69" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">L1+L2+L3</text>
+
+      <text x="310" y="69" fill="var(--text-muted)" font-size="14">···</text>
+
+      <rect x="340" y="48" width="290" height="34" rx="5" fill="var(--accent)" opacity="0.2"/>
+      <text x="485" y="70" text-anchor="middle" fill="var(--text)" font-size="9" font-weight="600">L1 + L2 + L3 + L4 + ... + L100</text>
+
+      <!-- Signal size label -->
+      <text x="50" y="95" fill="var(--accent)" font-size="9" font-weight="600">Small</text>
+      <line x1="80" y1="92" x2="600" y2="92" stroke="var(--accent)" stroke-width="0.5" stroke-dasharray="3,3" opacity="0.4"/>
+      <text x="630" y="95" fill="var(--red)" font-size="9" font-weight="600" text-anchor="end">Huge</text>
+
+      <!-- Analogy section -->
+      <rect x="40" y="125" width="600" height="230" rx="10" fill="var(--bg-alt)" stroke="var(--border)" stroke-width="1"/>
+      <text x="60" y="152" fill="var(--text-muted)" font-size="9" font-weight="700" letter-spacing="0.1em">ANALOGY: 50 CHEFS, ONE POT</text>
+
+      <!-- Chef 1 -->
+      <rect x="72" y="178" width="56" height="44" rx="6" fill="var(--accent)" opacity="0.85"/>
+      <text x="100" y="198" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">C1</text>
+      <text x="100" y="214" text-anchor="middle" fill="#fff" font-size="7" opacity="0.85">basil</text>
+      <text x="100" y="240" text-anchor="middle" fill="var(--accent)" font-size="8.5" font-weight="600">Delicate</text>
+
+      <line x1="134" y1="200" x2="156" y2="200" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <!-- Chef 2 -->
+      <rect x="162" y="178" width="56" height="44" rx="6" fill="var(--accent)" opacity="0.65"/>
+      <text x="190" y="198" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">C2</text>
+      <text x="190" y="214" text-anchor="middle" fill="#fff" font-size="7" opacity="0.85">broth</text>
+      <text x="190" y="240" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">A gallon</text>
+
+      <line x1="224" y1="200" x2="246" y2="200" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <!-- Chef 3 -->
+      <rect x="252" y="178" width="56" height="44" rx="6" fill="var(--accent)" opacity="0.45"/>
+      <text x="280" y="198" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">C3</text>
+      <text x="280" y="214" text-anchor="middle" fill="#fff" font-size="7" opacity="0.85">potato</text>
+      <text x="280" y="240" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">A crate</text>
+
+      <text x="340" y="205" fill="var(--text-muted)" font-size="16">···</text>
+
+      <!-- Chef 50 -->
+      <rect x="372" y="178" width="56" height="44" rx="6" fill="var(--accent)" opacity="0.18" stroke="var(--accent)" stroke-width="0.5"/>
+      <text x="400" y="198" text-anchor="middle" fill="var(--text)" font-size="9" font-weight="700">C50</text>
+      <text x="400" y="214" text-anchor="middle" fill="var(--text-muted)" font-size="7">more</text>
+      <text x="400" y="240" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Even more</text>
+
+      <line x1="434" y1="200" x2="462" y2="200" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <!-- The massive pot -->
+      <rect x="470" y="172" width="140" height="60" rx="8" fill="var(--red)" opacity="0.12" stroke="var(--red)" stroke-width="1.5"/>
+      <text x="540" y="196" text-anchor="middle" fill="var(--red)" font-size="11" font-weight="700">CUMULATIVE</text>
+      <text x="540" y="212" text-anchor="middle" fill="var(--red)" font-size="11" font-weight="700">OUTPUT</text>
+      <text x="540" y="226" text-anchor="middle" fill="var(--red)" font-size="8">Σ all 50 contributions</text>
+
+      <!-- Punchline -->
+      <text x="340" y="280" text-anchor="middle" fill="var(--text-secondary)" font-size="11">After 50 chefs, each dumping ingredients into one pot,</text>
+      <text x="340" y="297" text-anchor="middle" fill="var(--text-secondary)" font-size="11">you cannot taste the basil from Chef 1 anymore.</text>
+
+      <rect x="130" y="314" width="420" height="26" rx="5" fill="var(--red-soft)"/>
+      <text x="340" y="332" text-anchor="middle" fill="var(--red)" font-size="10.5" font-weight="600">This is signal dilution. It is measurable and it gets worse with depth.</text>
+    </svg>
+  </div>
+
+  <p class="reveal">The Kimi team measured this directly: hidden state magnitudes grow roughly linearly with depth in standard transformers. This creates two cascading failures. First, early layers lose their influence on the final output. Second, later layers must produce disproportionately large outputs just to have any noticeable effect, because they are competing against the cumulative weight of everything before them.</p>
+
+  <p class="reveal">Researchers have tried scaling tricks: multiplying residuals by small constants, adding learnable gates, using multi stream recurrences. None of these solved the core issue. They all still feed each layer a single aggregated result of everything before it. The soup stays mixed.</p>
+
+
+  <!-- ═══════ PART II ═══════ -->
+  <div class="section-break reveal" id="parallel">
+    <span class="part-num">Part II</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">A Problem We Already <em>Solved</em></h2>
+
+  <p class="reveal">Here is where the paper gets genuinely clever. The Kimi team recognized that this exact problem has an exact structural analog. And the field already solved that analog a decade ago.</p>
+
+  <p class="reveal">Before transformers, the dominant architecture for language was the Recurrent Neural Network (RNN). An RNN processes text one token at a time, compressing everything it has seen so far into a single fixed size hidden state. To process word 100 in a sentence, it uses a summary of words 1 through 99. The failure mode is obvious in hindsight: by the end of a long paragraph, the information from the beginning has been compressed and overwritten so many times that it is practically gone.</p>
+
+  <p class="reveal">The transformer architecture fixed this by introducing attention over the sequence dimension. Instead of a single compressed memory, every token can look back directly at every previous token and compute learned, content dependent weights that determine what is relevant. The model decides what matters on the fly. That single change made modern AI possible.</p>
+
+  <div class="diagram-wrap reveal">
+    <div class="diagram-label">The Structural Parallel</div>
+    <svg viewBox="0 0 680 420" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+
+      <!-- LEFT: Sequence dimension (RNN problem) -->
+      <text x="170" y="35" text-anchor="middle" fill="var(--red)" font-size="10.5" font-weight="700" letter-spacing="0.1em">SEQUENCE DIMENSION</text>
+      <text x="170" y="52" text-anchor="middle" fill="var(--text-muted)" font-size="9">(how tokens flow through time)</text>
+
+      <!-- RNN chain -->
+      <rect x="30" y="75" width="56" height="38" rx="6" fill="var(--red)" opacity="0.85"/>
+      <text x="58" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">w₁</text>
+
+      <line x1="86" y1="94" x2="104" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="108" y="75" width="56" height="38" rx="6" fill="var(--red)" opacity="0.65"/>
+      <text x="136" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">w₂</text>
+
+      <line x1="164" y1="94" x2="182" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="186" y="75" width="56" height="38" rx="6" fill="var(--red)" opacity="0.45"/>
+      <text x="214" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">w₃</text>
+
+      <line x1="242" y1="94" x2="260" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="264" y="75" width="56" height="38" rx="6" fill="var(--red)" opacity="0.25"/>
+      <text x="292" y="99" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="600">wₙ</text>
+
+      <text x="170" y="140" text-anchor="middle" fill="var(--red)" font-size="10">Single compressed state. Early tokens lost.</text>
+
+      <!-- Fix arrow -->
+      <rect x="55" y="162" width="230" height="28" rx="6" fill="var(--accent)" opacity="0.12"/>
+      <text x="170" y="181" text-anchor="middle" fill="var(--accent)" font-size="10.5" font-weight="700">↓ Fixed by Transformer Attention</text>
+
+      <!-- RIGHT: Depth dimension -->
+      <text x="510" y="35" text-anchor="middle" fill="var(--blue)" font-size="10.5" font-weight="700" letter-spacing="0.1em">DEPTH DIMENSION</text>
+      <text x="510" y="52" text-anchor="middle" fill="var(--text-muted)" font-size="9">(how data flows through layers)</text>
+
+      <!-- Layer chain -->
+      <rect x="370" y="75" width="56" height="38" rx="6" fill="var(--blue)" opacity="0.85"/>
+      <text x="398" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">L₁</text>
+
+      <line x1="426" y1="94" x2="444" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="448" y="75" width="56" height="38" rx="6" fill="var(--blue)" opacity="0.65"/>
+      <text x="476" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">L₂</text>
+
+      <line x1="504" y1="94" x2="522" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="526" y="75" width="56" height="38" rx="6" fill="var(--blue)" opacity="0.45"/>
+      <text x="554" y="99" text-anchor="middle" fill="#fff" font-size="10" font-weight="600">L₃</text>
+
+      <line x1="582" y1="94" x2="600" y2="94" stroke="var(--text-muted)" stroke-width="1" marker-end="url(#arw)"/>
+
+      <rect x="604" y="75" width="56" height="38" rx="6" fill="var(--blue)" opacity="0.25"/>
+      <text x="632" y="99" text-anchor="middle" fill="var(--text)" font-size="10" font-weight="600">Lₙ</text>
+
+      <text x="510" y="140" text-anchor="middle" fill="var(--blue)" font-size="10">Single cumulative sum. Early layers lost.</text>
+
+      <!-- Fix arrow -->
+      <rect x="395" y="162" width="230" height="28" rx="6" fill="var(--accent)" opacity="0.12"/>
+      <text x="510" y="181" text-anchor="middle" fill="var(--accent)" font-size="10.5" font-weight="700">↓ Fixed by Attention Residuals</text>
+
+      <!-- Center divider -->
+      <line x1="340" y1="30" x2="340" y2="195" stroke="var(--border)" stroke-width="1" stroke-dasharray="4,4"/>
+
+      <!-- Bottom unified box -->
+      <rect x="80" y="220" width="520" height="175" rx="12" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="1.5"/>
+
+      <text x="340" y="250" text-anchor="middle" fill="var(--accent)" font-size="14" font-weight="700" font-family="var(--font-display)">Same Pattern, Same Fix</text>
+
+      <!-- Comparison rows -->
+      <text x="160" y="285" text-anchor="middle" fill="var(--red)" font-size="10" font-weight="600">RNN over sequence</text>
+      <text x="160" y="302" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">Compress all past tokens</text>
+      <text x="160" y="317" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">into one hidden state</text>
+
+      <line x1="300" y1="272" x2="300" y2="340" stroke="var(--accent)" stroke-width="1" opacity="0.3"/>
+
+      <text x="340" y="285" text-anchor="middle" fill="var(--accent)" font-size="22">→</text>
+
+      <line x1="380" y1="272" x2="380" y2="340" stroke="var(--accent)" stroke-width="1" opacity="0.3"/>
+
+      <text x="520" y="285" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="600">Attention over depth</text>
+      <text x="520" y="302" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">Let each layer selectively</text>
+      <text x="520" y="317" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">retrieve from any previous layer</text>
+
+      <text x="340" y="365" text-anchor="middle" fill="var(--text-secondary)" font-size="10.5">Replace fixed compression with learned, input dependent selection.</text>
+      <text x="340" y="382" text-anchor="middle" fill="var(--text-secondary)" font-size="10.5">The insight was hiding in plain sight.</text>
+    </svg>
+  </div>
+
+  <div class="callout reveal">
+    <strong>The core insight.</strong> Standard residual connections create the exact same bottleneck along the depth dimension that RNNs had along the sequence dimension. Each layer receives a single compressed summary of all previous layers, with no ability to selectively retrieve specific information from specific depths. RNNs compress along time. Residual connections compress along depth. Transformers fixed the first. Attention Residuals fix the second.
+  </div>
+
+
+  <!-- ═══════ PART III ═══════ -->
+  <div class="section-break reveal" id="fix">
+    <span class="part-num">Part III</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">The Fix: Attention Over <em>Depth</em></h2>
+
+  <p class="reveal">The mechanism is straightforward if you understand how transformer attention works. In standard token attention, every token has a query ("what am I looking for?"), every previous token has a key ("here is what I contain"), and a value ("here is my actual data"). The model computes which keys match each query and retrieves the corresponding values with learned weights.</p>
+
+  <p class="reveal">Attention Residuals apply this exact mechanism along the depth axis instead. Each layer gets a learned query vector that asks: "Which previous layers hold information relevant to what I am currently processing?" Each previous layer's output serves as both key and value. The model computes softmax attention weights over all preceding layer outputs and assembles a weighted combination.</p>
+
+  <div class="diagram-wrap reveal">
+    <div class="diagram-label">Full Attention Residuals (AttnRes)</div>
+    <svg viewBox="0 0 680 450" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+
+      <!-- Layer outputs preserved separately -->
+      <text x="280" y="35" text-anchor="middle" fill="var(--text-muted)" font-size="9.5" font-weight="500">Each layer's output preserved as a separate, addressable representation</text>
+
+      <!-- Layer boxes -->
+      <rect x="30" y="55" width="82" height="56" rx="7" fill="var(--accent)" opacity="0.9"/>
+      <text x="71" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Layer 1</text>
+      <text x="71" y="95" text-anchor="middle" fill="#fff" font-size="8" opacity="0.8">output v₁</text>
+
+      <rect x="130" y="55" width="82" height="56" rx="7" fill="var(--accent)" opacity="0.72"/>
+      <text x="171" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Layer 2</text>
+      <text x="171" y="95" text-anchor="middle" fill="#fff" font-size="8" opacity="0.8">output v₂</text>
+
+      <rect x="230" y="55" width="82" height="56" rx="7" fill="var(--accent)" opacity="0.55"/>
+      <text x="271" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Layer 3</text>
+      <text x="271" y="95" text-anchor="middle" fill="#fff" font-size="8" opacity="0.8">output v₃</text>
+
+      <rect x="330" y="55" width="82" height="56" rx="7" fill="var(--accent)" opacity="0.4"/>
+      <text x="371" y="78" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">Layer 4</text>
+      <text x="371" y="95" text-anchor="middle" fill="#fff" font-size="8" opacity="0.8">output v₄</text>
+
+      <rect x="430" y="55" width="82" height="56" rx="7" fill="var(--accent)" opacity="0.28"/>
+      <text x="471" y="78" text-anchor="middle" fill="var(--text)" font-size="11" font-weight="700">Layer 5</text>
+      <text x="471" y="95" text-anchor="middle" fill="var(--text-muted)" font-size="8">output v₅</text>
+
+      <!-- Current layer (centered below) -->
+      <rect x="270" y="230" width="140" height="65" rx="10" fill="var(--orange)" opacity="0.9"/>
+      <text x="340" y="257" text-anchor="middle" fill="#fff" font-size="13" font-weight="700">Layer 6</text>
+      <text x="340" y="275" text-anchor="middle" fill="#fff" font-size="9" opacity="0.9">query: "what do I need?"</text>
+
+      <!-- Attention lines (curved, fan pattern from Layer 6 up to each layer) -->
+      <!-- L1 → L6: STRONG -->
+      <path d="M71 111 C71 170, 300 200, 300 230" stroke="var(--accent)" stroke-width="4" fill="none" opacity="0.8"/>
+      <!-- L2 → L6: weak -->
+      <path d="M171 111 C171 165, 310 195, 310 230" stroke="var(--accent)" stroke-width="1" fill="none" opacity="0.2"/>
+      <!-- L3 → L6: weak -->
+      <path d="M271 111 C271 160, 330 190, 330 230" stroke="var(--accent)" stroke-width="1" fill="none" opacity="0.18"/>
+      <!-- L4 → L6: STRONG -->
+      <path d="M371 111 C371 165, 355 195, 350 230" stroke="var(--accent)" stroke-width="3.5" fill="none" opacity="0.75"/>
+      <!-- L5 → L6: moderate -->
+      <path d="M471 111 C471 170, 380 200, 375 230" stroke="var(--accent)" stroke-width="1.5" fill="none" opacity="0.35"/>
+
+      <!-- Weight labels (positioned outside the lines, no overlap) -->
+      <text x="48" y="150" fill="var(--accent)" font-size="10" font-weight="700">α = 0.42</text>
+      <text x="148" y="145" fill="var(--text-muted)" font-size="8.5">0.04</text>
+      <text x="255" y="155" fill="var(--text-muted)" font-size="8.5">0.03</text>
+      <text x="395" y="150" fill="var(--accent)" font-size="10" font-weight="700">α = 0.38</text>
+      <text x="490" y="155" fill="var(--text-muted)" font-size="9">0.13</text>
+
+      <!-- Result annotation -->
+      <rect x="100" y="320" width="480" height="105" rx="10" fill="var(--bg-alt)" stroke="var(--border)" stroke-width="1"/>
+
+      <text x="340" y="348" text-anchor="middle" fill="var(--text)" font-size="12" font-weight="600" font-family="var(--font-display)">What changed</text>
+
+      <text x="200" y="375" text-anchor="middle" fill="var(--red)" font-size="10" font-weight="600">Before (Standard)</text>
+      <text x="200" y="395" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">h₆ = h₅ + f(h₅)</text>
+      <text x="200" y="412" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Fixed weight. No choice.</text>
+
+      <line x1="340" y1="362" x2="340" y2="420" stroke="var(--border)" stroke-width="1"/>
+
+      <text x="480" y="375" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="600">After (AttnRes)</text>
+      <text x="480" y="395" text-anchor="middle" fill="var(--text-muted)" font-size="9.5">h₆ = Σ α(i→6) · v(i)</text>
+      <text x="480" y="412" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Learned. Input dependent. Selective.</text>
+    </svg>
+  </div>
+
+  <p class="reveal">The critical difference: weights are not fixed at 1. They are computed dynamically based on what the network is actually processing. A layer handling a logical inference might pull heavily from early reasoning layers. A layer processing emotional tone might reach for entirely different depths. The model routes information through itself based on what the input requires.</p>
+
+  <div class="code-block reveal"><span class="c-cmt"># Standard residual (every transformer since 2017)</span>
+h[l] = h[l<span class="c-num">-1</span>] + f(h[l<span class="c-num">-1</span>])          <span class="c-cmt"># fixed weight = 1, always</span>
+
+<span class="c-cmt"># Attention Residual</span>
+h[l] = <span class="c-fn">Σ</span> alpha[i→l] * v[i]         <span class="c-cmt"># learned, input dependent weights</span>
+       <span class="c-cmt"># alpha = softmax(query_l · key_i)</span>
+       <span class="c-cmt"># weights sum to 1 → bounded signal</span></div>
+
+  <p class="reveal">Each layer has a learned query vector. The keys and values come from previous layer outputs. The softmax normalization ensures the weights sum to one, which bounds the hidden state magnitude and prevents the unbounded growth that plagues standard residuals. The signal stays stable no matter how deep the network goes.</p>
+
+
+  <!-- ═══════ PART IV ═══════ -->
+  <div class="section-break reveal" id="scale">
+    <span class="part-num">Part IV</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">Making It Work at <em>Scale</em></h2>
+
+  <p class="reveal">Full Attention Residuals have an obvious engineering problem. If every layer attends to every previous layer, memory cost grows as O(L·d) where L is the layer count and d is the hidden dimension. For a model with hundreds of layers distributed across multiple server racks connected by fiber optic cables, this creates an explosion of cross machine communication. Each layer would need to fetch data from potentially every previous server. That is not viable at the scale of frontier models.</p>
+
+  <p class="reveal">The Kimi team solved this with Block Attention Residuals. The model is partitioned into blocks, roughly 8 in practice. Within each block, layers accumulate normally using standard residual connections. At block boundaries, the accumulated representation gets stored as a summary. The attention mechanism then operates over these block level summaries instead of individual layer outputs.</p>
+
+  <div class="diagram-wrap reveal">
+    <div class="diagram-label">Block Attention Residuals</div>
+    <svg viewBox="0 0 680 380" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+
+      <text x="340" y="28" text-anchor="middle" fill="var(--text-muted)" font-size="10">Standard residuals inside each block. Attention only over block summaries.</text>
+
+      <!-- Block 1 -->
+      <rect x="25" y="55" width="170" height="130" rx="10" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="1.5"/>
+      <text x="110" y="48" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="700">BLOCK 1</text>
+
+      <rect x="42" y="75" width="60" height="32" rx="5" fill="var(--accent)" opacity="0.7"/>
+      <text x="72" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L1</text>
+      <rect x="42" y="116" width="60" height="32" rx="5" fill="var(--accent)" opacity="0.6"/>
+      <text x="72" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L2</text>
+      <rect x="120" y="75" width="60" height="32" rx="5" fill="var(--accent)" opacity="0.5"/>
+      <text x="150" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L3</text>
+      <rect x="120" y="116" width="60" height="32" rx="5" fill="var(--accent)" opacity="0.4"/>
+      <text x="150" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L4</text>
+
+      <!-- Summary output -->
+      <rect x="60" y="160" width="100" height="20" rx="4" fill="var(--accent)" opacity="0.2" stroke="var(--accent)" stroke-width="1"/>
+      <text x="110" y="174" text-anchor="middle" fill="var(--accent)" font-size="8" font-weight="600">Summary S₁</text>
+
+      <!-- Block 2 -->
+      <rect x="230" y="55" width="170" height="130" rx="10" fill="var(--blue-soft)" stroke="var(--blue)" stroke-width="1.5"/>
+      <text x="315" y="48" text-anchor="middle" fill="var(--blue)" font-size="10" font-weight="700">BLOCK 2</text>
+
+      <rect x="247" y="75" width="60" height="32" rx="5" fill="var(--blue)" opacity="0.7"/>
+      <text x="277" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L5</text>
+      <rect x="247" y="116" width="60" height="32" rx="5" fill="var(--blue)" opacity="0.6"/>
+      <text x="277" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L6</text>
+      <rect x="325" y="75" width="60" height="32" rx="5" fill="var(--blue)" opacity="0.5"/>
+      <text x="355" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L7</text>
+      <rect x="325" y="116" width="60" height="32" rx="5" fill="var(--blue)" opacity="0.4"/>
+      <text x="355" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L8</text>
+
+      <rect x="265" y="160" width="100" height="20" rx="4" fill="var(--blue)" opacity="0.15" stroke="var(--blue)" stroke-width="1"/>
+      <text x="315" y="174" text-anchor="middle" fill="var(--blue)" font-size="8" font-weight="600">Summary S₂</text>
+
+      <!-- Ellipsis -->
+      <text x="430" y="125" text-anchor="middle" fill="var(--text-muted)" font-size="20">···</text>
+
+      <!-- Block N -->
+      <rect x="460" y="55" width="170" height="130" rx="10" fill="var(--orange-soft)" stroke="var(--orange)" stroke-width="1.5"/>
+      <text x="545" y="48" text-anchor="middle" fill="var(--orange)" font-size="10" font-weight="700">BLOCK N</text>
+
+      <rect x="477" y="75" width="60" height="32" rx="5" fill="var(--orange)" opacity="0.7"/>
+      <text x="507" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L..</text>
+      <rect x="477" y="116" width="60" height="32" rx="5" fill="var(--orange)" opacity="0.6"/>
+      <text x="507" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L..</text>
+      <rect x="555" y="75" width="60" height="32" rx="5" fill="var(--orange)" opacity="0.5"/>
+      <text x="585" y="96" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">L..</text>
+      <rect x="555" y="116" width="60" height="32" rx="5" fill="var(--orange)" opacity="0.4"/>
+      <text x="585" y="137" text-anchor="middle" fill="#fff" font-size="9.5" font-weight="600">Lₙ</text>
+
+      <rect x="490" y="160" width="100" height="20" rx="4" fill="var(--orange)" opacity="0.15" stroke="var(--orange)" stroke-width="1"/>
+      <text x="540" y="174" text-anchor="middle" fill="var(--orange)" font-size="8" font-weight="600">Summary Sₙ</text>
+
+      <!-- Attention arrows between summaries -->
+      <path d="M110 182 C110 240, 315 240, 315 182" stroke="var(--accent)" stroke-width="2" fill="none" opacity="0.5" stroke-dasharray="5,3"/>
+      <path d="M110 182 C110 260, 540 260, 540 182" stroke="var(--accent)" stroke-width="2" fill="none" opacity="0.5" stroke-dasharray="5,3"/>
+      <path d="M315 182 C315 245, 540 245, 540 182" stroke="var(--accent)" stroke-width="2" fill="none" opacity="0.5" stroke-dasharray="5,3"/>
+
+      <!-- Labels -->
+      <rect x="140" y="282" width="400" height="72" rx="8" fill="var(--accent-dim)" stroke="var(--accent)" stroke-width="1"/>
+      <text x="340" y="306" text-anchor="middle" fill="var(--accent)" font-size="11" font-weight="700">Attention operates over block summaries only</text>
+      <text x="340" y="326" text-anchor="middle" fill="var(--text-muted)" font-size="10">Memory: O(N·d) instead of O(L·d). Compatible with pipeline parallelism.</text>
+      <text x="340" y="342" text-anchor="middle" fill="var(--text-muted)" font-size="10">~8 blocks recovers nearly all gains of full AttnRes.</text>
+    </svg>
+  </div>
+
+  <p class="reveal">The team tested block counts from 1 (equivalent to full AttnRes) up to 32. Block counts of 2, 4, and 8 all reached nearly identical validation loss. Beyond 16, the benefit degraded back toward baseline. Eight blocks became the default: small enough for manageable cross machine communication, large enough to capture most of the benefit.</p>
+
+  <div class="compare-table reveal">
+    <div class="compare-row header">
+      <div class="compare-cell">Property</div>
+      <div class="compare-cell">Number</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell">Training overhead</div>
+      <div class="compare-cell">Under 4%</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell">Inference latency overhead</div>
+      <div class="compare-cell">Under 2%</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell">Memory per layer vs standard</div>
+      <div class="compare-cell">5.5d vs 3d (standard) vs 34d (mHC)</div>
+    </div>
+    <div class="compare-row">
+      <div class="compare-cell">Architecture changes needed</div>
+      <div class="compare-cell">None. Drop in replacement.</div>
+    </div>
+  </div>
+
+  <p class="reveal">These numbers matter. Block AttnRes is not a research prototype that requires a new training infrastructure. You swap the residual connection module. Everything else stays the same. The attention heads, the feed forward layers, the routing logic, the optimizer, the data pipeline. Unchanged.</p>
+
+
+  <!-- ═══════ PART V ═══════ -->
+  <div class="section-break reveal" id="results">
+    <span class="part-num">Part V</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">What the <em>Numbers</em> Say</h2>
+
+  <p class="reveal">The Kimi team trained models with and without AttnRes across five different sizes and integrated it into their Kimi Linear architecture (48B total parameters, 3B activated, trained on 1.4T tokens). The improvements were consistent across every size and every benchmark.</p>
+
+  <div class="stats-grid reveal">
+    <div class="stat-cell">
+      <span class="val">1.25x</span>
+      <span class="desc">Less compute needed to reach the same performance level</span>
+    </div>
+    <div class="stat-cell">
+      <span class="val">+7.5</span>
+      <span class="desc">Points on GPQA Diamond (graduate level science)</span>
+    </div>
+    <div class="stat-cell">
+      <span class="val">Stable</span>
+      <span class="desc">Signal magnitude bounded across all depths (no exponential growth)</span>
+    </div>
+    <div class="stat-cell">
+      <span class="val">Even</span>
+      <span class="desc">Gradient distribution across all layers (balanced learning)</span>
+    </div>
+  </div>
+
+  <p class="reveal">The 1.25x compute efficiency alone is significant. At the scale where a single training run costs tens of millions of dollars, that translates directly into millions saved or a meaningfully more capable model for the same budget. The paper notes that AttnRes outperforms DeepSeek's multi head constraint hyperconnections (mHC) on the same benchmarks while using significantly less memory per layer.</p>
+
+  <p class="reveal">The reasoning improvements are the more revealing result. The biggest jumps appear on tasks that require long chains of multi step reasoning: graduate level science, mathematics, code generation. These are exactly the domains where signal dilution hurts most, because solving them requires the model to hold early reasoning steps in focus while performing dozens of subsequent operations. When early signals survive instead of getting buried, the model can actually use them.</p>
+
+  <p class="reveal">The paper also ran a depth versus width experiment that deserves attention. They trained 25 models with identical parameter counts but different shapes, ranging from short and wide to deep and narrow. Both standard and AttnRes models improved as they went deeper. But standard models hit a wall: past a certain depth, performance collapsed as dilution took over. AttnRes models kept improving. The constraint that has limited model depth since 2015 is gone.</p>
+
+  <p class="punch reveal">Depth is no longer a liability. It is an advantage.</p>
+
+
+  <!-- ═══════ PART VI ═══════ -->
+  <div class="section-break reveal" id="implications">
+    <span class="part-num">Part VI</span>
+    <span class="part-line"></span>
+  </div>
+
+  <h2 class="reveal">What the Model <em>Learns</em> to Do</h2>
+
+  <p class="reveal">The most interesting finding in the paper is not the benchmark improvements. It is the attention pattern visualizations.</p>
+
+  <p class="reveal">When the researchers mapped how layers attend to each other, three distinct behaviors emerged. First, locality: most layers attend most strongly to their immediate predecessors, preserving step by step processing. Second, long range connections: certain deep layers suddenly reach all the way back to the very first layers, skipping everything in between. The model learns to revisit its original premises when the computation demands it. Third, specialization: different layers develop different functional roles. Some focus locally, acting as working memory. Others act as global coordinators, pulling information from across the entire depth of the network.</p>
+
+  <div class="diagram-wrap reveal">
+    <div class="diagram-label">Emergent Attention Patterns</div>
+    <svg viewBox="0 0 680 300" xmlns="http://www.w3.org/2000/svg" style="font-family: 'Plus Jakarta Sans', sans-serif;">
+
+      <!-- Three pattern columns -->
+      <!-- Pattern 1: Locality -->
+      <rect x="20" y="25" width="200" height="250" rx="8" fill="var(--accent-dim)"/>
+      <text x="120" y="50" text-anchor="middle" fill="var(--accent)" font-size="10" font-weight="700" letter-spacing="0.08em">LOCALITY</text>
+      <text x="120" y="67" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Most layers attend to neighbors</text>
+
+      <!-- Local chain visualization -->
+      <circle cx="70" cy="110" r="14" fill="var(--accent)" opacity="0.3"/>
+      <text x="70" y="114" text-anchor="middle" fill="var(--text)" font-size="8">L₁</text>
+
+      <circle cx="120" cy="140" r="14" fill="var(--accent)" opacity="0.4"/>
+      <text x="120" y="144" text-anchor="middle" fill="var(--text)" font-size="8">L₂</text>
+
+      <circle cx="170" cy="170" r="14" fill="var(--accent)" opacity="0.5"/>
+      <text x="170" y="174" text-anchor="middle" fill="var(--text)" font-size="8">L₃</text>
+
+      <circle cx="120" cy="210" r="14" fill="var(--accent)" opacity="0.65"/>
+      <text x="120" y="214" text-anchor="middle" fill="var(--text)" font-size="8">L₄</text>
+
+      <line x1="80" y1="120" x2="110" y2="132" stroke="var(--accent)" stroke-width="3" opacity="0.6"/>
+      <line x1="130" y1="150" x2="160" y2="162" stroke="var(--accent)" stroke-width="3" opacity="0.6"/>
+      <line x1="162" y1="180" x2="130" y2="202" stroke="var(--accent)" stroke-width="3" opacity="0.6"/>
+
+      <text x="120" y="250" text-anchor="middle" fill="var(--text-muted)" font-size="9">Step by step processing</text>
+
+      <!-- Pattern 2: Long range -->
+      <rect x="240" y="25" width="200" height="250" rx="8" fill="var(--orange-soft)"/>
+      <text x="340" y="50" text-anchor="middle" fill="var(--orange)" font-size="10" font-weight="700" letter-spacing="0.08em">LONG RANGE</text>
+      <text x="340" y="67" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Deep layers reach back to early ones</text>
+
+      <circle cx="290" cy="100" r="14" fill="var(--accent)" opacity="0.7"/>
+      <text x="290" y="104" text-anchor="middle" fill="#fff" font-size="8">L₁</text>
+
+      <circle cx="310" cy="140" r="10" fill="var(--text-muted)" opacity="0.2"/>
+      <circle cx="330" cy="160" r="10" fill="var(--text-muted)" opacity="0.2"/>
+      <circle cx="350" cy="180" r="10" fill="var(--text-muted)" opacity="0.2"/>
+
+      <circle cx="390" cy="215" r="16" fill="var(--orange)" opacity="0.8"/>
+      <text x="390" y="219" text-anchor="middle" fill="#fff" font-size="8">L₉₀</text>
+
+      <path d="M296 112 C310 190, 370 200, 378 210" stroke="var(--orange)" stroke-width="2.5" fill="none"/>
+      <text x="335" y="145" fill="var(--orange)" font-size="8" font-weight="600" transform="rotate(15,335,145)">skip!</text>
+
+      <text x="340" y="255" text-anchor="middle" fill="var(--text-muted)" font-size="9">"Revisit the original premise"</text>
+
+      <!-- Pattern 3: Specialization -->
+      <rect x="460" y="25" width="200" height="250" rx="8" fill="var(--blue-soft)"/>
+      <text x="560" y="50" text-anchor="middle" fill="var(--blue)" font-size="10" font-weight="700" letter-spacing="0.08em">SPECIALIZATION</text>
+      <text x="560" y="67" text-anchor="middle" fill="var(--text-muted)" font-size="8.5">Layers develop distinct roles</text>
+
+      <!-- Local specialist -->
+      <rect x="490" y="90" width="60" height="28" rx="5" fill="var(--accent)" opacity="0.5"/>
+      <text x="520" y="109" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">Local</text>
+
+      <rect x="570" y="90" width="60" height="28" rx="5" fill="var(--accent)" opacity="0.5"/>
+      <text x="600" y="109" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">Local</text>
+
+      <!-- Global coordinator -->
+      <rect x="505" y="145" width="90" height="32" rx="5" fill="var(--blue)" opacity="0.7"/>
+      <text x="550" y="166" text-anchor="middle" fill="#fff" font-size="9" font-weight="700">Global</text>
+
+      <!-- Lines from global to multiple -->
+      <line x1="520" y1="145" x2="520" y2="118" stroke="var(--blue)" stroke-width="1.5" opacity="0.5"/>
+      <line x1="600" y1="118" x2="575" y2="145" stroke="var(--blue)" stroke-width="1.5" opacity="0.5"/>
+
+      <rect x="490" y="200" width="60" height="28" rx="5" fill="var(--accent)" opacity="0.5"/>
+      <text x="520" y="219" text-anchor="middle" fill="#fff" font-size="8" font-weight="600">Local</text>
+
+      <line x1="550" y1="177" x2="520" y2="200" stroke="var(--blue)" stroke-width="1.5" opacity="0.5"/>
+
+      <text x="560" y="255" text-anchor="middle" fill="var(--text-muted)" font-size="9">Hierarchical, like a brain</text>
+    </svg>
+  </div>
+
+  <p class="reveal">This is no longer a static pipeline. The model dynamically routes information through itself based on what the input requires. For each input, it constructs a custom pathway through its layers, uses it, and moves on. The architecture becomes adaptive in a way that standard residual connections physically cannot support.</p>
+
+  <div class="callout reveal">
+    <strong>The practical takeaway.</strong> Attention Residuals are a drop in replacement for standard residual connections with minimal overhead. They fix a measurable structural flaw, improve performance across all evaluated benchmarks, and unlock deeper architectures. The paper includes open source code and reference implementations. If you are building or training transformer models, this is worth integrating. If you are following how these models are designed, this is worth understanding because the constraint it removes (useful depth) has shaped every architecture decision for the past decade.
+  </div>
+
+  <p class="reveal">Residual connections were the ceiling preventing useful depth. With that ceiling removed, the design space for transformer architectures expands considerably. Deeper models with specialized layers, dynamic routing, and long range internal connections become practical to build and train. The paper does not claim this is the final architecture. But it removes one of the fundamental constraints that has shaped model design since 2015. And sometimes removing the right constraint is the thing that changes everything.</p>
+
+</article>
+
+<footer class="article-footer">
+  <div class="footer-links">
+    <a href="https://arxiv.org/abs/2603.15031" target="_blank">Read the Paper</a>
+    <a href="https://github.com/MoonshotAI/Attention-Residuals" target="_blank">GitHub</a>
+    <a href="https://www.hundredsunited.com/blog/" target="_blank">More from The Trenches</a>
+  </div>
+  <p class="footer-note">Written from the trenches. No affiliate links. No sponsors. Just signal.</p>
+</footer>
+
+<script>
+// Theme toggle
+function toggleTheme() {
+  const body = document.body;
+  const btn = document.querySelector('.theme-toggle');
+  if (body.getAttribute('data-theme') === 'dark') {
+    body.removeAttribute('data-theme');
+    btn.textContent = '☽';
+    localStorage.setItem('theme', 'light');
+  } else {
+    body.setAttribute('data-theme', 'dark');
+    btn.textContent = '☀';
+    localStorage.setItem('theme', 'dark');
+  }
+}
+
+// Restore theme
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+    document.body.setAttribute('data-theme', 'dark');
+    document.querySelector('.theme-toggle').textContent = '☀';
+  }
+})();
+
+// Progress bar
+window.addEventListener('scroll', function() {
+  const bar = document.getElementById('progressBar');
+  const scrollTop = window.scrollY;
+  const docHeight = document.documentElement.scrollHeight - window.innerHeight;
+  bar.style.width = (scrollTop / docHeight * 100) + '%';
+});
+
+// Scroll reveals
+const observer = new IntersectionObserver(function(entries) {
+  entries.forEach(function(entry) {
+    if (entry.isIntersecting) {
+      entry.target.classList.add('visible');
+    }
+  });
+}, { threshold: 0.08, rootMargin: '0px 0px -40px 0px' });
+
+document.querySelectorAll('.reveal').forEach(function(el) {
+  observer.observe(el);
+});
+
+// Active nav highlighting
+const sections = document.querySelectorAll('.section-break[id]');
+const navLinks = document.querySelectorAll('.header-nav a');
+
+window.addEventListener('scroll', function() {
+  let current = '';
+  sections.forEach(function(section) {
+    if (window.scrollY >= section.offsetTop - 120) {
+      current = section.getAttribute('id');
+    }
+  });
+  navLinks.forEach(function(link) {
+    link.classList.remove('active');
+    if (link.getAttribute('href') === '#' + current) {
+      link.classList.add('active');
+    }
+  });
+});
+</script>
+
+</body>
+</html>

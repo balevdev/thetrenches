@@ -1,0 +1,3690 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>Deep Modules GQL · The Trenches</title>
+        <meta
+            name="description"
+            content="GraphQL hands you a question every REST API answers for you: where does each rule live? A working theory of GraphQL APIs that hold up at scale."
+        />
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+        <link
+            href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,600;0,9..144,700;1,9..144,300;1,9..144,400&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+            rel="stylesheet"
+        />
+        <style>
+            :root {
+                --bg: #faf9f7;
+                --bg-alt: #f2f0ec;
+                --bg-diagram: #f6f5f2;
+                --text: #131312;
+                --text-secondary: #3d3d3a;
+                --text-muted: #6c6c64;
+                --accent: #1a7a6d;
+                --accent-hover: #15665a;
+                --accent-light: #e6f4f1;
+                --accent-dim: rgba(26, 122, 109, 0.07);
+                --border: #ddd8d0;
+                --border-light: #eae7e1;
+                --red: #c4453a;
+                --red-soft: rgba(196, 69, 58, 0.1);
+                --red-tint: rgba(196, 69, 58, 0.04);
+                --orange: #d4922a;
+                --orange-soft: rgba(212, 146, 42, 0.12);
+                --blue: #3d72a8;
+                --blue-soft: rgba(61, 114, 168, 0.12);
+
+                --code-bg: #18181a;
+                --code-bg-soft: #1e1e22;
+                --code-text: #e5e3da;
+                --code-border: #26262a;
+                --code-head-bg-1: #2c2c30;
+                --code-head-bg-2: #1f1f22;
+                --code-head-border: #2e2e32;
+                --code-head-text: #c0c0b6;
+
+                --font-display: "Fraunces", Georgia, serif;
+                --font-body: "Plus Jakarta Sans", system-ui, sans-serif;
+                --font-mono:
+                    "JetBrains Mono", "SF Mono", ui-monospace, monospace;
+                --max-w: 720px;
+                --gutter: 2rem;
+            }
+
+            [data-theme="dark"] {
+                --bg: #111110;
+                --bg-alt: #1a1a18;
+                --bg-diagram: #161614;
+                --text: #ecebe4;
+                --text-secondary: #c6c3b9;
+                --text-muted: #95938a;
+                --accent: #3cc9b5;
+                --accent-hover: #4dd9c5;
+                --accent-light: #172b28;
+                --accent-dim: rgba(60, 201, 181, 0.08);
+                --border: #2a2a26;
+                --border-light: #232321;
+                --red: #e06b62;
+                --red-soft: rgba(224, 107, 98, 0.14);
+                --red-tint: rgba(224, 107, 98, 0.05);
+                --orange: #f0b84a;
+                --orange-soft: rgba(240, 184, 74, 0.14);
+                --blue: #5e9fd4;
+                --blue-soft: rgba(94, 159, 212, 0.14);
+
+                --code-bg: #0d0d0f;
+                --code-bg-soft: #131316;
+                --code-text: #e2e0d6;
+                --code-border: #1f1f22;
+                --code-head-bg-1: #1c1c1f;
+                --code-head-bg-2: #131316;
+                --code-head-border: #232327;
+                --code-head-text: #b5b3a9;
+            }
+
+            *,
+            *::before,
+            *::after {
+                box-sizing: border-box;
+                margin: 0;
+                padding: 0;
+            }
+            html {
+                scroll-behavior: smooth;
+            }
+
+            body {
+                font-family: var(--font-body);
+                font-size: 18px;
+                line-height: 1.75;
+                color: var(--text);
+                background: var(--bg);
+                -webkit-font-smoothing: antialiased;
+                -moz-osx-font-smoothing: grayscale;
+                transition:
+                    background 0.35s ease,
+                    color 0.35s ease;
+            }
+
+            ::selection {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            .progress-bar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 2px;
+                background: var(--accent);
+                width: 0%;
+                z-index: 200;
+                transition: width 0.1s linear;
+            }
+
+            .site-header {
+                position: sticky;
+                top: 0;
+                z-index: 100;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                padding: 0.9rem var(--gutter);
+                background: var(--bg);
+                border-bottom: 1px solid var(--border);
+                backdrop-filter: blur(16px);
+                -webkit-backdrop-filter: blur(16px);
+            }
+
+            .site-logo {
+                font-family: var(--font-display);
+                font-size: 0.95rem;
+                font-weight: 600;
+                color: var(--text);
+                text-decoration: none;
+                letter-spacing: 0.02em;
+            }
+
+            .header-right {
+                display: flex;
+                align-items: center;
+                gap: 1.2rem;
+            }
+
+            .header-nav {
+                display: flex;
+                gap: 0.2rem;
+            }
+
+            .header-nav a {
+                font-size: 0.72rem;
+                font-weight: 600;
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                text-decoration: none;
+                padding: 0.35rem 0.6rem;
+                border-radius: 4px;
+                transition:
+                    color 0.2s,
+                    background 0.2s;
+            }
+
+            .header-nav a:hover,
+            .header-nav a.active {
+                color: var(--accent);
+                background: var(--accent-dim);
+            }
+
+            .theme-toggle {
+                background: none;
+                border: 1px solid var(--border);
+                width: 32px;
+                height: 32px;
+                border-radius: 6px;
+                font-size: 0.85rem;
+                cursor: pointer;
+                color: var(--text-muted);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                transition:
+                    border-color 0.2s,
+                    color 0.2s;
+            }
+            .theme-toggle:hover {
+                border-color: var(--accent);
+                color: var(--accent);
+            }
+
+            .hero {
+                max-width: 800px;
+                margin: 0 auto;
+                padding: 4.5rem var(--gutter) 2.5rem;
+            }
+
+            .hero-figure {
+                max-width: 960px;
+                margin: 2.5rem auto 0;
+                padding: 0 var(--gutter);
+            }
+
+            .hero-figure-frame {
+                position: relative;
+                aspect-ratio: 16 / 9;
+                border-radius: 14px;
+                overflow: hidden;
+                background: #0a0a0a;
+                border: 1px solid var(--border);
+                box-shadow:
+                    0 1px 0 rgba(255, 255, 255, 0.03) inset,
+                    0 30px 60px -30px rgba(0, 0, 0, 0.35);
+            }
+
+            [data-theme="dark"] .hero-figure-frame {
+                border-color: var(--border);
+                box-shadow:
+                    0 1px 0 rgba(255, 255, 255, 0.04) inset,
+                    0 40px 80px -30px rgba(0, 0, 0, 0.65);
+            }
+
+            .hero-figure-frame img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+
+            @media (max-width: 720px) {
+                .hero-figure {
+                    margin-top: 1.5rem;
+                }
+                .hero-figure-frame {
+                    border-radius: 10px;
+                }
+            }
+
+            .hero-kicker {
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--accent);
+                margin-bottom: 1.2rem;
+            }
+
+            h1 {
+                font-family: var(--font-display);
+                font-size: clamp(2.6rem, 5.5vw, 3.6rem);
+                font-weight: 700;
+                line-height: 1.1;
+                letter-spacing: -0.025em;
+                margin-bottom: 1.5rem;
+            }
+
+            h1 em {
+                font-style: italic;
+                color: var(--accent);
+            }
+
+            .hero-deck {
+                font-size: 1.08rem;
+                line-height: 1.7;
+                color: var(--text-secondary);
+                max-width: 600px;
+            }
+
+            .hero-meta {
+                margin-top: 2.2rem;
+                padding-top: 1.2rem;
+                border-top: 1px solid var(--border);
+                display: flex;
+                align-items: center;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+                font-size: 0.8rem;
+                color: var(--text-muted);
+            }
+
+            .hero-meta strong {
+                color: var(--text);
+                font-weight: 600;
+            }
+            .hero-meta a {
+                color: var(--accent);
+                text-decoration: none;
+            }
+            .hero-meta a:hover {
+                text-decoration: underline;
+            }
+
+            .tldr {
+                max-width: var(--max-w);
+                margin: 0 auto 3rem;
+                padding: 0 var(--gutter);
+            }
+
+            .tldr-box {
+                background: var(--bg-alt);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                padding: 1.6rem 1.8rem;
+            }
+
+            .tldr-title {
+                font-family: var(--font-display);
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--text-muted);
+                letter-spacing: 0.06em;
+                text-transform: uppercase;
+                margin-bottom: 0.7rem;
+            }
+
+            .tldr-box p {
+                font-size: 0.95rem;
+                line-height: 1.7;
+                color: var(--text-secondary);
+            }
+
+            .tldr-box p strong {
+                color: var(--text);
+            }
+
+            .article {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                padding: 0 var(--gutter) 5rem;
+            }
+
+            .article p {
+                margin-bottom: 1.5rem;
+            }
+
+            .article h2 {
+                font-family: var(--font-display);
+                font-size: 1.75rem;
+                font-weight: 600;
+                line-height: 1.25;
+                letter-spacing: -0.015em;
+                margin: 0 0 1.2rem;
+            }
+
+            .article h2 em {
+                font-style: italic;
+                color: var(--accent);
+            }
+
+            .article h3 {
+                font-family: var(--font-display);
+                font-size: 1.2rem;
+                font-weight: 600;
+                margin: 2.5rem 0 0.8rem;
+            }
+
+            .article strong {
+                font-weight: 600;
+            }
+
+            .article a {
+                color: var(--accent);
+                text-decoration: underline;
+                text-underline-offset: 3px;
+                text-decoration-thickness: 1px;
+            }
+
+            .article ul {
+                margin: 0 0 1.5rem 1.2rem;
+                padding: 0;
+            }
+
+            .article ul li {
+                margin-bottom: 0.5rem;
+                line-height: 1.7;
+            }
+
+            .section-break {
+                margin: 4rem 0 1rem;
+                display: flex;
+                align-items: center;
+                gap: 1rem;
+            }
+
+            .section-break .part-num {
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                color: var(--accent);
+                white-space: nowrap;
+            }
+
+            .section-break .part-line {
+                flex: 1;
+                height: 1px;
+                background: var(--border);
+            }
+
+            .callout {
+                background: var(--accent-dim);
+                border-left: 3px solid var(--accent);
+                padding: 1.3rem 1.6rem;
+                margin: 2rem 0;
+                border-radius: 0 8px 8px 0;
+                font-size: 0.95rem;
+                line-height: 1.7;
+                color: var(--text-secondary);
+            }
+
+            .callout strong {
+                color: var(--text);
+            }
+
+            .punch {
+                font-family: var(--font-display);
+                font-size: 1.15rem;
+                font-weight: 600;
+                line-height: 1.55;
+                margin: 2rem 0;
+                padding-left: 1.2rem;
+                border-left: 3px solid var(--accent);
+                color: var(--text);
+            }
+
+            .diagram-wrap {
+                margin: 2.5rem 0;
+                background: var(--bg-diagram);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                overflow: hidden;
+            }
+
+            .diagram-label {
+                padding: 0.75rem 1.3rem;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+                border-bottom: 1px solid var(--border);
+                background: var(--bg-alt);
+            }
+
+            .diagram-wrap svg {
+                display: block;
+                width: 100%;
+                height: auto;
+                padding: 1.2rem 0.6rem;
+            }
+
+            .stats-grid {
+                display: grid;
+                grid-template-columns: repeat(2, 1fr);
+                gap: 1px;
+                background: var(--border);
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                overflow: hidden;
+                margin: 2rem 0;
+            }
+
+            .stat-cell {
+                background: var(--bg-alt);
+                padding: 1.3rem 1.5rem;
+            }
+
+            .stat-cell .val {
+                font-family: var(--font-display);
+                font-size: 1.8rem;
+                font-weight: 700;
+                color: var(--accent);
+                letter-spacing: -0.02em;
+                display: block;
+                margin-bottom: 0.15rem;
+            }
+
+            .stat-cell .desc {
+                font-size: 0.78rem;
+                color: var(--text-muted);
+                line-height: 1.45;
+            }
+
+            /* Modern IDE-style code presentation */
+            .code-card {
+                margin: 2.4rem 0;
+                border-radius: 14px;
+                overflow: hidden;
+                border: 1px solid var(--code-border);
+                background: var(--code-bg);
+                box-shadow:
+                    0 1px 0 rgba(0, 0, 0, 0.04),
+                    0 12px 30px -16px rgba(0, 0, 0, 0.22);
+            }
+
+            .code-card-head {
+                display: flex;
+                align-items: center;
+                gap: 0.9rem;
+                padding: 0.7rem 1.1rem;
+                background: linear-gradient(
+                    180deg,
+                    var(--code-head-bg-1) 0%,
+                    var(--code-head-bg-2) 100%
+                );
+                border-bottom: 1px solid var(--code-head-border);
+            }
+
+            .code-dots {
+                display: inline-flex;
+                gap: 0.42rem;
+                flex-shrink: 0;
+                align-items: center;
+            }
+
+            .code-dots i {
+                width: 11px;
+                height: 11px;
+                border-radius: 50%;
+                display: inline-block;
+            }
+
+            .code-dots i:nth-child(1) {
+                background: #ff5f57;
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+            }
+            .code-dots i:nth-child(2) {
+                background: #febc2e;
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+            }
+            .code-dots i:nth-child(3) {
+                background: #28c840;
+                box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.18);
+            }
+
+            .code-card-file {
+                font-family: var(--font-mono);
+                font-size: 0.8rem;
+                font-weight: 500;
+                color: var(--code-head-text);
+                letter-spacing: 0.01em;
+                flex: 1;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+            .code-card-lang {
+                font-family: var(--font-mono);
+                font-size: 0.65rem;
+                font-weight: 700;
+                letter-spacing: 0.14em;
+                text-transform: uppercase;
+                padding: 0.22rem 0.55rem;
+                border-radius: 4px;
+                background: rgba(60, 201, 181, 0.1);
+                color: #3cc9b5;
+                border: 1px solid rgba(60, 201, 181, 0.28);
+                flex-shrink: 0;
+            }
+
+            .code-card-lang.gql {
+                background: rgba(229, 84, 162, 0.1);
+                color: #e554a2;
+                border-color: rgba(229, 84, 162, 0.28);
+            }
+
+            .code-card-body {
+                margin: 0;
+                padding: 1.4rem 1.7rem;
+                background: var(--code-bg);
+                color: var(--code-text);
+                font-family: var(--font-mono);
+                font-size: 0.88rem;
+                line-height: 1.85;
+                overflow-x: auto;
+                white-space: pre;
+                position: relative;
+                font-feature-settings:
+                    "calt" 1,
+                    "liga" 1;
+            }
+
+            .code-card-body code {
+                font-family: inherit;
+                font-size: inherit;
+                background: none;
+                padding: 0;
+                color: inherit;
+                display: block;
+            }
+
+            /* Subtle accent gutter on the left edge */
+            .code-card-body::before {
+                content: "";
+                position: absolute;
+                left: 0;
+                top: 0;
+                bottom: 0;
+                width: 3px;
+                background: linear-gradient(
+                    180deg,
+                    rgba(60, 201, 181, 0.55),
+                    rgba(60, 201, 181, 0.04)
+                );
+                pointer-events: none;
+            }
+
+            /* Syntax tokens, refreshed for clarity in 2026 */
+            .c-cmt {
+                color: #7ba87f;
+                font-style: italic;
+            }
+            .c-kw {
+                color: #d289cf;
+                font-weight: 500;
+            }
+            .c-fn {
+                color: #e4dfa3;
+            }
+            .c-str {
+                color: #e0a585;
+            }
+            .c-num {
+                color: #b9d6a8;
+            }
+            .c-type {
+                color: #5ed5be;
+            }
+
+            /* Backward-compat: legacy .code-block falls back to card-body styling */
+            .code-block {
+                margin: 2.4rem 0;
+                padding: 1.4rem 1.7rem;
+                border-radius: 14px;
+                border: 1px solid var(--code-border);
+                background: var(--code-bg);
+                color: var(--code-text);
+                font-family: var(--font-mono);
+                font-size: 0.88rem;
+                line-height: 1.85;
+                overflow-x: auto;
+                white-space: pre;
+            }
+
+            /* Mini code blocks used inside comparison tables */
+            .mini-code {
+                margin: 0;
+                padding: 0.75rem 0.95rem;
+                font-family: var(--font-mono);
+                font-size: 0.78rem;
+                line-height: 1.6;
+                color: var(--text);
+                background: var(--bg);
+                border-radius: 6px;
+                border: 1px solid var(--border-light);
+                white-space: pre;
+                overflow-x: auto;
+            }
+
+            .mini-code code {
+                font-family: inherit;
+                background: none;
+                padding: 0;
+                color: inherit;
+            }
+
+            .compare-cell.old .mini-code {
+                background: var(--red-tint);
+                border-color: rgba(196, 69, 58, 0.22);
+            }
+
+            .compare-cell.new .mini-code {
+                background: var(--accent-dim);
+                border-color: rgba(26, 122, 109, 0.22);
+            }
+
+            .mini-code .c-cmt {
+                color: var(--text-muted);
+                font-style: italic;
+            }
+            .mini-code .c-kw {
+                color: var(--accent);
+                font-weight: 600;
+            }
+            .mini-code .c-type {
+                color: var(--blue);
+                font-weight: 500;
+            }
+
+            .compare-table {
+                margin: 2rem 0;
+                border: 1px solid var(--border);
+                border-radius: 10px;
+                overflow: hidden;
+            }
+
+            .compare-row {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+                align-items: center;
+                border-bottom: 1px solid var(--border);
+            }
+
+            .compare-row.three {
+                grid-template-columns: 1.1fr 1fr 1.4fr;
+            }
+
+            .compare-row:last-child {
+                border-bottom: none;
+            }
+
+            .compare-row.header {
+                background: var(--bg-alt);
+                font-weight: 700;
+                font-size: 0.78rem;
+                letter-spacing: 0.04em;
+                text-transform: uppercase;
+                color: var(--text-muted);
+            }
+
+            .compare-cell {
+                padding: 0.9rem 1.2rem;
+                font-size: 0.9rem;
+                line-height: 1.5;
+            }
+
+            .compare-cell + .compare-cell {
+                border-left: 1px solid var(--border);
+            }
+
+            .compare-cell.old {
+                background: var(--red-soft);
+            }
+            .compare-cell.new {
+                background: var(--accent-dim);
+            }
+
+            .compare-cell code {
+                font-family: var(--font-mono);
+                font-size: 0.82rem;
+                color: var(--text);
+                background: var(--bg);
+                padding: 0.1rem 0.35rem;
+                border-radius: 4px;
+            }
+
+            .article p code,
+            .article li code {
+                font-family: var(--font-mono);
+                font-size: 0.88em;
+                background: var(--bg-alt);
+                padding: 0.12rem 0.45rem;
+                border-radius: 5px;
+                color: var(--text);
+                border: 1px solid var(--border-light);
+            }
+
+            .article-footer {
+                max-width: var(--max-w);
+                margin: 0 auto;
+                padding: 2rem var(--gutter) 4rem;
+                border-top: 1px solid var(--border);
+            }
+
+            .footer-links {
+                display: flex;
+                gap: 1.5rem;
+                flex-wrap: wrap;
+            }
+
+            .footer-links a {
+                font-size: 0.82rem;
+                font-weight: 600;
+                color: var(--accent);
+                text-decoration: none;
+                padding: 0.4rem 0.9rem;
+                border: 1px solid var(--accent);
+                border-radius: 6px;
+                transition:
+                    background 0.2s,
+                    color 0.2s;
+            }
+
+            .footer-links a:hover {
+                background: var(--accent);
+                color: #fff;
+            }
+
+            .footer-note {
+                margin-top: 1.5rem;
+                font-size: 0.78rem;
+                color: var(--text-muted);
+            }
+
+            .reveal {
+                opacity: 0;
+                transform: translateY(20px);
+                transition:
+                    opacity 0.6s ease,
+                    transform 0.6s ease;
+            }
+
+            .reveal.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            /* DOM punchline below a diagram (replaces in-SVG callouts) */
+            .diagram-punch {
+                background: var(--accent-dim);
+                border: 1px solid var(--accent);
+                border-radius: 10px;
+                padding: 1.6rem 1.8rem;
+                margin: -0.5rem 0 2.8rem;
+            }
+
+            .diagram-punch-head {
+                font-family: var(--font-display);
+                font-size: 1.2rem;
+                font-weight: 700;
+                color: var(--accent);
+                margin: 0 0 1.1rem;
+                text-align: center;
+                letter-spacing: -0.01em;
+            }
+
+            .diagram-punch-grid {
+                display: grid;
+                grid-template-columns: 1fr 1px 1fr;
+                gap: 1.4rem;
+                padding-bottom: 1.1rem;
+                border-bottom: 1px solid var(--border-light);
+            }
+
+            .diagram-punch-grid > .divider {
+                background: var(--border-light);
+            }
+
+            .diagram-punch-grid strong {
+                display: block;
+                font-weight: 600;
+                color: var(--text);
+                margin-bottom: 0.45rem;
+                font-size: 0.98rem;
+            }
+
+            .diagram-punch-grid p {
+                margin: 0;
+                font-size: 0.92rem;
+                color: var(--text-secondary);
+                line-height: 1.55;
+            }
+
+            .diagram-punch-grid p.muted {
+                color: var(--text-muted);
+                font-size: 0.85rem;
+                margin-top: 0.3rem;
+            }
+
+            .diagram-punch-foot {
+                margin: 1.1rem 0 0;
+                text-align: center;
+                font-size: 0.86rem;
+                font-style: italic;
+                color: var(--text-muted);
+            }
+
+            @media (max-width: 700px) {
+                :root {
+                    --gutter: 1.4rem;
+                }
+                body {
+                    font-size: 17px;
+                }
+                .hero {
+                    padding-top: 3rem;
+                }
+                .header-nav {
+                    display: none;
+                }
+                .stats-grid {
+                    grid-template-columns: 1fr 1fr;
+                }
+                .compare-cell {
+                    font-size: 0.84rem;
+                    padding: 0.7rem 0.9rem;
+                }
+                .compare-row.three {
+                    grid-template-columns: 1fr;
+                }
+                .compare-row.three .compare-cell + .compare-cell {
+                    border-left: none;
+                    border-top: 1px solid var(--border);
+                }
+                .diagram-wrap svg {
+                    padding: 0.8rem 0.3rem;
+                }
+                .code-card-body,
+                .code-block {
+                    font-size: 0.82rem;
+                    padding: 1.1rem 1.2rem;
+                }
+                .code-card-file {
+                    font-size: 0.72rem;
+                }
+                .mini-code {
+                    font-size: 0.74rem;
+                }
+                .diagram-punch {
+                    padding: 1.2rem 1.3rem;
+                }
+                .diagram-punch-grid {
+                    grid-template-columns: 1fr;
+                    gap: 0.9rem;
+                }
+                .diagram-punch-grid > .divider {
+                    display: none;
+                }
+            }
+
+            @media (max-width: 440px) {
+                .stats-grid {
+                    grid-template-columns: 1fr;
+                }
+                h1 {
+                    font-size: 2.2rem;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div class="progress-bar" id="progressBar"></div>
+
+        <header class="site-header">
+            <a href="https://www.hundredsunited.com/blog/" class="site-logo"
+                >The Trenches</a
+            >
+            <div class="header-right">
+                <nav class="header-nav">
+                    <a href="#trap">Trap</a>
+                    <a href="#deep">Deep</a>
+                    <a href="#rules">Rules</a>
+                    <a href="#path">Path</a>
+                    <a href="#contract">Contract</a>
+                    <a href="#truth">Truth</a>
+                    <a href="#engine">Engine</a>
+                    <a href="#guardrails">Guardrails</a>
+                    <a href="#filter">Filter</a>
+                </nav>
+                <button
+                    class="theme-toggle"
+                    onclick="toggleTheme()"
+                    aria-label="Toggle theme"
+                >
+                    ☽
+                </button>
+            </div>
+        </header>
+
+        <figure class="hero-figure">
+            <div class="hero-figure-frame">
+                <img
+                    src="/images/story/hexagon.webp"
+                    alt="A hexagonal lattice with a triangle inscribed at its center, drawn over a faint isometric grid."
+                    loading="eager"
+                    decoding="async"
+                />
+            </div>
+        </figure>
+
+        <section class="hero">
+            <div class="hero-kicker">API Architecture · May 2026</div>
+            <h1>Deep Modules <em>GQL</em></h1>
+            <p class="hero-deck">
+                Most GraphQL APIs do not fail because GraphQL is hard. They fail
+                because GraphQL hands you a question that REST answers for you
+                by default: where does each rule live? This is a working theory
+                of the answer, drawn from the architecture of a production read
+                API.
+            </p>
+            <div class="hero-meta">
+                <span><strong>Boyan Balev</strong></span>
+                <span>15 min read</span>
+                <span
+                    >Stack:
+                    <strong>Apollo · Postgres · DataLoader · Zod</strong></span
+                >
+            </div>
+        </section>
+
+        <div class="tldr">
+            <div class="tldr-box">
+                <div class="tldr-title">The whole article in ten seconds</div>
+                <p>
+                    The SDL is the public contract. Zod owns input syntax.
+                    Services orchestrate one use case at a time. Repositories
+                    own SQL and visibility. Resolvers are wiring. Cross-entity
+                    fields go through per-request DataLoaders that live in one
+                    registry.
+                    <strong
+                        >The interface is small. The interior is large.</strong
+                    >
+                    Every change starts at the schema and ends in SQL, and
+                    nothing in the middle gets clever. The result is an API that
+                    a new engineer can navigate by reading file paths.
+                </p>
+            </div>
+        </div>
+
+        <article class="article">
+            <!-- ═══════ PART I ═══════ -->
+            <div class="section-break reveal" id="trap">
+                <span class="part-num">Part I</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">The Question GraphQL <em>Hands You</em></h2>
+
+            <p class="reveal">
+                REST answers a question for you by structure. One URL, one
+                resource, one verb. The interface forces the architecture: if
+                you want a filtered list of products by collection, you build
+                <code>GET /collections/:id/products</code>. The URL itself is a
+                placement decision. The router routes. The handler handles.
+                Nothing crosses.
+            </p>
+
+            <p class="reveal">
+                GraphQL does not force that. GraphQL gives you a graph and asks
+                you to pick the shape. Every field is a function. Every type is
+                a record. Clients compose their own queries. The protocol does
+                not care where the rule lives. The protocol cares that the rule
+                produces the right answer.
+            </p>
+
+            <p class="reveal">
+                This is the trap. The first time you build a GraphQL API, you
+                write a few resolvers, hook them to a database, and ship. It
+                works. The second time, a buyer asks for a filter, and you add a
+                tiny SQL call inside the resolver. It still works. The third
+                time, a nested field starts hydrating related entities. The
+                fourth time, a repository starts returning unpublished rows and
+                the resolver "remembers" to filter them out. None of these
+                decisions look dangerous. Each one is the smallest possible
+                change that delivers the feature.
+            </p>
+
+            <p class="reveal">
+                Two years later, you have a 4000-line resolver file. A new
+                engineer cannot tell where a published-only rule is enforced. A
+                buyer query that should issue three SQL statements issues fifty.
+                The integration tests pass and the production logs do not. The
+                schema, the original contract, has deformed into a documentation
+                of accidents.
+            </p>
+
+            <p class="punch reveal">
+                GraphQL did not do this. The absence of an opinion did.
+            </p>
+
+            <p class="reveal">
+                This is an essay about supplying that opinion. There is nothing
+                novel in it. The pattern is older than GraphQL. It is sometimes
+                called "deep modules," sometimes "thin resolvers," sometimes
+                "hexagonal architecture" with a tilt. What matters is not the
+                name. What matters is that the pattern answers one question
+                consistently at every layer of the API:
+                <strong>who owns this rule?</strong>
+            </p>
+
+            <p class="reveal">
+                The examples below use a generic store. Products, collections,
+                reviews, customers, orders, line items. If you have ever queried
+                a Shopify-shaped data set, you already know the domain. The same
+                patterns apply to any read-heavy API over a relational store: a
+                CMS, a catalog, a directory, a ticketing system, a B2B feed. The
+                data shape changes. The architecture does not.
+            </p>
+
+            <!-- ═══════ PART II ═══════ -->
+            <div class="section-break reveal" id="deep">
+                <span class="part-num">Part II</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">Deep Modules, <em>Thin Interfaces</em></h2>
+
+            <p class="reveal">
+                A deep module has a small surface and a large interior. The
+                outside looks simple. The inside does real work. A shallow
+                module exposes its complexity to every caller. It looks like a
+                wrapper, because it is one.
+            </p>
+
+            <p class="reveal">
+                In a GraphQL API, the public surface is the SDL. A client types:
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file">client → /graphql</span>
+                    <span class="code-card-lang gql">query</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">query</span> {
+  <span class="c-fn">products</span>(<span class="c-kw">page</span>: <span class="c-num">1</span>, <span class="c-kw">filter</span>: { <span class="c-kw">collectionId</span>: <span class="c-str">"summer-25"</span> }) {
+    <span class="c-fn">items</span> {
+      <span class="c-fn">id</span>
+      <span class="c-fn">title</span>
+      <span class="c-fn">price</span>
+      <span class="c-fn">reviews</span> { <span class="c-fn">rating</span>, <span class="c-fn">body</span>, <span class="c-fn">author</span> { <span class="c-fn">name</span> } }
+    }
+    <span class="c-fn">total</span>
+    <span class="c-fn">hasNext</span>
+  }
+}</code></pre>
+            </figure>
+
+            <p class="reveal">
+                That is the whole interface. Forty tokens, a stable shape, a
+                precise return. Behind it, the module is doing argument
+                validation, pagination math, SQL filter construction, count
+                parity, foreign-key normalization, batched related-entity
+                lookups, null coalescing, error mapping. None of that complexity
+                is visible to the buyer. None of it should be.
+            </p>
+
+            <div class="diagram-wrap reveal">
+                <div class="diagram-label">Shallow vs Deep Module</div>
+                <svg
+                    viewBox="0 0 680 320"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="
+                        font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                    "
+                >
+                    <defs>
+                        <marker
+                            id="arwM"
+                            markerWidth="7"
+                            markerHeight="5"
+                            refX="6"
+                            refY="2.5"
+                            orient="auto"
+                        >
+                            <polygon
+                                points="0 0, 7 2.5, 0 5"
+                                fill="var(--text-muted)"
+                            />
+                        </marker>
+                    </defs>
+
+                    <!-- LEFT: shallow -->
+                    <text
+                        x="170"
+                        y="32"
+                        text-anchor="middle"
+                        fill="var(--red)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        SHALLOW MODULE
+                    </text>
+                    <text
+                        x="170"
+                        y="50"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9"
+                    >
+                        Surface area equals interior. Every caller sees
+                        everything.
+                    </text>
+
+                    <rect
+                        x="40"
+                        y="70"
+                        width="260"
+                        height="190"
+                        rx="10"
+                        fill="var(--red-soft)"
+                        stroke="var(--red)"
+                        stroke-width="1.2"
+                    />
+
+                    <!-- Many "exposed" items at the boundary -->
+                    <rect
+                        x="55"
+                        y="90"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="105"
+                        y="105"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        validate args
+                    </text>
+
+                    <rect
+                        x="170"
+                        y="90"
+                        width="115"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="227"
+                        y="105"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        build SQL filter
+                    </text>
+
+                    <rect
+                        x="55"
+                        y="120"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="105"
+                        y="135"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        page math
+                    </text>
+
+                    <rect
+                        x="170"
+                        y="120"
+                        width="115"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="227"
+                        y="135"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        run query
+                    </text>
+
+                    <rect
+                        x="55"
+                        y="150"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="105"
+                        y="165"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        map rows
+                    </text>
+
+                    <rect
+                        x="170"
+                        y="150"
+                        width="115"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="227"
+                        y="165"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        filter unpublished
+                    </text>
+
+                    <rect
+                        x="55"
+                        y="180"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="105"
+                        y="195"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        load reviews
+                    </text>
+
+                    <rect
+                        x="170"
+                        y="180"
+                        width="115"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="227"
+                        y="195"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        format response
+                    </text>
+
+                    <text
+                        x="170"
+                        y="232"
+                        text-anchor="middle"
+                        fill="var(--red)"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        Caller knows about all of it.
+                    </text>
+                    <text
+                        x="170"
+                        y="250"
+                        text-anchor="middle"
+                        fill="var(--red)"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        A new field changes ten places.
+                    </text>
+
+                    <!-- Center divider -->
+                    <line
+                        x1="340"
+                        y1="60"
+                        x2="340"
+                        y2="280"
+                        stroke="var(--border)"
+                        stroke-width="1"
+                        stroke-dasharray="4,4"
+                    />
+
+                    <!-- RIGHT: deep -->
+                    <text
+                        x="510"
+                        y="32"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        DEEP MODULE
+                    </text>
+                    <text
+                        x="510"
+                        y="50"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9"
+                    >
+                        Small surface. Large, hidden interior.
+                    </text>
+
+                    <rect
+                        x="380"
+                        y="70"
+                        width="260"
+                        height="190"
+                        rx="10"
+                        fill="var(--accent-dim)"
+                        stroke="var(--accent)"
+                        stroke-width="1.2"
+                    />
+
+                    <!-- Tiny surface at top -->
+                    <rect
+                        x="465"
+                        y="85"
+                        width="90"
+                        height="26"
+                        rx="5"
+                        fill="var(--accent)"
+                        opacity="0.9"
+                    />
+                    <text
+                        x="510"
+                        y="103"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10"
+                        font-weight="700"
+                    >
+                        products(...)
+                    </text>
+
+                    <line
+                        x1="510"
+                        y1="113"
+                        x2="510"
+                        y2="135"
+                        stroke="var(--text-muted)"
+                        stroke-width="1"
+                        marker-end="url(#arwM)"
+                    />
+
+                    <!-- Large interior, dim -->
+                    <rect
+                        x="400"
+                        y="140"
+                        width="220"
+                        height="100"
+                        rx="6"
+                        fill="var(--accent)"
+                        opacity="0.1"
+                        stroke="var(--accent)"
+                        stroke-width="0.5"
+                        stroke-dasharray="3,3"
+                    />
+                    <text
+                        x="510"
+                        y="165"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="9"
+                        font-weight="500"
+                    >
+                        validate · paginate · query
+                    </text>
+                    <text
+                        x="510"
+                        y="183"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="9"
+                        font-weight="500"
+                    >
+                        filter · count · map · batch
+                    </text>
+                    <text
+                        x="510"
+                        y="201"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="9"
+                        font-weight="500"
+                    >
+                        load relations · normalize FKs
+                    </text>
+                    <text
+                        x="510"
+                        y="219"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="9"
+                        font-weight="500"
+                    >
+                        handle errors · shape page
+                    </text>
+
+                    <text
+                        x="510"
+                        y="254"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        A new field changes one layer.
+                    </text>
+                </svg>
+            </div>
+
+            <p class="reveal">
+                The temptation, especially in GraphQL, is to give every layer a
+                slightly broader job. A "convenience helper" emerges in a
+                service. A resolver "just adds" a small condition. A repository
+                returns the full row in case someone needs the rest of it. Each
+                of these is a tiny act of generosity. Each one moves a small
+                piece of complexity outward, into the surface, where the next
+                engineer will trip over it.
+            </p>
+
+            <p class="reveal">
+                The discipline is unromantic: every layer answers one kind of
+                question, and only that kind. When you change the rule, you
+                change exactly one layer. The other layers are unchanged because
+                the question they answer has not changed.
+            </p>
+
+            <!-- ═══════ PART III ═══════ -->
+            <div class="section-break reveal" id="rules">
+                <span class="part-num">Part III</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">Where Each Rule <em>Lives</em></h2>
+
+            <p class="reveal">
+                This is the matrix that decides whether the codebase will be
+                readable in two years.
+            </p>
+
+            <div class="compare-table reveal">
+                <div class="compare-row three header">
+                    <div class="compare-cell">Question</div>
+                    <div class="compare-cell">Owner</div>
+                    <div class="compare-cell">Why</div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">What can clients ask for?</div>
+                    <div class="compare-cell">
+                        <code>src/schemas/*.graphql</code>
+                    </div>
+                    <div class="compare-cell">
+                        The SDL is the public contract and the documentation
+                        surface.
+                    </div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">
+                        Is this input syntactically valid?
+                    </div>
+                    <div class="compare-cell">
+                        <code>src/validations/*.ts</code>
+                    </div>
+                    <div class="compare-cell">
+                        Zod keeps runtime checks and TypeScript types aligned.
+                    </div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">
+                        How do page args become offset/limit?
+                    </div>
+                    <div class="compare-cell">
+                        <code>src/services/*.ts</code>
+                    </div>
+                    <div class="compare-cell">
+                        Services orchestrate one use case. They do not own SQL.
+                    </div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">Which rows are public?</div>
+                    <div class="compare-cell">
+                        <code>src/repositories/*.ts</code>
+                    </div>
+                    <div class="compare-cell">
+                        Visibility is enforced before rows leave Postgres.
+                    </div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">
+                        How does a field load relations?
+                    </div>
+                    <div class="compare-cell">
+                        <code>resolver → ctx.loaders</code>
+                    </div>
+                    <div class="compare-cell">
+                        Resolvers wire fields. DataLoaders batch the lookups.
+                    </div>
+                </div>
+                <div class="compare-row three">
+                    <div class="compare-cell">How do modules meet?</div>
+                    <div class="compare-cell">
+                        <code>src/loaders/registry.ts</code>
+                    </div>
+                    <div class="compare-cell">
+                        One intentional cross-module integration point.
+                    </div>
+                </div>
+            </div>
+
+            <p class="reveal">
+                The matrix is not arbitrary. It follows a single principle:
+                <strong
+                    >rules belong where they are easiest to find when you
+                    forget</strong
+                >. If a buyer can ask for <code>product.reviews</code>, where do
+                you look when reviews stop appearing? The SDL tells you the
+                field exists. The resolver tells you it uses a loader. The
+                loader tells you which repository call backs it. The repository
+                tells you the SQL that runs. You can debug this without grep.
+            </p>
+
+            <p class="reveal">
+                Notice what is missing. There is no "controller." There is no
+                "manager." There is no "facade." Each of those names is an
+                invitation to put behavior in a place where the next engineer
+                will not think to look. A name that does not answer a question
+                does not belong in the architecture.
+            </p>
+
+            <div class="callout reveal">
+                <strong>The placement test.</strong> Before writing a line of
+                code, name the question your change answers. Then look at the
+                matrix. If the answer to "where does this go?" is "it depends,"
+                the change is two changes glued together. Split them.
+            </div>
+
+            <!-- ═══════ PART IV ═══════ -->
+            <div class="section-break reveal" id="path">
+                <span class="part-num">Part IV</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">Acquire the Root, <em>Reuse the Parent</em></h2>
+
+            <p class="reveal">
+                Most GraphQL writing focuses on a single request path: HTTP
+                enters, a resolver runs, a response leaves. That is one third of
+                the picture. A query that traverses any depth has three flows,
+                not one, and treating them the same is the source of the worst
+                performance problems in GraphQL.
+            </p>
+
+            <p class="reveal">
+                Take the query from Part II: a page of products, each with its
+                reviews, each review with its author. The naive mental model is
+                "one resolver per field, just call the database from each." That
+                mental model works for a flat query of one product. It collapses
+                for a list.
+            </p>
+
+            <p class="reveal">The flows are these:</p>
+
+            <ul class="reveal">
+                <li>
+                    <strong>Acquire the root.</strong> The query resolver calls
+                    a service. The service validates args, clamps the page,
+                    calls one repository. The repository returns parent rows and
+                    a total count. One SQL statement, regardless of how many
+                    children the client asks for.
+                </li>
+                <li>
+                    <strong>Expand the children.</strong> For each parent row,
+                    the field resolvers fire. Each one needs related data. This
+                    is where naive GraphQL dies:
+                    <code
+                        >reviews: (parent) =&gt;
+                        fetchReviewsFor(parent.id)</code
+                    >
+                    issues N queries for a page of N products. Instead, the
+                    field resolver calls a per-request DataLoader. DataLoader
+                    collects all the IDs in the current tick of the event loop,
+                    fires one set query, and returns rows grouped by parent ID.
+                </li>
+                <li>
+                    <strong>Reuse the parent IDs.</strong> Each child becomes a
+                    parent for the next level. Review authors are loaded by
+                    author ID. The author loader batches across all reviews from
+                    all products. One query for all authors, regardless of how
+                    many reviews referenced them.
+                </li>
+            </ul>
+
+            <div class="diagram-wrap reveal">
+                <div class="diagram-label">
+                    Acquire and Reuse: The Two-Phase Request
+                </div>
+                <svg
+                    viewBox="0 0 680 285"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="
+                        font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                    "
+                >
+                    <defs>
+                        <marker
+                            id="arwP"
+                            markerWidth="7"
+                            markerHeight="5"
+                            refX="6"
+                            refY="2.5"
+                            orient="auto"
+                        >
+                            <polygon
+                                points="0 0, 7 2.5, 0 5"
+                                fill="var(--text-muted)"
+                            />
+                        </marker>
+                        <marker
+                            id="arwA"
+                            markerWidth="7"
+                            markerHeight="5"
+                            refX="6"
+                            refY="2.5"
+                            orient="auto"
+                        >
+                            <polygon
+                                points="0 0, 7 2.5, 0 5"
+                                fill="var(--accent)"
+                            />
+                        </marker>
+                        <marker
+                            id="arwO"
+                            markerWidth="7"
+                            markerHeight="5"
+                            refX="6"
+                            refY="2.5"
+                            orient="auto"
+                        >
+                            <polygon
+                                points="0 0, 7 2.5, 0 5"
+                                fill="var(--orange)"
+                            />
+                        </marker>
+                    </defs>
+
+                    <!-- PHASE 1: ACQUIRE (orange) -->
+                    <text
+                        x="170"
+                        y="30"
+                        text-anchor="middle"
+                        fill="var(--orange)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        PHASE 1 · ACQUIRE
+                    </text>
+                    <text
+                        x="170"
+                        y="48"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="10"
+                    >
+                        One service call. One SQL statement.
+                    </text>
+
+                    <rect
+                        x="40"
+                        y="65"
+                        width="260"
+                        height="200"
+                        rx="10"
+                        fill="var(--orange-soft)"
+                        stroke="var(--orange)"
+                        stroke-width="1"
+                    />
+
+                    <rect
+                        x="80"
+                        y="80"
+                        width="180"
+                        height="30"
+                        rx="5"
+                        fill="var(--orange)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="170"
+                        y="100"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10.5"
+                        font-weight="600"
+                    >
+                        Query.products(args)
+                    </text>
+
+                    <line
+                        x1="170"
+                        y1="110"
+                        x2="170"
+                        y2="128"
+                        stroke="var(--orange)"
+                        stroke-width="1.5"
+                        marker-end="url(#arwO)"
+                    />
+
+                    <rect
+                        x="80"
+                        y="130"
+                        width="180"
+                        height="30"
+                        rx="5"
+                        fill="var(--orange)"
+                        opacity="0.75"
+                    />
+                    <text
+                        x="170"
+                        y="150"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10.5"
+                        font-weight="600"
+                    >
+                        listProducts(ctx, args)
+                    </text>
+
+                    <line
+                        x1="170"
+                        y1="160"
+                        x2="170"
+                        y2="178"
+                        stroke="var(--orange)"
+                        stroke-width="1.5"
+                        marker-end="url(#arwO)"
+                    />
+
+                    <rect
+                        x="80"
+                        y="180"
+                        width="180"
+                        height="30"
+                        rx="5"
+                        fill="var(--orange)"
+                        opacity="0.6"
+                    />
+                    <text
+                        x="170"
+                        y="200"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10.5"
+                        font-weight="600"
+                    >
+                        findProducts(filter)
+                    </text>
+
+                    <line
+                        x1="170"
+                        y1="210"
+                        x2="170"
+                        y2="228"
+                        stroke="var(--orange)"
+                        stroke-width="1.5"
+                        marker-end="url(#arwO)"
+                    />
+
+                    <rect
+                        x="80"
+                        y="230"
+                        width="180"
+                        height="26"
+                        rx="5"
+                        fill="var(--orange)"
+                        opacity="0.4"
+                        stroke="var(--orange)"
+                        stroke-width="1"
+                    />
+                    <text
+                        x="170"
+                        y="248"
+                        text-anchor="middle"
+                        fill="var(--orange)"
+                        font-size="10"
+                        font-weight="700"
+                    >
+                        SELECT ... WHERE status='active'
+                    </text>
+
+                    <!-- BRIDGE -->
+                    <text
+                        x="340"
+                        y="155"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="22"
+                    >
+                        →
+                    </text>
+                    <text
+                        x="340"
+                        y="180"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9.5"
+                        font-weight="600"
+                    >
+                        25 product rows
+                    </text>
+                    <text
+                        x="340"
+                        y="195"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9.5"
+                    >
+                        parent.id × 25
+                    </text>
+
+                    <!-- PHASE 2: REUSE (accent) -->
+                    <text
+                        x="510"
+                        y="30"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        PHASE 2 · REUSE
+                    </text>
+                    <text
+                        x="510"
+                        y="48"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="10"
+                    >
+                        Many field resolvers. One batched query each.
+                    </text>
+
+                    <rect
+                        x="380"
+                        y="65"
+                        width="260"
+                        height="200"
+                        rx="10"
+                        fill="var(--accent-dim)"
+                        stroke="var(--accent)"
+                        stroke-width="1"
+                    />
+
+                    <rect
+                        x="395"
+                        y="80"
+                        width="230"
+                        height="26"
+                        rx="4"
+                        fill="var(--accent)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="510"
+                        y="98"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        Product.reviews(parent) → loader
+                    </text>
+
+                    <rect
+                        x="395"
+                        y="112"
+                        width="230"
+                        height="26"
+                        rx="4"
+                        fill="var(--accent)"
+                        opacity="0.7"
+                    />
+                    <text
+                        x="510"
+                        y="130"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        Product.collections(parent) → loader
+                    </text>
+
+                    <rect
+                        x="395"
+                        y="144"
+                        width="230"
+                        height="26"
+                        rx="4"
+                        fill="var(--accent)"
+                        opacity="0.55"
+                    />
+                    <text
+                        x="510"
+                        y="162"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="10"
+                        font-weight="600"
+                    >
+                        Review.author(parent) → loader
+                    </text>
+
+                    <line
+                        x1="510"
+                        y1="180"
+                        x2="510"
+                        y2="198"
+                        stroke="var(--accent)"
+                        stroke-width="1.5"
+                        marker-end="url(#arwA)"
+                    />
+
+                    <rect
+                        x="395"
+                        y="200"
+                        width="230"
+                        height="26"
+                        rx="4"
+                        fill="var(--accent)"
+                        opacity="0.4"
+                        stroke="var(--accent)"
+                        stroke-width="1"
+                    />
+                    <text
+                        x="510"
+                        y="218"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="10"
+                        font-weight="700"
+                    >
+                        batch keys → 1 SET query per kind
+                    </text>
+
+                    <text
+                        x="510"
+                        y="244"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="10"
+                    >
+                        grouped by parent ID, returned
+                    </text>
+                </svg>
+            </div>
+
+            <div class="diagram-punch reveal">
+                <h4 class="diagram-punch-head">
+                    Conquer the root. Reuse the parent.
+                </h4>
+                <div class="diagram-punch-grid">
+                    <div>
+                        <strong>Services own use cases.</strong>
+                        <p>"Which products are on this page?"</p>
+                        <p class="muted">One question. One call.</p>
+                    </div>
+                    <div class="divider" aria-hidden="true"></div>
+                    <div>
+                        <strong>Loaders own expansion.</strong>
+                        <p>"For these 25 IDs, fetch reviews."</p>
+                        <p class="muted">Many fields. One batch each.</p>
+                    </div>
+                </div>
+                <p class="diagram-punch-foot">
+                    Two phases. Two ownership boundaries. The resolver is the
+                    wire between them.
+                </p>
+            </div>
+
+            <p class="reveal">
+                The architectural mantra is two sentences. Conquer the root,
+                reuse the parent. Services own root acquisition. Loaders own
+                child expansion. Resolvers are the wiring between them, and
+                resolvers do almost nothing.
+            </p>
+
+            <p class="reveal">
+                Why does this split matter? Because the two phases have
+                different cost models. Acquisition is one SQL statement no
+                matter what. Expansion is one SQL statement per relationship
+                type, no matter how many parents. A page of 100 products with
+                reviews, collections, and authors costs four queries with this
+                design and four hundred without it. The difference is not a
+                micro-optimization. It is the difference between a system that
+                survives a popular query and one that hangs.
+            </p>
+
+            <p class="reveal">
+                There is a corollary the architecture quietly enforces: services
+                never know about loaders, and loaders never call services. The
+                service is allowed to call one repository directly because it
+                owns one use case. A field resolver is allowed to call a loader
+                because it owns one relationship edge. These two privileges do
+                not compose. If a service starts using a loader, you have hidden
+                a batched call behind a use case, and the next engineer will not
+                know it batches. If a loader starts calling a service, you have
+                invited recursive expansion, and the next engineer will not know
+                the call stack depth.
+            </p>
+
+            <p class="punch reveal">
+                Each layer knows about exactly one neighbor. No more.
+            </p>
+
+            <!-- ═══════ PART V ═══════ -->
+            <div class="section-break reveal" id="contract">
+                <span class="part-num">Part V</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">The Schema Is Not <em>Your Database</em></h2>
+
+            <p class="reveal">
+                This is the most common failure mode in API design, and it gets
+                worse every year as tools that auto-generate types from database
+                schemas get better. The story usually goes: introspect the
+                database, generate types, expose them as GraphQL. It is fast. It
+                is also wrong.
+            </p>
+
+            <p class="reveal">
+                The contract you ship is shaped like your storage. Buyers see
+                your join tables. They see soft-delete columns. They see audit
+                fields. They see the difference between <code>price</code> and
+                <code>price_cents</code> because the codegen surfaced both. They
+                see your migration history through column names that hint at
+                past refactors. When you change your schema, you break their
+                queries. When you cannot change your schema because their
+                queries depend on its shape, your storage is now their problem.
+            </p>
+
+            <p class="reveal">
+                A well-designed GraphQL contract is a translation layer. Inside,
+                you might have a CMS-managed Postgres with implementation noise:
+                relationship tables suffixed with <code>_rels</code>, status
+                columns named <code>_status</code>, foreign keys that allow null
+                because Postgres requires it, numeric strings because the ORM
+                returns them. Outside, buyers see Product, Collection, Review,
+                Author. The translation happens in two places: the repository
+                (row mapping) and the SDL (field shape).
+            </p>
+
+            <div class="compare-table reveal">
+                <div class="compare-row header">
+                    <div class="compare-cell">Storage-shaped</div>
+                    <div class="compare-cell">Buyer-shaped</div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-cell old">
+                        <pre
+                            class="mini-code"
+                        ><code><span class="c-kw">type</span> <span class="c-type">ProductsCollectionsRels</span> {
+  collection_id: <span class="c-type">ID!</span>
+  product_id: <span class="c-type">ID!</span>
+  _status: <span class="c-type">String!</span>
+}</code></pre>
+                    </div>
+                    <div class="compare-cell new">
+                        <pre
+                            class="mini-code"
+                        ><code><span class="c-kw">type</span> <span class="c-type">Product</span> {
+  collections: [<span class="c-type">Collection!</span>]!
+}</code></pre>
+                    </div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-cell old">
+                        <pre
+                            class="mini-code"
+                        ><code>price_cents: <span class="c-type">String</span>
+currency_code: <span class="c-type">String</span>
+discount_applied_flag: <span class="c-type">Int</span></code></pre>
+                    </div>
+                    <div class="compare-cell new">
+                        <pre
+                            class="mini-code"
+                        ><code>price: <span class="c-type">Money!</span>
+<span class="c-cmt"># { amount: Float!, currency: String! }</span></code></pre>
+                    </div>
+                </div>
+                <div class="compare-row">
+                    <div class="compare-cell old">
+                        <pre
+                            class="mini-code"
+                        ><code>products: [<span class="c-type">Product</span>]
+products_count: <span class="c-type">String</span>
+products_page: <span class="c-type">Int</span>
+products_per_page: <span class="c-type">Int</span></code></pre>
+                    </div>
+                    <div class="compare-cell new">
+                        <pre
+                            class="mini-code"
+                        ><code>products: <span class="c-type">ProductPage!</span>
+<span class="c-cmt"># consistent envelope, used everywhere</span></code></pre>
+                    </div>
+                </div>
+            </div>
+
+            <p class="reveal">
+                Two rules make this stick. The first is that
+                <strong>nullability is honest</strong>. If a foreign key can be
+                null in the database and that nullability has product meaning (a
+                product with no manufacturer is genuinely a product without a
+                manufacturer), the field is nullable in the SDL. If it cannot be
+                null (a product always has a price), the field is non-null.
+                Buyers learn the meaning of <code>null</code> in your API by
+                reading the schema, not by trial and error.
+            </p>
+
+            <p class="reveal">
+                The second is that <strong>pagination is consistent</strong>.
+                Every list returns the same envelope. <code>items</code>,
+                <code>page</code>, <code>pageSize</code>, <code>total</code>,
+                <code>totalPages</code>, <code>hasNext</code>,
+                <code>hasPrev</code>. Buyers learn the shape once and use it
+                everywhere. Do not invent a one-off envelope for a single module
+                because "this list is special." This list is not special. Buyers
+                do not want six pagination dialects.
+            </p>
+
+            <p class="reveal">
+                This sounds like style. It is not style. It is a contract about
+                cognitive load. The buyer's mental budget is small, and you are
+                competing with their actual job for it. Every inconsistency you
+                ship spends some of that budget.
+            </p>
+
+            <!-- ═══════ PART VI ═══════ -->
+            <div class="section-break reveal" id="truth">
+                <span class="part-num">Part VI</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">SQL Owns the <em>Truth</em></h2>
+
+            <p class="reveal">
+                The repository is where SQL lives. It is also where visibility
+                lives. These two facts are inseparable, and treating them as
+                separable is the source of most data leaks.
+            </p>
+
+            <p class="reveal">
+                If a product is <code>draft</code>, it should never reach a
+                resolver. If a review is unmoderated, it should never reach a
+                resolver. The temptation is to fetch broadly and filter in
+                JavaScript: pull the rows, then apply
+                <code>.filter(r =&gt; r.status === 'active')</code>. This is
+                wrong for two reasons. The shallow reason is that it scales
+                badly. You fetch rows you will not return. The deep reason is
+                that it leaks invariants. Any caller can forget the filter. The
+                next caller usually does.
+            </p>
+
+            <p class="reveal">
+                The discipline: visibility is enforced in the WHERE clause. The
+                repository is the only place where data leaves the database, so
+                it is the only place that can guarantee what leaves. There is no
+                opt-out. There is no "internal" mode that skips the filter. The
+                filter is part of the function.
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file"
+                        >src/repositories/products.ts</span
+                    >
+                    <span class="code-card-lang">ts</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">const</span> <span class="c-fn">PUBLISHED</span> = <span class="c-fn">eq</span>(products.status, <span class="c-str">'active'</span>);
+
+<span class="c-kw">const</span> <span class="c-fn">buildFilterSql</span> = (<span class="c-fn">filter</span>: <span class="c-type">ProductsFilter</span>) =&gt; {
+  <span class="c-kw">const</span> clauses = [<span class="c-fn">PUBLISHED</span>];                <span class="c-cmt">// always. no exceptions.</span>
+  <span class="c-kw">if</span> (filter.titleContains) {
+    clauses.<span class="c-fn">push</span>(<span class="c-fn">ilike</span>(products.title, <span class="c-str">`%${filter.titleContains}%`</span>));
+  }
+  <span class="c-kw">if</span> (filter.collectionId) {
+    clauses.<span class="c-fn">push</span>(<span class="c-fn">sql</span><span class="c-str">`EXISTS (
+      SELECT 1 FROM product_collections pc
+      WHERE pc.product_id = products.id
+        AND pc.collection_id = ${filter.collectionId}
+        AND pc.status = 'active'
+    )`</span>);
+  }
+  <span class="c-kw">return</span> <span class="c-fn">and</span>(...clauses);
+};
+
+<span class="c-cmt">// list and count share one predicate — no drift, no lying totals.</span>
+<span class="c-kw">const</span> where = <span class="c-fn">buildFilterSql</span>(filter);
+<span class="c-kw">const</span> [items, [{ count }]] = <span class="c-kw">await</span> <span class="c-fn">Promise.all</span>([
+  db.<span class="c-fn">select</span>(...).<span class="c-fn">from</span>(products).<span class="c-fn">where</span>(where).<span class="c-fn">orderBy</span>(...).<span class="c-fn">limit</span>(limit).<span class="c-fn">offset</span>(offset),
+  db.<span class="c-fn">select</span>({ count: <span class="c-fn">sql</span><span class="c-str">`COUNT(*)::int`</span> }).<span class="c-fn">from</span>(products).<span class="c-fn">where</span>(where),
+]);</code></pre>
+            </figure>
+
+            <p class="reveal">
+                A few things in that snippet are worth naming explicitly,
+                because they are easy to skip past:
+            </p>
+
+            <ul class="reveal">
+                <li>
+                    <strong>The predicate is built once.</strong> The list query
+                    and the count query share it. If they diverge, the page math
+                    lies: a buyer asks for page 3, gets an empty result, and the
+                    total says there are 47 items. Build the predicate once.
+                    Pass it to both queries.
+                </li>
+                <li>
+                    <strong>Relationship state matters.</strong> The collection
+                    join also checks <code>pc.status = 'active'</code>.
+                    Filtering published products is not enough if a buyer can
+                    still see them through an inactive link. Visibility is
+                    transitive.
+                </li>
+                <li>
+                    <strong>Ordering is stable.</strong> Pagination needs a
+                    deterministic order, which means a business field plus a
+                    tiebreaker.
+                    <code>ORDER BY featured_at DESC NULLS LAST, id ASC</code>.
+                    Without the tiebreaker, two rows with the same
+                    <code>featured_at</code> can appear on different pages or
+                    the same page on different requests.
+                </li>
+                <li>
+                    <strong>Counts cast explicitly.</strong> Postgres returns
+                    <code>COUNT(*)</code> as a bigint, which most drivers
+                    serialize as a string. Cast it. Convert it once at the
+                    boundary. The rest of the codebase sees a number.
+                </li>
+            </ul>
+
+            <p class="reveal">
+                The repository is also where you handle database quirks once. If
+                the ORM returns numeric strings, convert them. If foreign keys
+                are nullable, normalize them. If a timestamp is stored as text,
+                parse it. The rest of the codebase sees clean, typed rows. There
+                is one place to fix a quirk, and one place to look for one.
+            </p>
+
+            <div class="callout reveal">
+                <strong>The repository checklist for every query.</strong>
+                Visibility filter applied? Relationship state checked? Stable
+                ordering with a tiebreaker? Count predicate equal to list
+                predicate? Numeric strings and nullable FKs normalized? Set
+                queries return either one row per key or a row with a
+                <code>sourceParentId</code> for grouping? If you cannot answer
+                all six, the query is not done.
+            </div>
+
+            <!-- ═══════ PART VII ═══════ -->
+            <div class="section-break reveal" id="engine">
+                <span class="part-num">Part VII</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">The Quiet <em>Engine</em></h2>
+
+            <p class="reveal">
+                DataLoader is a small library and a large idea. It is two
+                hundred lines of code and an entire design discipline. The idea:
+                within a single request, batch all calls to the same loader. If
+                three resolvers each call
+                <code>loaders.reviewsByProductId.load(...)</code> with different
+                IDs in the same tick of the event loop, DataLoader collects all
+                the IDs, fires one query, and returns the results to each
+                caller.
+            </p>
+
+            <p class="reveal">
+                Mechanically it works by deferring. When you call
+                <code>.load(id)</code>, you get a promise. DataLoader adds the
+                ID to an internal queue and schedules the actual batch fetch for
+                the end of the current tick. Any other
+                <code>.load(id)</code> calls in the same tick join the same
+                batch. When the tick ends, the batch fires once. The returned
+                rows are distributed to the waiting promises.
+            </p>
+
+            <div class="diagram-wrap reveal">
+                <div class="diagram-label">N+1 Before and After DataLoader</div>
+                <svg
+                    viewBox="0 0 680 400"
+                    xmlns="http://www.w3.org/2000/svg"
+                    style="
+                        font-family: &quot;Plus Jakarta Sans&quot;, sans-serif;
+                    "
+                >
+                    <defs>
+                        <marker
+                            id="arwR"
+                            markerWidth="6"
+                            markerHeight="4"
+                            refX="5"
+                            refY="2"
+                            orient="auto"
+                        >
+                            <polygon points="0 0, 6 2, 0 4" fill="var(--red)" />
+                        </marker>
+                        <marker
+                            id="arwAR"
+                            markerWidth="6"
+                            markerHeight="4"
+                            refX="5"
+                            refY="2"
+                            orient="auto"
+                        >
+                            <polygon
+                                points="0 0, 6 2, 0 4"
+                                fill="var(--accent)"
+                            />
+                        </marker>
+                    </defs>
+
+                    <!-- LEFT: BEFORE -->
+                    <text
+                        x="170"
+                        y="28"
+                        text-anchor="middle"
+                        fill="var(--red)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        WITHOUT DATALOADER
+                    </text>
+                    <text
+                        x="170"
+                        y="46"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9"
+                    >
+                        25 products × 1 query per product = 26 queries
+                    </text>
+
+                    <!-- Product page -->
+                    <rect
+                        x="40"
+                        y="65"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--red)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="90"
+                        y="80"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        products query
+                    </text>
+
+                    <line
+                        x1="90"
+                        y1="87"
+                        x2="90"
+                        y2="103"
+                        stroke="var(--red)"
+                        stroke-width="1"
+                        marker-end="url(#arwR)"
+                    />
+
+                    <!-- 25 individual product rows -->
+                    <g>
+                        <rect
+                            x="40"
+                            y="105"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.4"
+                        />
+                        <text
+                            x="90"
+                            y="116"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            product 1
+                        </text>
+                        <line
+                            x1="145"
+                            y1="112"
+                            x2="195"
+                            y2="112"
+                            stroke="var(--red)"
+                            stroke-width="0.7"
+                            marker-end="url(#arwR)"
+                            opacity="0.6"
+                        />
+                        <rect
+                            x="200"
+                            y="105"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.5"
+                        />
+                        <text
+                            x="250"
+                            y="116"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            SELECT reviews
+                        </text>
+                    </g>
+                    <g>
+                        <rect
+                            x="40"
+                            y="124"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.4"
+                        />
+                        <text
+                            x="90"
+                            y="135"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            product 2
+                        </text>
+                        <line
+                            x1="145"
+                            y1="131"
+                            x2="195"
+                            y2="131"
+                            stroke="var(--red)"
+                            stroke-width="0.7"
+                            marker-end="url(#arwR)"
+                            opacity="0.6"
+                        />
+                        <rect
+                            x="200"
+                            y="124"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.5"
+                        />
+                        <text
+                            x="250"
+                            y="135"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            SELECT reviews
+                        </text>
+                    </g>
+                    <g>
+                        <rect
+                            x="40"
+                            y="143"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.4"
+                        />
+                        <text
+                            x="90"
+                            y="154"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            product 3
+                        </text>
+                        <line
+                            x1="145"
+                            y1="150"
+                            x2="195"
+                            y2="150"
+                            stroke="var(--red)"
+                            stroke-width="0.7"
+                            marker-end="url(#arwR)"
+                            opacity="0.6"
+                        />
+                        <rect
+                            x="200"
+                            y="143"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.5"
+                        />
+                        <text
+                            x="250"
+                            y="154"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            SELECT reviews
+                        </text>
+                    </g>
+
+                    <text
+                        x="170"
+                        y="178"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="14"
+                    >
+                        ⋮
+                    </text>
+
+                    <g>
+                        <rect
+                            x="40"
+                            y="195"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.3"
+                        />
+                        <text
+                            x="90"
+                            y="206"
+                            text-anchor="middle"
+                            fill="var(--text)"
+                            font-size="7.5"
+                        >
+                            product 25
+                        </text>
+                        <line
+                            x1="145"
+                            y1="202"
+                            x2="195"
+                            y2="202"
+                            stroke="var(--red)"
+                            stroke-width="0.7"
+                            marker-end="url(#arwR)"
+                            opacity="0.6"
+                        />
+                        <rect
+                            x="200"
+                            y="195"
+                            width="100"
+                            height="14"
+                            rx="3"
+                            fill="var(--red)"
+                            opacity="0.4"
+                        />
+                        <text
+                            x="250"
+                            y="206"
+                            text-anchor="middle"
+                            fill="#fff"
+                            font-size="7.5"
+                        >
+                            SELECT reviews
+                        </text>
+                    </g>
+
+                    <rect
+                        x="40"
+                        y="230"
+                        width="260"
+                        height="34"
+                        rx="6"
+                        fill="var(--red-soft)"
+                        stroke="var(--red)"
+                        stroke-width="1"
+                    />
+                    <text
+                        x="170"
+                        y="251"
+                        text-anchor="middle"
+                        fill="var(--red)"
+                        font-size="11"
+                        font-weight="700"
+                    >
+                        26 SQL statements
+                    </text>
+
+                    <!-- RIGHT: AFTER -->
+                    <text
+                        x="510"
+                        y="28"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="11"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        WITH DATALOADER
+                    </text>
+                    <text
+                        x="510"
+                        y="46"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="9"
+                    >
+                        25 .load() calls collapse into 1 batched query
+                    </text>
+
+                    <rect
+                        x="380"
+                        y="65"
+                        width="100"
+                        height="22"
+                        rx="4"
+                        fill="var(--accent)"
+                        opacity="0.85"
+                    />
+                    <text
+                        x="430"
+                        y="80"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="600"
+                    >
+                        products query
+                    </text>
+
+                    <line
+                        x1="430"
+                        y1="87"
+                        x2="430"
+                        y2="103"
+                        stroke="var(--accent)"
+                        stroke-width="1"
+                        marker-end="url(#arwAR)"
+                    />
+
+                    <!-- 25 .load() calls converging -->
+                    <rect
+                        x="380"
+                        y="105"
+                        width="100"
+                        height="14"
+                        rx="3"
+                        fill="var(--accent)"
+                        opacity="0.4"
+                    />
+                    <text
+                        x="430"
+                        y="116"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="7.5"
+                    >
+                        .load(p1.id)
+                    </text>
+                    <line
+                        x1="485"
+                        y1="112"
+                        x2="540"
+                        y2="156"
+                        stroke="var(--accent)"
+                        stroke-width="0.6"
+                        opacity="0.5"
+                    />
+
+                    <rect
+                        x="380"
+                        y="124"
+                        width="100"
+                        height="14"
+                        rx="3"
+                        fill="var(--accent)"
+                        opacity="0.4"
+                    />
+                    <text
+                        x="430"
+                        y="135"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="7.5"
+                    >
+                        .load(p2.id)
+                    </text>
+                    <line
+                        x1="485"
+                        y1="131"
+                        x2="540"
+                        y2="160"
+                        stroke="var(--accent)"
+                        stroke-width="0.6"
+                        opacity="0.5"
+                    />
+
+                    <rect
+                        x="380"
+                        y="143"
+                        width="100"
+                        height="14"
+                        rx="3"
+                        fill="var(--accent)"
+                        opacity="0.4"
+                    />
+                    <text
+                        x="430"
+                        y="154"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="7.5"
+                    >
+                        .load(p3.id)
+                    </text>
+                    <line
+                        x1="485"
+                        y1="150"
+                        x2="540"
+                        y2="164"
+                        stroke="var(--accent)"
+                        stroke-width="0.6"
+                        opacity="0.5"
+                    />
+
+                    <text
+                        x="430"
+                        y="178"
+                        text-anchor="middle"
+                        fill="var(--text-muted)"
+                        font-size="14"
+                    >
+                        ⋮
+                    </text>
+
+                    <rect
+                        x="380"
+                        y="195"
+                        width="100"
+                        height="14"
+                        rx="3"
+                        fill="var(--accent)"
+                        opacity="0.4"
+                    />
+                    <text
+                        x="430"
+                        y="206"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="7.5"
+                    >
+                        .load(p25.id)
+                    </text>
+                    <line
+                        x1="485"
+                        y1="202"
+                        x2="540"
+                        y2="178"
+                        stroke="var(--accent)"
+                        stroke-width="0.6"
+                        opacity="0.5"
+                    />
+
+                    <!-- Batch -->
+                    <rect
+                        x="540"
+                        y="150"
+                        width="100"
+                        height="40"
+                        rx="6"
+                        fill="var(--accent)"
+                        opacity="0.8"
+                    />
+                    <text
+                        x="590"
+                        y="167"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="9"
+                        font-weight="700"
+                    >
+                        batch fires
+                    </text>
+                    <text
+                        x="590"
+                        y="182"
+                        text-anchor="middle"
+                        fill="#fff"
+                        font-size="8"
+                    >
+                        1 SET query
+                    </text>
+
+                    <rect
+                        x="380"
+                        y="230"
+                        width="260"
+                        height="34"
+                        rx="6"
+                        fill="var(--accent-dim)"
+                        stroke="var(--accent)"
+                        stroke-width="1"
+                    />
+                    <text
+                        x="510"
+                        y="251"
+                        text-anchor="middle"
+                        fill="var(--accent)"
+                        font-size="11"
+                        font-weight="700"
+                    >
+                        2 SQL statements total
+                    </text>
+
+                    <!-- BOTTOM CODE COMPARISON -->
+                    <rect
+                        x="40"
+                        y="290"
+                        width="600"
+                        height="100"
+                        rx="8"
+                        fill="var(--bg-alt)"
+                        stroke="var(--border)"
+                    />
+
+                    <text
+                        x="100"
+                        y="318"
+                        fill="var(--red)"
+                        font-size="10.5"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        BEFORE
+                    </text>
+                    <text
+                        x="80"
+                        y="338"
+                        fill="var(--text)"
+                        font-size="10.5"
+                        font-family="JetBrains Mono"
+                    >
+                        reviews: (p) =&gt; fetchReviewsFor(p.id)
+                    </text>
+                    <text
+                        x="80"
+                        y="356"
+                        fill="var(--text-muted)"
+                        font-size="9.5"
+                        font-family="JetBrains Mono"
+                        font-style="italic"
+                    >
+                        // looks innocent. fires N queries.
+                    </text>
+
+                    <text
+                        x="430"
+                        y="318"
+                        fill="var(--accent)"
+                        font-size="10.5"
+                        font-weight="700"
+                        letter-spacing="0.1em"
+                    >
+                        AFTER
+                    </text>
+                    <text
+                        x="370"
+                        y="338"
+                        fill="var(--text)"
+                        font-size="10.5"
+                        font-family="JetBrains Mono"
+                    >
+                        reviews: (p, _, ctx) =&gt;
+                    </text>
+                    <text
+                        x="370"
+                        y="354"
+                        fill="var(--text)"
+                        font-size="10.5"
+                        font-family="JetBrains Mono"
+                    >
+                        &nbsp;&nbsp;ctx.loaders.reviewsByProductId.load(p.id)
+                    </text>
+                    <text
+                        x="370"
+                        y="372"
+                        fill="var(--accent)"
+                        font-size="9.5"
+                        font-family="JetBrains Mono"
+                        font-style="italic"
+                    >
+                        // same shape. 1 query.
+                    </text>
+                </svg>
+            </div>
+
+            <p class="reveal">
+                DataLoader solves N+1, but it also creates a discipline:
+                <strong
+                    >every cross-entity field resolver must use a loader</strong
+                >. Not "should." Must. The moment you have a field resolver that
+                calls a repository or a service directly, and a client requests
+                that field inside a list, you have N+1. The fix is the same
+                every time. The rule is the same every time. Make it the only
+                path.
+            </p>
+
+            <p class="reveal">
+                Three details make DataLoader work in production:
+            </p>
+
+            <ul class="reveal">
+                <li>
+                    <strong>The registry is one file.</strong> Every loader
+                    lives in one place, typically
+                    <code>src/loaders/registry.ts</code>. This is the one
+                    intentional cross-module integration point. A product loader
+                    can know about reviews. A review loader can know about
+                    authors. The registry composes them. Nothing else does.
+                    Without this discipline, loaders sprout in random files and
+                    you lose the ability to scan the surface area of relation
+                    traversal in your codebase.
+                </li>
+                <li>
+                    <strong>One registry per request.</strong> Loaders cache by
+                    ID within a request. A user fetched in one resolver gets
+                    reused in another. But the cache must not survive the
+                    request - it would leak data between users and serve stale
+                    rows. The registry is constructed in
+                    <code>context()</code> on every incoming request and
+                    discarded when the response finishes.
+                </li>
+                <li>
+                    <strong>Cap the batch size.</strong> Set a maximum (500 is a
+                    reasonable default). Without it, a single page with
+                    thousands of nested IDs fires a query with a
+                    50,000-character IN clause. Postgres handles this poorly,
+                    the planner gives up, and your fast path becomes your slow
+                    path. With the cap, DataLoader chunks automatically.
+                </li>
+            </ul>
+
+            <p class="reveal">
+                There is a fourth discipline that is less obvious: loaders
+                return shapes, not entities. A "reviews by product ID" loader
+                returns <code>Review[][]</code> in the same order as the input
+                keys. A "manager by ID" loader returns
+                <code>Manager | null</code> for each key. The shape encodes the
+                cardinality of the relationship. The resolver does not have to
+                think about it. This sounds pedantic until you have a resolver
+                that expects a single value and gets an array, and the error
+                surfaces three layers away from the cause.
+            </p>
+
+            <p class="reveal">
+                A worked example, in code, is worth more than another paragraph:
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file">src/loaders/registry.ts</span>
+                    <span class="code-card-lang">ts</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">export const</span> <span class="c-fn">createLoaders</span> = (<span class="c-fn">db</span>: <span class="c-type">Database</span>) =&gt; ({
+  <span class="c-cmt">// many-to-one parent → returns Review[] per productId, in input order</span>
+  <span class="c-fn">reviewsByProductId</span>: <span class="c-kw">new</span> <span class="c-fn">DataLoader</span>&lt;<span class="c-type">string</span>, <span class="c-type">Review</span>[]&gt;(
+    <span class="c-kw">async</span> (productIds) =&gt; {
+      <span class="c-kw">const</span> rows = <span class="c-kw">await</span> <span class="c-fn">findReviewsForProductIds</span>(db, productIds);
+      <span class="c-kw">const</span> byProduct = <span class="c-fn">groupBy</span>(rows, r =&gt; r.productId);
+      <span class="c-kw">return</span> productIds.<span class="c-fn">map</span>(id =&gt; byProduct.<span class="c-fn">get</span>(id) ?? []);
+    },
+    { <span class="c-kw">maxBatchSize</span>: <span class="c-num">500</span> }
+  ),
+
+  <span class="c-cmt">// one-to-one parent → Author | null per id</span>
+  <span class="c-fn">authorById</span>: <span class="c-kw">new</span> <span class="c-fn">DataLoader</span>&lt;<span class="c-type">string</span>, <span class="c-type">Author</span> | <span class="c-kw">null</span>&gt;(
+    <span class="c-kw">async</span> (ids) =&gt; {
+      <span class="c-kw">const</span> rows = <span class="c-kw">await</span> <span class="c-fn">findAuthorsByIds</span>(db, ids);
+      <span class="c-kw">const</span> byId = <span class="c-kw">new</span> <span class="c-fn">Map</span>(rows.<span class="c-fn">map</span>(r =&gt; [r.id, r]));
+      <span class="c-kw">return</span> ids.<span class="c-fn">map</span>(id =&gt; byId.<span class="c-fn">get</span>(id) ?? <span class="c-kw">null</span>);
+    },
+    { <span class="c-kw">maxBatchSize</span>: <span class="c-num">500</span> }
+  ),
+});</code></pre>
+            </figure>
+
+            <p class="reveal">
+                Notice that the loader does almost no business logic. It calls a
+                repository function, groups the result, and returns it in the
+                input order. The repository function does the SQL and the
+                visibility. The loader does the batching. Each layer answers one
+                question.
+            </p>
+
+            <!-- ═══════ PART VIII ═══════ -->
+            <div class="section-break reveal" id="guardrails">
+                <span class="part-num">Part VIII</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">Operational <em>Guardrails</em></h2>
+
+            <p class="reveal">
+                A schema is not an API. An API is a schema plus the operational
+                behavior that makes it survivable. Clients are not always
+                benign. Networks fail. Databases hiccup. The graph permits
+                queries that the database cannot answer in finite time. None of
+                this is in the SDL. All of it is part of the contract.
+            </p>
+
+            <p class="reveal">
+                The minimum set of guardrails, in rough order of how often they
+                save you:
+            </p>
+
+            <div class="stats-grid reveal">
+                <div class="stat-cell">
+                    <span class="val">8</span>
+                    <span class="desc"
+                        >Max query depth. Reject anything deeper. Stops
+                        exponential fan-out.</span
+                    >
+                </div>
+                <div class="stat-cell">
+                    <span class="val">100</span>
+                    <span class="desc"
+                        >Max page size. Never trust the client's
+                        <code>pageSize</code> argument.</span
+                    >
+                </div>
+                <div class="stat-cell">
+                    <span class="val">500</span>
+                    <span class="desc"
+                        >Max DataLoader batch size. Chunks large IN clauses
+                        automatically.</span
+                    >
+                </div>
+                <div class="stat-cell">
+                    <span class="val">5s</span>
+                    <span class="desc"
+                        >Postgres <code>statement_timeout</code>. A hung query
+                        cannot hang the API.</span
+                    >
+                </div>
+            </div>
+
+            <p class="reveal">
+                These four numbers cap the worst-case work a single request can
+                cause. They are not optional. A GraphQL server without them is a
+                server waiting for one curious client to wedge it.
+            </p>
+
+            <p class="reveal">
+                The other operational rules are less numeric but equally
+                load-bearing:
+            </p>
+
+            <ul class="reveal">
+                <li>
+                    <strong>Authentication is the first middleware.</strong>
+                    Every request carries a key. The key is hashed and matched
+                    against an <code>api_clients</code> table in constant time.
+                    There is no "optional auth" mode. There is no "internal
+                    endpoint." Every path is authenticated.
+                </li>
+                <li>
+                    <strong>Authorization is in the repository.</strong> For a
+                    single-tenant public read API, authorization is trivial: all
+                    authenticated clients see all published data. For a
+                    multi-tenant API, it is the most important rule in the
+                    system, and it lives next to the visibility filter, in SQL.
+                </li>
+                <li>
+                    <strong>Request identity is a UUID.</strong> Every request
+                    gets an <code>x-request-id</code> at the edge. Every log
+                    line carries it. Every error response returns it. When a
+                    buyer reports a problem, you ask for the request ID and find
+                    every related log line with one grep. The cost of adding
+                    this is twenty lines. The value of having it during an
+                    incident is everything.
+                </li>
+                <li>
+                    <strong>The health check is honest.</strong>
+                    <code>/healthz</code> probes Postgres with a short timeout.
+                    It returns failure when the database is unreachable. It does
+                    not always return 200. Load balancers should believe it.
+                </li>
+                <li>
+                    <strong>Error shapes are stable.</strong> Every GraphQL
+                    error has a <code>code</code> field, and the codes are part
+                    of the contract: <code>BAD_USER_INPUT</code>,
+                    <code>UNAUTHENTICATED</code>, <code>NOT_FOUND</code>,
+                    <code>INTERNAL_SERVER_ERROR</code>. Stack traces are never
+                    exposed in production. Buyers handle errors by code, not by
+                    message text.
+                </li>
+                <li>
+                    <strong>Body size is capped.</strong> A typical GraphQL
+                    query is a few kilobytes. A pathological client can submit
+                    megabytes of garbage. Set the body limit at the HTTP layer,
+                    well below your query depth implies.
+                </li>
+            </ul>
+
+            <p class="reveal">
+                None of these are GraphQL features. All of them are part of
+                running a GraphQL API. The schema and the guardrails are
+                inseparable, and the schema is not finished until the guardrails
+                are.
+            </p>
+
+            <p class="reveal">
+                There is one more category of guardrail worth naming honestly
+                because most teams skip it:
+                <strong>query cost accounting and rate limiting</strong>. Depth
+                and page size cap individual requests. They do not cap a
+                client's total work across a window. If you serve public traffic
+                at any scale, you need both, and you need them at the edge, not
+                in your application code. This article does not solve that. It
+                just refuses to pretend the schema solves it.
+            </p>
+
+            <!-- ═══════ PART IX ═══════ -->
+            <div class="section-break reveal" id="filter">
+                <span class="part-num">Part IX</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">A Filter, <em>End to End</em></h2>
+
+            <p class="reveal">
+                The whole architecture is theory until you run a change through
+                it. Here is one. A buyer asks for
+                <code>products(filter: { collectionId })</code>. They want every
+                active product in a given collection, paginated, with the usual
+                nested fields.
+            </p>
+
+            <p class="reveal">
+                The wrong instinct is to add a JavaScript filter. Load all
+                products, then drop the ones not in the collection. This loses
+                on every dimension: it fetches rows you will not return, it
+                leaks the rule into the resolver, and it breaks count parity.
+                Pagination metadata becomes a lie because
+                <code>total</code> reflects the unfiltered query.
+            </p>
+
+            <p class="reveal">
+                The disciplined path is small and local. Four files. Each layer
+                answers the question it owns.
+            </p>
+
+            <h3 class="reveal">01 · Start at the contract</h3>
+
+            <p class="reveal">
+                The SDL is the public surface. The change starts there because
+                if it does not start there, the rest of the work is invisible to
+                buyers.
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file"
+                        >src/schemas/products.graphql</span
+                    >
+                    <span class="code-card-lang gql">gql</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">input</span> <span class="c-type">ProductsFilter</span> {
+  <span class="c-fn">titleContains</span>: <span class="c-type">String</span>
+  <span class="c-fn">collectionId</span>: <span class="c-type">ID</span>      <span class="c-cmt"># new — public surface grows by one optional field</span>
+}</code></pre>
+            </figure>
+
+            <h3 class="reveal">02 · Mirror it in Zod</h3>
+
+            <p class="reveal">
+                SDL types are not runtime checks. They are removed at parse
+                time. Zod is the runtime gate. It also generates the TypeScript
+                types the service uses internally, which keeps the contract
+                honest end to end.
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file"
+                        >src/validations/products.ts</span
+                    >
+                    <span class="code-card-lang">ts</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">export const</span> <span class="c-fn">ProductsFilter</span> = z.<span class="c-fn">object</span>({
+  <span class="c-fn">titleContains</span>: z.<span class="c-fn">string</span>().<span class="c-fn">min</span>(<span class="c-num">1</span>).<span class="c-fn">max</span>(<span class="c-num">120</span>).<span class="c-fn">optional</span>(),
+  <span class="c-fn">collectionId</span>: z.<span class="c-fn">string</span>().<span class="c-fn">uuid</span>().<span class="c-fn">optional</span>(),  <span class="c-cmt">// new — runtime gate matches the SDL</span>
+}).<span class="c-fn">strict</span>();</code></pre>
+            </figure>
+
+            <h3 class="reveal">03 · The service does not change</h3>
+
+            <p class="reveal">
+                This is the test of the architecture. A new filter changes the
+                contract, the validation, and the SQL. The orchestrator should
+                not change. If it does, the architecture has leaked, and the
+                next filter will leak again.
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file"
+                        >src/services/products.ts
+                        <span style="color: var(--accent); font-weight: 600"
+                            >· unchanged</span
+                        ></span
+                    >
+                    <span class="code-card-lang">ts</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">export const</span> <span class="c-fn">listProducts</span> = <span class="c-kw">async</span> (<span class="c-fn">ctx</span>: <span class="c-type">Ctx</span>, <span class="c-fn">args</span>: <span class="c-type">unknown</span>) =&gt; {
+  <span class="c-kw">const</span> parsed = <span class="c-fn">ProductsArgs</span>.<span class="c-fn">safeParse</span>(args);
+  <span class="c-kw">if</span> (!parsed.success) <span class="c-kw">throw</span> <span class="c-fn">badInput</span>(parsed.error);
+  <span class="c-kw">const</span> { page, pageSize, filter } = <span class="c-fn">clampPage</span>(parsed.data);
+  <span class="c-kw">const</span> { items, total } = <span class="c-kw">await</span> <span class="c-fn">findProducts</span>(ctx.db, { filter, page, pageSize });
+  <span class="c-kw">return</span> <span class="c-fn">buildPage</span>({ items, total, page, pageSize });
+};</code></pre>
+            </figure>
+
+            <h3 class="reveal">04 · Put the rule in SQL</h3>
+
+            <p class="reveal">
+                An <code>EXISTS</code> clause against the join table, with the
+                relationship state checked. The visibility filter on products
+                stays where it is. The two predicates compose.
+            </p>
+
+            <figure class="code-card reveal">
+                <header class="code-card-head">
+                    <span class="code-dots"><i></i><i></i><i></i></span>
+                    <span class="code-card-file"
+                        >src/repositories/products.ts
+                        <span style="color: var(--orange); font-weight: 600"
+                            >· +3 lines</span
+                        ></span
+                    >
+                    <span class="code-card-lang">ts</span>
+                </header>
+                <pre
+                    class="code-card-body"
+                ><code><span class="c-kw">const</span> <span class="c-fn">buildFilterSql</span> = (<span class="c-fn">filter</span>: <span class="c-type">ProductsFilter</span>) =&gt; {
+  <span class="c-kw">const</span> clauses = [<span class="c-fn">PUBLISHED</span>];
+  <span class="c-kw">if</span> (filter.titleContains) {
+    clauses.<span class="c-fn">push</span>(<span class="c-fn">ilike</span>(products.title, <span class="c-str">`%${filter.titleContains}%`</span>));
+  }
+  <span class="c-kw">if</span> (filter.collectionId) {                                <span class="c-cmt">// new</span>
+    clauses.<span class="c-fn">push</span>(<span class="c-fn">sql</span><span class="c-str">`EXISTS (
+      SELECT 1 FROM product_collections pc
+      WHERE pc.product_id = products.id
+        AND pc.collection_id = ${filter.collectionId}
+        AND pc.status = 'active'
+    )`</span>);                                                  <span class="c-cmt">// new</span>
+  }                                                          <span class="c-cmt">// new</span>
+  <span class="c-kw">return</span> <span class="c-fn">and</span>(...clauses);
+};</code></pre>
+            </figure>
+
+            <p class="reveal">
+                That is the entire change. Four files. The contract grew by one
+                optional input. The validation grew by one optional field. The
+                repository gained one clause. The service is unchanged. The
+                resolver is unchanged. The loader registry is unchanged. The
+                tests that need updating are the contract tests: one new test
+                that asserts the filter works, one that asserts pagination is
+                still consistent when the filter is applied.
+            </p>
+
+            <div class="callout reveal">
+                <strong>What did not happen.</strong> No new abstraction. No
+                "filter engine." No generic <code>where</code> builder that
+                handles every domain. Three lines of conditional SQL. The
+                architecture's job is not to make the change clever. Its job is
+                to make the change small.
+            </div>
+
+            <p class="reveal">
+                If a future filter does justify abstraction (suppose you have
+                eight filters with similar EXISTS patterns), build it then, on
+                top of working code, with the real shape in hand. Premature
+                abstraction is the cousin of the shallow module. It expands
+                surface area in anticipation of a future that may not arrive.
+            </p>
+
+            <p class="punch reveal">
+                Three similar implementations are better than a premature
+                abstraction.
+            </p>
+
+            <!-- ═══════ PART X ═══════ -->
+            <div class="section-break reveal" id="closing">
+                <span class="part-num">Part X</span>
+                <span class="part-line"></span>
+            </div>
+
+            <h2 class="reveal">The Working <em>Checklist</em></h2>
+
+            <p class="reveal">
+                The architecture compresses into a few questions you can run
+                before any pull request. These are not theoretical. They are
+                what stops a small mistake from becoming a structural one.
+            </p>
+
+            <ul class="reveal">
+                <li>
+                    Can a buyer understand the new field without knowing your
+                    storage?
+                </li>
+                <li>Does the service call only its own repository?</li>
+                <li>
+                    Does every cross-entity field route through
+                    <code>ctx.loaders</code>?
+                </li>
+                <li>
+                    Are unpublished rows impossible to return from the
+                    repository, on every code path?
+                </li>
+                <li>
+                    Do page size, query depth, and batch size still cap
+                    worst-case work?
+                </li>
+                <li>
+                    Is the new test pinning a buyer-visible contract, or is it
+                    pinning local plumbing?
+                </li>
+            </ul>
+
+            <p class="reveal">
+                When you start a new module, the SOP is similar and short:
+            </p>
+
+            <ul class="reveal">
+                <li>
+                    Add SDL in <code>src/schemas/&lt;domain&gt;.graphql</code>.
+                </li>
+                <li>
+                    Add Zod args and filters in <code>src/validations</code>.
+                </li>
+                <li>
+                    Add a service that validates, paginates, and calls one
+                    repository.
+                </li>
+                <li>
+                    Add a repository: row type, select columns, filter builder,
+                    list/count helpers, by-id helpers.
+                </li>
+                <li>
+                    Enforce visibility in SQL on every primary entity and every
+                    relationship table.
+                </li>
+                <li>
+                    Add resolver <code>Query</code> entries and field resolvers
+                    that go through <code>ctx.loaders</code>.
+                </li>
+                <li>
+                    Register new loaders only when a relation traversal needs
+                    them.
+                </li>
+                <li>
+                    Add focused contract coverage for the new entry point or
+                    graph edge.
+                </li>
+            </ul>
+
+            <p class="reveal">
+                None of this is exciting. It is not supposed to be. The
+                interesting work happens in product surfaces, performance
+                frontiers, and data modeling. The architecture's job is to get
+                out of the way of that work. When the architecture is invisible
+                to the engineer adding a feature, it is doing its job.
+            </p>
+
+            <!-- ═══════ CLOSING ═══════ -->
+            <h2 class="reveal" style="margin-top: 4rem">
+                Why <em>This Holds Up</em>
+            </h2>
+
+            <p class="reveal">
+                The pattern in this essay is not the only way to build a GraphQL
+                API. It is the way that has held up across iterations of a
+                production read API serving real traffic. The tradeoffs are
+                concrete and worth naming honestly.
+            </p>
+
+            <p class="reveal">
+                You pay for this architecture in file count. Adding a single
+                field touches the SDL, sometimes a validation, sometimes a
+                service, often a repository, occasionally a loader. A junior
+                engineer's first reaction is reasonable: this is a lot of files
+                for a small change. The answer is that the files are the point.
+                Each one answers a question. When the question changes, exactly
+                one file changes. The diff is local. The review is fast. The
+                blast radius is small.
+            </p>
+
+            <p class="reveal">
+                You also pay in generated noise. If your storage is managed by a
+                CMS or any tool that produces opinionated table names, the
+                repository has to translate. There is no way to make this
+                disappear. The alternative is to expose those names to buyers,
+                and that alternative is much worse than translation.
+            </p>
+
+            <p class="reveal">
+                You give up some framework magic. There is no resolver decorator
+                that auto-generates from a database table. There is no
+                "fastify-style" plugin that wires everything for you. Every
+                connection is a function call from one file to another. This is
+                the boring tradeoff, and it is the one that pays off the
+                longest. Boring code is reviewable code. Reviewable code is
+                fixable code.
+            </p>
+
+            <p class="reveal">
+                What you get in return is a system where the next engineer can
+                find a rule by reading the architecture. Where a regression has
+                a known place to look. Where a performance problem has a known
+                place to start. Where a new feature has a known shape. The
+                architecture is not novel. It is not the point that it is novel.
+                The point is that it is consistent. Every layer answers one
+                question.
+            </p>
+
+            <p class="reveal">
+                A GraphQL API is the surface of a contract between you and every
+                client you have not met yet. That contract should be small,
+                stable, and honest. The architecture that produces it should be
+                the same.
+            </p>
+
+            <p class="punch reveal">
+                The interface is small. The interior is large. The schema is the
+                contract. The SQL is the truth. Conquer the root and reuse the
+                parent.
+            </p>
+
+            <p class="reveal">
+                A buyer should see a clean graph. An engineer should see clear
+                ownership. The code should answer one question at every layer:
+                who owns this rule? When you can read your own architecture
+                without grep, you have arrived.
+            </p>
+
+            <div class="callout reveal">
+                <strong>The minimum bar.</strong> Schema-first contract.
+                Zod-validated input. Service-orchestrated use cases.
+                Repository-owned visibility. DataLoader-batched expansion.
+                Per-request loader registry. Capped depth, page size, batch
+                size, and statement timeout. Contract tests over implementation
+                tests. If your GraphQL API has all of these, it will survive
+                most of what production throws at it. If it is missing any of
+                them, you already know which incident is coming.
+            </div>
+        </article>
+
+        <footer class="article-footer">
+            <div class="footer-links">
+                <a href="https://graphql.org/learn/" target="_blank"
+                    >GraphQL Spec</a
+                >
+                <a href="https://github.com/graphql/dataloader" target="_blank"
+                    >DataLoader</a
+                >
+                <a href="https://www.hundredsunited.com/blog/" target="_blank"
+                    >More from The Trenches</a
+                >
+            </div>
+            <p class="footer-note">
+                Written from the trenches. No affiliate links. No sponsors. Just
+                signal.
+            </p>
+        </footer>
+
+        <script>
+            function toggleTheme() {
+                const body = document.body;
+                const btn = document.querySelector(".theme-toggle");
+                if (body.getAttribute("data-theme") === "dark") {
+                    body.removeAttribute("data-theme");
+                    btn.textContent = "☽";
+                    localStorage.setItem("theme", "light");
+                } else {
+                    body.setAttribute("data-theme", "dark");
+                    btn.textContent = "☀";
+                    localStorage.setItem("theme", "dark");
+                }
+            }
+
+            (function () {
+                const saved = localStorage.getItem("theme");
+                if (
+                    saved === "dark" ||
+                    (!saved &&
+                        window.matchMedia("(prefers-color-scheme: dark)")
+                            .matches)
+                ) {
+                    document.body.setAttribute("data-theme", "dark");
+                    document.querySelector(".theme-toggle").textContent = "☀";
+                }
+            })();
+
+            window.addEventListener("scroll", function () {
+                const bar = document.getElementById("progressBar");
+                const scrollTop = window.scrollY;
+                const docHeight =
+                    document.documentElement.scrollHeight - window.innerHeight;
+                bar.style.width = (scrollTop / docHeight) * 100 + "%";
+            });
+
+            const observer = new IntersectionObserver(
+                function (entries) {
+                    entries.forEach(function (entry) {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add("visible");
+                        }
+                    });
+                },
+                { threshold: 0.08, rootMargin: "0px 0px -40px 0px" },
+            );
+
+            document.querySelectorAll(".reveal").forEach(function (el) {
+                observer.observe(el);
+            });
+
+            const sections = document.querySelectorAll(".section-break[id]");
+            const navLinks = document.querySelectorAll(".header-nav a");
+
+            window.addEventListener("scroll", function () {
+                let current = "";
+                sections.forEach(function (section) {
+                    if (window.scrollY >= section.offsetTop - 120) {
+                        current = section.getAttribute("id");
+                    }
+                });
+                navLinks.forEach(function (link) {
+                    link.classList.remove("active");
+                    if (link.getAttribute("href") === "#" + current) {
+                        link.classList.add("active");
+                    }
+                });
+            });
+        </script>
+    </body>
+</html>

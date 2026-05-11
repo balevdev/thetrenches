@@ -18,10 +18,11 @@ const blog = defineCollection({
     readTime: z.string(),
     tags: z.array(z.string()).default([]),
     heroImage: z.string().optional(),
+    backImage: z.string().optional(),
     ogImage: z.string().optional(),
     accent: z.enum(['orange', 'blue', 'purple', 'pink', 'violet']).default('orange'),
     draft: z.boolean().default(false),
-    format: z.enum(['article', 'story']).default('article'),
+    format: z.enum(['article', 'story', 'paper']).default('article'),
     storyUrl: z.string().optional(),
   }),
 });

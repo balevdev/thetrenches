@@ -8,7 +8,8 @@ interface Props {
   readTime: string;
   tags?: string[];
   heroImage?: string;
-  format?: 'article' | 'story';
+  backImage?: string;
+  format?: 'article' | 'story' | 'paper';
 }
 
 const {
@@ -20,10 +21,18 @@ const {
   readTime,
   tags = [],
   heroImage,
+  backImage,
   format = 'article',
 } = Astro.props;
 
 const isStory = format === 'story';
+const isPaper = format === 'paper';
+const hasBackFace = isPaper || (isStory && !!backImage);
+const isSpecial = isStory || isPaper;
+const badgeLabel = isPaper ? 'Brief' : 'Story';
+const categoryLabel = isPaper ? 'Brief' : isStory ? 'Story' : category;
+const backLabel = isPaper ? 'Research Brief' : 'Interactive Story';
+const backCta = isPaper ? 'Read Brief \u2192' : 'Read Story \u2192';
 
 const formattedDate = pubDate.toLocaleDateString('en-US', {
   year: 'numeric',
@@ -33,34 +42,40 @@ const formattedDate = pubDate.toLocaleDateString('en-US', {
 const isoDate = pubDate.toISOString();
 ---
 
-<article class:list={['card', 'reveal', { 'card--story': isStory }]}>
+<article class:list={['card', 'reveal', { 'card--story': isStory, 'card--paper': isPaper, 'card--has-back': hasBackFace }]}>
   <a href={href} class="card__link">
     <div class="card__front">
       <div class="card__image">
         {heroImage ? (
           <img src={heroImage} alt="" loading="lazy" decoding="async" />
+        ) : isStory && backImage ? (
+          <img src={backImage} alt="" class="card__cover" loading="lazy" decoding="async" />
         ) : (
           <div class="card__placeholder">
-            <div class="card__placeholder-icon">
-              {isStory ? (
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-                </svg>
-              ) : (
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
-                  <path d="M8 7h6"></path>
-                  <path d="M8 11h8"></path>
-                </svg>
-              )}
-            </div>
+            {isPaper ? (
+              <img src="/images/moonshot/moonshot.png" alt="" class="card__moonshot" loading="lazy" decoding="async" />
+            ) : (
+              <div class="card__placeholder-icon">
+                {isStory ? (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                  </svg>
+                ) : (
+                  <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"></path>
+                    <path d="M8 7h6"></path>
+                    <path d="M8 11h8"></path>
+                  </svg>
+                )}
+              </div>
+            )}
           </div>
         )}
-        {isStory && <span class="card__badge">Story</span>}
+        {isSpecial && <span class="card__badge">{badgeLabel}</span>}
       </div>
       <div class="card__content">
         <div class="card__meta">
-          <span class="card__category">{isStory ? 'Story' : category}</span>
+          <span class="card__category">{categoryLabel}</span>
           <span class="card__separator">&middot;</span>
           <time class="card__date" datetime={isoDate}>{formattedDate}</time>
         </div>
@@ -85,19 +100,21 @@ const isoDate = pubDate.toISOString();
       </div>
     </div>
 
-    {/* Back face — only rendered for story cards, shown on desktop hover */}
-    {isStory && (
+    {/* Back face — opt-in: papers always, stories only if backImage is set */}
+    {hasBackFace && (
       <div class="card__back">
         <div class="card__back-shine"></div>
         <div class="card__back-content">
           <div class="card__back-icon">
-            <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-            </svg>
+            {isPaper ? (
+              <img src="/images/moonshot/moonshot.png" alt="" class="card__back-moonshot" loading="lazy" decoding="async" />
+            ) : (
+              <img src={backImage} alt="" class="card__back-cover" loading="lazy" decoding="async" />
+            )}
           </div>
-          <span class="card__back-label">Interactive Story</span>
+          <span class="card__back-label">{backLabel}</span>
           <h3 class="card__back-title" set:html={title} />
-          <span class="card__back-cta">Read Story &rarr;</span>
+          <span class="card__back-cta">{backCta}</span>
         </div>
       </div>
     )}
@@ -377,6 +394,14 @@ const isoDate = pubDate.toISOString();
     filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.5));
   }
 
+  .card__back-cover {
+    width: 96px;
+    height: 96px;
+    border-radius: 14px;
+    object-fit: cover;
+    filter: drop-shadow(0 0 16px rgba(251, 191, 36, 0.3));
+  }
+
   .card__back-label {
     font-family: var(--font-mono);
     font-size: 0.65rem;
@@ -420,10 +445,10 @@ const isoDate = pubDate.toISOString();
   }
 
   /* ══════════════════════════════════════════════
-     3D flip — desktop with hover only
+     3D flip — desktop with hover only, opt-in via .card--has-back
      ══════════════════════════════════════════════ */
   @media (hover: hover) and (min-width: 769px) {
-    .card--story {
+    .card--story.card--has-back {
       perspective: 1000px;
       overflow: visible;
       background: transparent;
@@ -431,26 +456,27 @@ const isoDate = pubDate.toISOString();
       background-image: none;
     }
 
-    .card--story:hover {
+    .card--story.card--has-back:hover {
       transform: none;
       box-shadow: none;
       border-color: transparent;
     }
 
-    .card--story .card__link {
+    .card--story.card--has-back .card__link {
       position: relative;
       transform-style: preserve-3d;
       transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
     }
 
-    .card--story:hover .card__link {
+    .card--story.card--has-back:hover .card__link {
       transform: rotateY(180deg);
     }
 
     /* Front becomes a real box for backface-visibility */
-    .card--story .card__front {
+    .card--story.card--has-back .card__front {
       display: flex;
       flex-direction: column;
+      height: 100%;
       backface-visibility: hidden;
       -webkit-backface-visibility: hidden;
       border-radius: var(--radius-xl);
@@ -464,12 +490,12 @@ const isoDate = pubDate.toISOString();
       );
     }
 
-    :global([data-theme="light"]) .card--story .card__front {
+    :global([data-theme="light"]) .card--story.card--has-back .card__front {
       border-color: rgba(217, 119, 6, 0.2);
     }
 
     /* Back face — absolutely positioned, pre-rotated */
-    .card--story .card__back {
+    .card--story.card--has-back .card__back {
       display: flex;
       align-items: center;
       justify-content: center;
@@ -485,8 +511,8 @@ const isoDate = pubDate.toISOString();
     }
 
     /* Corner accent lines on back face */
-    .card--story .card__back::before,
-    .card--story .card__back::after {
+    .card--story.card--has-back .card__back::before,
+    .card--story.card--has-back .card__back::after {
       content: '';
       position: absolute;
       width: 40px;
@@ -494,14 +520,14 @@ const isoDate = pubDate.toISOString();
       pointer-events: none;
     }
 
-    .card--story .card__back::before {
+    .card--story.card--has-back .card__back::before {
       top: 16px;
       left: 16px;
       border-top: 1px solid rgba(251, 191, 36, 0.4);
       border-left: 1px solid rgba(251, 191, 36, 0.4);
     }
 
-    .card--story .card__back::after {
+    .card--story.card--has-back .card__back::after {
       bottom: 16px;
       right: 16px;
       border-bottom: 1px solid rgba(251, 191, 36, 0.4);
@@ -509,15 +535,15 @@ const isoDate = pubDate.toISOString();
     }
 
     /* Disable front-face hover effects during flip */
-    .card--story:hover .card__title {
+    .card--story.card--has-back:hover .card__title {
       color: var(--text-primary);
     }
 
-    .card--story:hover .card__image img {
+    .card--story.card--has-back:hover .card__image img {
       transform: none;
     }
 
-    .card--story:hover .card__placeholder-icon {
+    .card--story.card--has-back:hover .card__placeholder-icon {
       transform: none;
       opacity: 0.6;
     }
@@ -571,6 +597,336 @@ const isoDate = pubDate.toISOString();
     box-shadow:
       0 2px 12px rgba(217, 119, 6, 0.25),
       0 0 20px rgba(217, 119, 6, 0.1);
+  }
+
+  /* ══════════════════════════════════════════════
+     Paper variant — cool-white monochrome (dark)
+     ══════════════════════════════════════════════ */
+  .card--paper {
+    border-color: rgba(229, 227, 221, 0.18);
+    background-image: linear-gradient(
+      160deg,
+      var(--bg-card) 60%,
+      rgba(229, 227, 221, 0.03) 100%
+    );
+  }
+
+  .card--paper:hover {
+    border-color: rgba(229, 227, 221, 0.4);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.4),
+      0 0 0 1px rgba(229, 227, 221, 0.08);
+  }
+
+  .card--paper .card__placeholder {
+    background: linear-gradient(
+      135deg,
+      #14140f 0%,
+      #1f1f1a 60%,
+      #14140f 100%
+    );
+  }
+
+  .card__moonshot {
+    width: 72px;
+    height: 72px;
+    border-radius: 16px;
+    object-fit: cover;
+    filter: drop-shadow(0 0 24px rgba(229, 227, 221, 0.18));
+    transition: transform var(--transition-smooth);
+  }
+
+  .card--paper:hover .card__moonshot {
+    transform: scale(1.06);
+  }
+
+  .card--paper .card__category {
+    color: #e5e3dd;
+    opacity: 0.75;
+  }
+
+  .card--paper:hover .card__title {
+    color: #ffffff;
+  }
+
+  .card--paper .card__title :global(em) {
+    color: #e5e3dd;
+  }
+
+  .card--paper .card__footer {
+    border-top-color: rgba(229, 227, 221, 0.08);
+  }
+
+  .card--paper .card__badge {
+    color: #14140f;
+    background: linear-gradient(135deg, #f5f3ed, #cfcdc5);
+  }
+
+  /* ══════════════════════════════════════════════
+     3D flip for paper — desktop hover
+     ══════════════════════════════════════════════ */
+  @media (hover: hover) and (min-width: 769px) {
+    .card--paper {
+      perspective: 1000px;
+      overflow: visible;
+      background: transparent;
+      border: none;
+      background-image: none;
+    }
+
+    .card--paper:hover {
+      transform: none;
+      box-shadow: none;
+      border-color: transparent;
+    }
+
+    .card--paper .card__link {
+      position: relative;
+      transform-style: preserve-3d;
+      transition: transform 0.6s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .card--paper:hover .card__link {
+      transform: rotateY(180deg);
+    }
+
+    .card--paper .card__front {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background-color: var(--bg-card);
+      border: 1px solid rgba(229, 227, 221, 0.18);
+      background-image: linear-gradient(
+        160deg,
+        var(--bg-card) 60%,
+        rgba(229, 227, 221, 0.03) 100%
+      );
+    }
+
+    :global([data-theme="light"]) .card--paper .card__front {
+      border-color: rgba(26, 26, 26, 0.12);
+      background-image: linear-gradient(
+        160deg,
+        var(--bg-card) 60%,
+        rgba(26, 26, 26, 0.02) 100%
+      );
+    }
+
+    .card--paper .card__back {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: absolute;
+      inset: 0;
+      transform: rotateY(180deg);
+      backface-visibility: hidden;
+      -webkit-backface-visibility: hidden;
+      border-radius: var(--radius-xl);
+      overflow: hidden;
+      background: linear-gradient(135deg, #0d0d0b 0%, #1c1c18 100%);
+      border: 1px solid rgba(229, 227, 221, 0.3);
+    }
+
+    .card--paper .card__back::before,
+    .card--paper .card__back::after {
+      content: '';
+      position: absolute;
+      width: 40px;
+      height: 40px;
+      pointer-events: none;
+    }
+
+    .card--paper .card__back::before {
+      top: 16px;
+      left: 16px;
+      border-top: 1px solid rgba(229, 227, 221, 0.35);
+      border-left: 1px solid rgba(229, 227, 221, 0.35);
+    }
+
+    .card--paper .card__back::after {
+      bottom: 16px;
+      right: 16px;
+      border-bottom: 1px solid rgba(229, 227, 221, 0.35);
+      border-right: 1px solid rgba(229, 227, 221, 0.35);
+    }
+
+    .card--paper .card__back-shine {
+      background: linear-gradient(
+        105deg,
+        transparent 40%,
+        rgba(229, 227, 221, 0.04) 45%,
+        rgba(229, 227, 221, 0.09) 50%,
+        rgba(229, 227, 221, 0.04) 55%,
+        transparent 60%
+      );
+    }
+
+    .card--paper .card__back-icon {
+      color: #e5e3dd;
+      filter: drop-shadow(0 0 10px rgba(229, 227, 221, 0.25));
+    }
+
+    .card__back-moonshot {
+      width: 52px;
+      height: 52px;
+      border-radius: 12px;
+      object-fit: cover;
+    }
+
+    .card--paper .card__back-label {
+      color: rgba(229, 227, 221, 0.65);
+    }
+
+    .card--paper .card__back-title {
+      color: #ffffff;
+    }
+
+    .card--paper .card__back-cta {
+      color: #0d0d0b;
+      background: linear-gradient(135deg, #f5f3ed, #cfcdc5);
+      box-shadow:
+        0 2px 12px rgba(0, 0, 0, 0.5),
+        0 0 20px rgba(229, 227, 221, 0.12);
+    }
+
+    .card--paper:hover .card__title {
+      color: var(--text-primary);
+    }
+
+    .card--paper:hover .card__moonshot {
+      transform: none;
+    }
+  }
+
+  /* ══════════════════════════════════════════════
+     Paper — light theme overrides
+     ══════════════════════════════════════════════ */
+  :global([data-theme="light"]) .card--paper {
+    border-color: rgba(26, 26, 26, 0.12);
+  }
+
+  :global([data-theme="light"]) .card--paper:hover {
+    border-color: rgba(26, 26, 26, 0.28);
+    box-shadow:
+      0 8px 32px rgba(26, 26, 26, 0.08),
+      0 0 0 1px rgba(26, 26, 26, 0.04);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__placeholder {
+    background: linear-gradient(
+      135deg,
+      #f2f0ec 0%,
+      #e8e6e0 60%,
+      #f2f0ec 100%
+    );
+  }
+
+  :global([data-theme="light"]) .card--paper .card__moonshot {
+    filter: drop-shadow(0 4px 16px rgba(26, 26, 26, 0.18));
+  }
+
+  :global([data-theme="light"]) .card--paper .card__category,
+  :global([data-theme="light"]) .card--paper .card__title :global(em) {
+    color: #1a1a1a;
+    opacity: 0.9;
+  }
+
+  :global([data-theme="light"]) .card--paper:hover .card__title {
+    color: #000000;
+  }
+
+  :global([data-theme="light"]) .card--paper .card__badge {
+    color: #faf9f7;
+    background: linear-gradient(135deg, #1a1a1a, #333330);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back {
+    background: linear-gradient(135deg, #faf9f7 0%, #f2f0ec 100%);
+    border-color: rgba(26, 26, 26, 0.22);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back::before {
+    border-top-color: rgba(26, 26, 26, 0.25);
+    border-left-color: rgba(26, 26, 26, 0.25);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back::after {
+    border-bottom-color: rgba(26, 26, 26, 0.25);
+    border-right-color: rgba(26, 26, 26, 0.25);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back-shine {
+    background: linear-gradient(
+      105deg,
+      transparent 40%,
+      rgba(26, 26, 26, 0.03) 45%,
+      rgba(26, 26, 26, 0.06) 50%,
+      rgba(26, 26, 26, 0.03) 55%,
+      transparent 60%
+    );
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back-icon {
+    filter: drop-shadow(0 4px 12px rgba(26, 26, 26, 0.2));
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back-label {
+    color: rgba(26, 26, 26, 0.6);
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back-title {
+    color: #0a0a0a;
+  }
+
+  :global([data-theme="light"]) .card--paper .card__back-cta {
+    color: #faf9f7;
+    background: linear-gradient(135deg, #1a1a1a, #333330);
+    box-shadow:
+      0 2px 12px rgba(26, 26, 26, 0.18),
+      0 0 20px rgba(26, 26, 26, 0.06);
+  }
+
+  /* Reduced motion for paper */
+  @media (prefers-reduced-motion: reduce) {
+    .card--paper {
+      perspective: none;
+      overflow: hidden;
+      background-color: var(--bg-card);
+      border: 1px solid rgba(229, 227, 221, 0.18);
+      background-image: linear-gradient(
+        160deg,
+        var(--bg-card) 60%,
+        rgba(229, 227, 221, 0.03) 100%
+      );
+    }
+
+    .card--paper:hover {
+      transform: translateY(-4px);
+      border-color: rgba(229, 227, 221, 0.4);
+      box-shadow:
+        0 8px 32px rgba(0, 0, 0, 0.4),
+        0 0 0 1px rgba(229, 227, 221, 0.08);
+    }
+
+    .card--paper .card__link {
+      transition: none !important;
+    }
+
+    .card--paper:hover .card__link {
+      transform: none !important;
+    }
+
+    .card--paper .card__back {
+      display: none !important;
+    }
+
+    .card--paper .card__front {
+      display: contents;
+    }
   }
 
   /* ══════════════════════════════════════════════
