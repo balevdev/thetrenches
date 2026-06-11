@@ -1,0 +1,1162 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Seven Ways to Talk · The Trenches</title>
+<meta name="description" content="A field guide to API design from first principles. REST, SOAP, gRPC, GraphQL, Webhooks, WebSockets, and WebRTC, and the questions that pick them for you.">
+<meta name="author" content="Boyan Balev">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400;1,9..144,500;1,9..144,600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<style>
+:root{
+  --serif:"Fraunces", Georgia, "Times New Roman", serif;
+  --sans:"Plus Jakarta Sans", system-ui, sans-serif;
+  --mono:"JetBrains Mono", ui-monospace, "SFMono-Regular", monospace;
+
+  --bg:#f6f3ec;
+  --bg-tint:#efe9dd;
+  --surface:#fcfaf5;
+  --surface-2:#f0ebe0;
+  --ink:#1b1a17;
+  --ink-soft:#33312b;
+  --muted:#75726a;
+  --faint:#a7a399;
+  --accent:#147567;
+  --accent-2:#1a8d7c;
+  --spark:#e85322;
+  --spark-soft:#f4794a;
+  --border:rgba(27,26,23,.10);
+  --border-strong:rgba(27,26,23,.20);
+  --shadow:rgba(60,50,30,.10);
+  --glow:rgba(20,117,103,.16);
+}
+html[data-theme="dark"]{
+  --bg:#131210;
+  --bg-tint:#191712;
+  --surface:#1c1a15;
+  --surface-2:#252219;
+  --ink:#ece8dd;
+  --ink-soft:#d4cfc2;
+  --muted:#9a9586;
+  --faint:#6a6658;
+  --accent:#39c4ab;
+  --accent-2:#54d9c0;
+  --spark:#ff6a3c;
+  --spark-soft:#ff8c63;
+  --border:rgba(236,232,221,.12);
+  --border-strong:rgba(236,232,221,.24);
+  --shadow:rgba(0,0,0,.45);
+  --glow:rgba(57,196,171,.16);
+}
+
+*{box-sizing:border-box;}
+html{ -webkit-text-size-adjust:100%; scroll-behavior:smooth; }
+body{
+  margin:0;
+  background:
+    radial-gradient(120% 80% at 50% -10%, var(--glow), transparent 60%),
+    var(--bg);
+  color:var(--ink-soft);
+  font-family:var(--sans);
+  font-size:17px;
+  line-height:1.72;
+  -webkit-font-smoothing:antialiased;
+  text-rendering:optimizeLegibility;
+  overflow-x:hidden;
+  transition:background-color .5s ease, color .5s ease;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0; z-index:0; pointer-events:none;
+  opacity:.5; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.035'/%3E%3C/svg%3E");
+}
+html[data-theme="dark"] body::before{ mix-blend-mode:screen; opacity:.6; }
+
+::selection{ background:var(--accent); color:var(--bg); }
+
+a{ color:var(--accent); text-decoration:none; }
+a:hover{ color:var(--accent-2); }
+
+/* ---------- progress + chrome ---------- */
+#progress{
+  position:fixed; top:0; left:0; height:3px; width:0%;
+  background:linear-gradient(90deg, var(--spark), var(--accent));
+  z-index:60; transition:width .12s linear;
+}
+header.top{
+  position:fixed; top:0; left:0; right:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  padding:14px clamp(16px,5vw,40px);
+  backdrop-filter:saturate(150%) blur(12px);
+  -webkit-backdrop-filter:saturate(150%) blur(12px);
+  background:color-mix(in srgb, var(--bg) 72%, transparent);
+  border-bottom:1px solid transparent;
+  transition:border-color .3s ease, background-color .3s ease;
+}
+header.top.scrolled{ border-bottom:1px solid var(--border); }
+.wordmark{
+  font-family:var(--serif); font-weight:600; font-size:1.06rem; letter-spacing:.2px;
+  color:var(--ink); display:flex; align-items:center; gap:9px;
+}
+.wordmark .dot{ width:9px; height:9px; border-radius:50%; background:var(--accent); box-shadow:0 0 0 3px var(--glow); }
+.wordmark em{ font-style:italic; color:var(--accent); }
+.theme-toggle{
+  appearance:none; border:1px solid var(--border-strong); background:var(--surface);
+  color:var(--ink); width:40px; height:40px; border-radius:50%; cursor:pointer;
+  font-size:1rem; display:grid; place-items:center;
+  transition:transform .3s ease, border-color .3s ease, background-color .3s ease;
+}
+.theme-toggle:hover{ transform:rotate(20deg) scale(1.05); border-color:var(--accent); }
+
+/* ---------- side dot nav ---------- */
+nav.dots{
+  position:fixed; right:18px; top:50%; transform:translateY(-50%);
+  z-index:45; display:none; flex-direction:column; gap:14px;
+}
+nav.dots a{ position:relative; width:9px; height:9px; }
+nav.dots a i{
+  position:absolute; inset:0; border-radius:50%;
+  border:1.5px solid var(--border-strong); background:transparent;
+  transition:all .25s ease;
+}
+nav.dots a:hover i, nav.dots a.active i{ background:var(--accent); border-color:var(--accent); transform:scale(1.35); }
+nav.dots a span{
+  position:absolute; right:20px; top:50%; transform:translateY(-50%) translateX(6px);
+  font-family:var(--mono); font-size:.62rem; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--muted); white-space:nowrap; opacity:0; pointer-events:none; transition:opacity .2s ease, transform .2s ease;
+  background:var(--surface); padding:3px 7px; border-radius:6px; border:1px solid var(--border);
+}
+nav.dots a:hover span{ opacity:1; transform:translateY(-50%) translateX(0); }
+@media(min-width:1080px){ nav.dots{ display:flex; } }
+
+/* ---------- layout ---------- */
+.wrap{ position:relative; z-index:1; width:100%; max-width:680px; margin:0 auto; padding:0 clamp(18px,5vw,28px); }
+main{ padding-bottom:80px; }
+
+/* ---------- hero ---------- */
+.hero-figure{
+  position:relative; z-index:1; max-width:860px; margin:0 auto;
+  padding:108px clamp(18px,5vw,28px) 0;
+}
+.hero-figure-frame{
+  position:relative; aspect-ratio:16/9; border-radius:14px; overflow:hidden;
+  background:#0a0a0a; border:1px solid var(--border);
+  box-shadow:0 1px 0 rgba(255,255,255,.03) inset, 0 30px 60px -30px var(--shadow);
+}
+html[data-theme="dark"] .hero-figure-frame{
+  box-shadow:0 1px 0 rgba(255,255,255,.04) inset, 0 40px 80px -30px rgba(0,0,0,.65);
+}
+.hero-figure-frame img{ width:100%; height:100%; object-fit:cover; display:block; }
+@media (max-width:720px){
+  .hero-figure{ padding-top:88px; }
+  .hero-figure-frame{ border-radius:10px; }
+}
+.hero{ padding:44px 0 30px; text-align:center; }
+.eyebrow{
+  font-family:var(--mono); font-size:.72rem; font-weight:600; letter-spacing:.26em;
+  text-transform:uppercase; color:var(--accent);
+}
+h1.title{
+  font-family:var(--serif); color:var(--ink);
+  font-weight:600; line-height:.96; letter-spacing:-.015em;
+  font-size:clamp(3.4rem,16vw,6.6rem); margin:.28em 0 .12em;
+}
+h1.title .l2{ display:block; font-style:italic; font-weight:500; color:var(--accent); }
+.pill{
+  display:inline-flex; align-items:center; gap:10px; margin:18px auto 0;
+  padding:9px 18px 9px 12px; border-radius:999px;
+  background:var(--surface); border:1px solid var(--border);
+  box-shadow:0 1px 0 var(--border), 0 8px 24px -16px var(--shadow);
+  font-family:var(--mono); font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; color:var(--muted);
+}
+.pill b{ color:var(--ink); font-weight:600; }
+.pill .glyph{
+  width:24px; height:24px; border-radius:50%; display:grid; place-items:center;
+  background:var(--ink); color:var(--bg); font-size:.7rem;
+}
+.dek{
+  font-family:var(--serif); font-weight:400; font-size:clamp(1.18rem,4.6vw,1.5rem);
+  line-height:1.5; color:var(--ink-soft); max-width:560px; margin:30px auto 0; letter-spacing:.005em;
+}
+.byline{
+  margin:34px auto 0; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:8px 14px;
+  font-family:var(--mono); font-size:.7rem; letter-spacing:.13em; text-transform:uppercase; color:var(--faint);
+}
+.byline b{ color:var(--ink); font-weight:600; }
+.byline .av{
+  width:34px; height:34px; border-radius:50%;
+  display:block; object-fit:cover; background:var(--surface-2);
+  box-shadow:0 0 0 3px var(--glow);
+}
+.byline .sep{ color:var(--border-strong); }
+
+/* ---------- tldr ---------- */
+.tldr{
+  margin:54px auto 0; padding:26px clamp(20px,5vw,32px);
+  border:1px solid var(--border); border-radius:18px;
+  background:linear-gradient(180deg, var(--surface), color-mix(in srgb, var(--surface) 88%, var(--bg)));
+  box-shadow:0 20px 50px -34px var(--shadow);
+}
+.tldr h4{
+  margin:0 0 12px; font-family:var(--mono); font-size:.68rem; font-weight:600; letter-spacing:.22em;
+  text-transform:uppercase; color:var(--accent);
+}
+.tldr p{ margin:0; font-size:1.01rem; line-height:1.66; color:var(--ink-soft); }
+.tldr strong{ color:var(--ink); font-weight:600; }
+
+/* ---------- sections + prose ---------- */
+section{ padding-top:74px; }
+.partlabel{
+  font-family:var(--mono); font-size:.7rem; font-weight:600; letter-spacing:.24em; text-transform:uppercase;
+  color:var(--accent); margin:0 0 14px;
+  display:flex; align-items:center; gap:12px;
+}
+.partlabel::before{ content:""; width:26px; height:1px; background:var(--accent); display:inline-block; }
+h2{
+  font-family:var(--serif); color:var(--ink); font-weight:600;
+  font-size:clamp(2rem,7.4vw,2.9rem); line-height:1.06; letter-spacing:-.01em;
+  margin:0 0 22px;
+}
+h2 em{ font-style:italic; color:var(--accent); font-weight:500; }
+h3{
+  font-family:var(--serif); color:var(--ink); font-weight:600;
+  font-size:1.32rem; line-height:1.25; margin:36px 0 12px;
+}
+p{ margin:0 0 20px; }
+p.lead{ font-size:1.12rem; color:var(--ink); }
+strong{ color:var(--ink); font-weight:600; }
+em.it{ font-style:italic; }
+code{
+  font-family:var(--mono); font-size:.86em; background:var(--surface-2);
+  border:1px solid var(--border); border-radius:5px; padding:.08em .38em; color:var(--ink);
+}
+
+.pullquote{
+  margin:42px 0; padding-left:22px; border-left:3px solid var(--accent);
+  font-family:var(--serif); font-style:italic; font-weight:500;
+  font-size:clamp(1.4rem,5.6vw,1.85rem); line-height:1.32; color:var(--ink);
+}
+
+/* ---------- spec card ---------- */
+.spec{
+  margin:8px 0 30px; border:1px solid var(--border); border-radius:14px; overflow:hidden;
+  background:var(--surface); box-shadow:0 14px 38px -30px var(--shadow);
+}
+.spec .grid{ display:grid; grid-template-columns:repeat(2,1fr); }
+.spec .cell{ padding:13px 16px; border-top:1px solid var(--border); border-right:1px solid var(--border); }
+.spec .cell:nth-child(2n){ border-right:none; }
+.spec .cell:nth-child(-n+2){ border-top:none; }
+.spec .cell:last-child{ grid-column:1 / -1; }
+.spec dt{ font-family:var(--mono); font-size:.6rem; letter-spacing:.18em; text-transform:uppercase; color:var(--faint); margin:0 0 3px; }
+.spec dd{ margin:0; font-size:.92rem; color:var(--ink); font-weight:500; }
+@media(min-width:560px){
+  .spec .grid{ grid-template-columns:repeat(5,1fr); }
+  .spec .cell{ border-top:none; }
+  .spec .cell:last-child{ grid-column:auto; border-right:none; }
+}
+
+/* ---------- viz frame ---------- */
+.viz{
+  margin:30px 0; padding:18px clamp(12px,3vw,22px) 12px;
+  border:1px solid var(--border); border-radius:18px;
+  background:
+    radial-gradient(120% 120% at 0% 0%, color-mix(in srgb, var(--accent) 6%, transparent), transparent 55%),
+    var(--surface);
+  box-shadow:0 24px 60px -40px var(--shadow);
+}
+.viz .cap{
+  display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin:2px 4px 10px;
+}
+.viz .cap b{ font-family:var(--mono); font-size:.66rem; letter-spacing:.18em; text-transform:uppercase; color:var(--accent); font-weight:600; }
+.viz .cap span{ font-size:.86rem; color:var(--muted); }
+.viz svg{ display:block; width:100%; height:auto; overflow:visible; }
+.viz .stage{ min-height:120px; }
+
+/* d3 themable classes */
+.v-node{ fill:var(--surface-2); stroke:var(--accent); stroke-width:1.6px; }
+.v-node-2{ fill:var(--surface-2); stroke:var(--spark); stroke-width:1.6px; }
+.v-line{ stroke:var(--border-strong); stroke-width:1.4px; fill:none; }
+.v-line-live{ stroke:var(--accent); stroke-width:1.8px; fill:none; }
+.v-dash{ stroke:var(--border-strong); stroke-width:1.4px; fill:none; stroke-dasharray:5 6; }
+.v-fill-accent{ fill:var(--accent); }
+.v-fill-spark{ fill:var(--spark); }
+.v-fill-ink{ fill:var(--ink); }
+.v-fill-muted{ fill:var(--faint); }
+.v-label{ font-family:var(--mono); font-size:11px; letter-spacing:.04em; fill:var(--muted); }
+.v-label-strong{ font-family:var(--mono); font-size:11px; letter-spacing:.06em; fill:var(--ink); font-weight:500; }
+.v-title{ font-family:var(--sans); font-weight:600; font-size:12px; fill:var(--ink); }
+.v-chip{ fill:var(--surface-2); stroke:var(--border-strong); stroke-width:1px; }
+.v-chip-on{ fill:color-mix(in srgb, var(--spark) 16%, var(--surface)); stroke:var(--spark); stroke-width:1.4px; }
+.v-glow{ fill:var(--glow); }
+
+/* ---------- soap envelope (css) ---------- */
+.envelope{ margin:28px 0; }
+.env-box{
+  border:1.5px solid var(--accent); border-radius:12px; padding:14px;
+  background:color-mix(in srgb, var(--accent) 5%, var(--surface)); position:relative;
+}
+.env-box + .env-box{ margin-top:0; }
+.env-tag{
+  position:absolute; top:-10px; left:14px; padding:1px 9px; border-radius:6px;
+  font-family:var(--mono); font-size:.6rem; letter-spacing:.14em; text-transform:uppercase;
+  background:var(--accent); color:var(--bg); font-weight:600;
+}
+.env-inner{ border:1.5px dashed var(--border-strong); border-radius:10px; padding:14px; margin-top:8px; position:relative; background:var(--surface); }
+.env-inner .env-tag{ background:var(--surface-2); color:var(--accent); border:1px solid var(--accent); }
+.env-line{ font-family:var(--mono); font-size:.74rem; color:var(--muted); line-height:1.9; }
+.env-line b{ color:var(--ink); }
+
+/* ---------- table ---------- */
+.tablewrap{ margin:26px 0; overflow-x:auto; border:1px solid var(--border); border-radius:16px; background:var(--surface); -webkit-overflow-scrolling:touch; }
+table{ border-collapse:collapse; width:100%; min-width:560px; font-size:.9rem; }
+th,td{ text-align:left; padding:13px 16px; border-bottom:1px solid var(--border); vertical-align:top; }
+thead th{
+  font-family:var(--mono); font-size:.62rem; letter-spacing:.16em; text-transform:uppercase; color:var(--accent);
+  position:sticky; top:0; background:var(--surface);
+}
+tbody th{ font-family:var(--mono); font-weight:600; color:var(--ink); font-size:.82rem; white-space:nowrap; }
+td{ color:var(--ink-soft); }
+tbody tr:last-child th, tbody tr:last-child td{ border-bottom:none; }
+
+/* ---------- callout ---------- */
+.note{
+  margin:26px 0; padding:16px 18px; border-radius:12px;
+  border:1px solid var(--border); border-left:3px solid var(--spark);
+  background:color-mix(in srgb, var(--spark) 5%, var(--surface)); font-size:.96rem;
+}
+.note b{ color:var(--ink); }
+
+/* ---------- footer ---------- */
+footer{
+  position:relative; z-index:1; text-align:center; padding:70px 24px 90px;
+  border-top:1px solid var(--border); margin-top:70px;
+}
+footer .mark{ font-family:var(--serif); font-weight:600; font-size:1.3rem; color:var(--ink); }
+footer .mark em{ font-style:italic; color:var(--accent); }
+footer p{ color:var(--muted); font-size:.9rem; max-width:460px; margin:14px auto 0; }
+footer .meta{ margin-top:22px; font-family:var(--mono); font-size:.66rem; letter-spacing:.16em; text-transform:uppercase; color:var(--faint); }
+
+/* ---------- reveal ---------- */
+.reveal{ opacity:0; transform:translateY(18px); transition:opacity .7s cubic-bezier(.2,.7,.2,1), transform .7s cubic-bezier(.2,.7,.2,1); }
+.reveal.in{ opacity:1; transform:none; }
+
+@media (prefers-reduced-motion: reduce){
+  .reveal{ opacity:1; transform:none; transition:none; }
+  html{ scroll-behavior:auto; }
+}
+</style>
+</head>
+<body>
+
+<div id="progress"></div>
+
+<header class="top" id="topbar">
+  <a class="wordmark" href="#top" aria-label="The Trenches home"><span class="dot"></span>The <em>Trenches</em></a>
+  <button class="theme-toggle" id="themeBtn" aria-label="Toggle light and dark theme">☾</button>
+</header>
+
+<nav class="dots" aria-label="Section navigation">
+  <a href="#top"><i></i><span>Top</span></a>
+  <a href="#shape"><i></i><span>The Shape</span></a>
+  <a href="#rest"><i></i><span>REST</span></a>
+  <a href="#soap"><i></i><span>SOAP</span></a>
+  <a href="#grpc"><i></i><span>gRPC</span></a>
+  <a href="#graphql"><i></i><span>GraphQL</span></a>
+  <a href="#webhooks"><i></i><span>Webhooks</span></a>
+  <a href="#websockets"><i></i><span>WebSockets</span></a>
+  <a href="#webrtc"><i></i><span>WebRTC</span></a>
+  <a href="#choosing"><i></i><span>Choosing</span></a>
+</nav>
+
+<main id="top">
+  <figure class="hero-figure">
+    <div class="hero-figure-frame">
+      <img
+        src="/images/story/tokyo_water.webp"
+        alt="Stylized waves of water rendered in layered teal and ink tones, in the manner of a Japanese woodblock print."
+        loading="eager"
+        decoding="async"
+      />
+    </div>
+  </figure>
+  <div class="wrap">
+
+    <div class="hero">
+      <div class="eyebrow reveal">Engineering Trenches · June 2026</div>
+      <h1 class="title reveal">Seven Ways<span class="l2">to Talk</span></h1>
+      <div class="pill reveal"><span class="glyph">◉</span><span>A field guide to <b>API design</b></span></div>
+      <p class="dek reveal">Every API is a decision about how two programs hold a conversation. There are only a handful of questions that decision answers, and seven names worth knowing. Learn the questions, and the names choose themselves.</p>
+      <div class="byline reveal">
+        <img class="av" src="https://imagedelivery.net/MJtvjX9fb_fA1fd2F8b4_A/43ac6880-5dd9-4c94-0eb3-1d066564e700/public" alt="" width="34" height="34" decoding="async">
+        <b>Boyan Balev</b><span class="sep">·</span>
+        <span>15 min read</span><span class="sep">·</span>
+        <span>June 8, 2026</span><span class="sep">·</span>
+        <span>The Trenches</span>
+      </div>
+    </div>
+
+    <div class="tldr reveal">
+      <h4>The whole field in thirty seconds</h4>
+      <p>An API is a contract for how two machines talk, and there are only a few axes that matter: who speaks first, whether the line stays open, whether you trade one question for one answer or a continuous stream, and whether the bytes are made for a human to read or for a machine to parse. <strong>REST</strong> borrows the web's own grammar and wins by default. <strong>gRPC</strong> drops to compact binary for traffic between your own services. <strong>GraphQL</strong> hands the client a pencil so it can draw exactly the data it wants. <strong>Webhooks</strong> flip the call so the server tells you. <strong>WebSockets</strong> keep one line open so the server can push. <strong>WebRTC</strong> builds a direct line between two people with no server in the middle. And <strong>SOAP</strong> is the one you reach for when the contract outranks your preferences. Same questions, seven stable answers.</p>
+    </div>
+
+    <!-- ============ PART I ============ -->
+    <section id="shape" data-spy>
+      <div class="partlabel reveal">Part I</div>
+      <h2 class="reveal">The Shape of a <em>Conversation</em></h2>
+
+      <p class="lead reveal">Right now, on the device in your hand, dozens of programs are mid sentence. The weather widget asked for a forecast. Your messages app is waiting to be told the moment a reply lands. A music app is pulling a playlist down in pieces. None of them invented how to talk. Each one picked a pattern that already existed, because the patterns are not infinite.</p>
+
+      <p class="reveal">We treat APIs like a catalogue of competing products, as if choosing one were a matter of taste or fashion. It is not. An API is a decision about the structure of a conversation between two programs, and a conversation has a finite anatomy. Strip away the logos and the marketing, and every one of the seven famous styles is just a stable answer to the same small set of questions.</p>
+
+      <div class="viz reveal" id="viz-shape">
+        <div class="cap"><b>Anatomy</b><span>two programs, one exchange, every time</span></div>
+        <div class="stage" id="stage-shape"></div>
+      </div>
+
+      <p class="reveal">Here are the questions. <strong>Who speaks first?</strong> In most conversations one side asks and the other answers, but in some the server is the one who reaches out, and in a few either side may speak at any moment. <strong>Does the line stay open?</strong> You can hang up after every exchange and dial again next time, or you can keep a single connection alive and reuse it. <strong>What is the shape of the exchange?</strong> One question for one answer, a single request that triggers a stream of replies, or a continuous duplex where both sides talk over each other. <strong>What do the bytes look like?</strong> Text that a person can read at the cost of size and speed, or packed binary that only a machine will ever decode. <strong>Does anyone remember?</strong> A stateless exchange forgets you the instant it ends, which is precisely what lets you add a tenth server on a busy afternoon. And <strong>who sits in the middle?</strong> A server relaying every byte, or a direct path between two peers with nothing in between.</p>
+
+      <div class="pullquote reveal">You do not memorize seven APIs. You learn the questions, and the seven answers fall out.</div>
+
+      <p class="reveal">Keep those questions in your pocket. We will hold each of the seven styles up against them, one at a time, and ask the only three things that matter in practice: <strong>when</strong> the situation calls for it, <strong>why</strong> it is shaped the way it is, and <strong>how</strong> the mechanism actually works. By the end you will have a map, and the map will do the deciding for you.</p>
+    </section>
+
+    <!-- ============ PART II REST ============ -->
+    <section id="rest" data-spy>
+      <div class="partlabel reveal">Part II</div>
+      <h2 class="reveal">REST, the Grammar of the <em>Web</em></h2>
+
+      <p class="lead reveal">Start here, because almost everything starts here. REST stands for Representational State Transfer, which is an academic name for a simple move: stop inventing your own protocol and borrow the one the web already runs on.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Client</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Per request</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Ask, answer</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Text, usually JSON</dd></div>
+          <div class="cell"><dt>State</dt><dd>None held</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">The web already had a grammar long before anyone needed an API. It had verbs, <code>GET</code> to read, <code>POST</code> to create, <code>PUT</code> to replace, <code>DELETE</code> to remove, and it had addresses, the URL. REST says model your domain as a set of resources, give each one an address, and use the verbs that already exist to act on them. You do not design a new language. You speak the one billions of documents already speak.</p>
+
+      <div class="viz reveal" id="viz-rest">
+        <div class="cap"><b>The request cycle</b><span>the client asks with a verb, the server answers with a status</span></div>
+        <div class="stage" id="stage-rest"></div>
+      </div>
+
+      <h3 class="reveal">Why it is shaped this way</h3>
+      <p class="reveal">The quiet genius of REST is the word <em class="it">stateless</em>. The server remembers nothing about you between calls. Every request carries everything it needs to be understood on its own. That sounds like a limitation, and it is the single most valuable property in the whole catalogue, because it means any server can answer any request. That is what lets you put ten identical servers behind a load balancer and add an eleventh when traffic spikes. State is the thing that makes scaling out painful, and REST refuses to hold it by design.</p>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">The resource model is rigid, and that rigidity has a price. A single screen that needs a user, their last five orders, and the shipping status of each order becomes three or four round trips, or one bloated endpoint that returns far more than the screen will ever show. REST is honest plumbing. It is not a precision instrument, and the next two styles exist precisely because of that gap.</p>
+
+      <div class="note reveal"><b>Reach for REST</b> when you are modelling a domain as resources, building a public API that other developers must learn quickly, or doing anything where simple and universally understood beats clever. It is the right answer for the large majority of what you will ever build. Make it prove insufficient before you reach past it.</div>
+    </section>
+
+    <!-- ============ PART III SOAP ============ -->
+    <section id="soap" data-spy>
+      <div class="partlabel reveal">Part III</div>
+      <h2 class="reveal">SOAP, the <em>Formal</em> Contract</h2>
+
+      <p class="lead reveal">If REST is a casual phone call, SOAP is a contract signed in triplicate. It stands for Simple Object Access Protocol, and despite the name it is anything but simple. It is what an API looks like when the consequences of a single wrong or lost message are measured in lawsuits, audits, or someone's medical record.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Client</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Per request</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Ask, answer</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>XML envelope</dd></div>
+          <div class="cell"><dt>State</dt><dd>Optional</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">Every SOAP message is wrapped in a strict XML structure: an envelope that contains a header and a body. The shape is not decoration. The header is where security tokens, routing rules, and reliability metadata travel, inside the message itself, independent of whatever transport carries it. The body holds the actual call. The whole interface is described up front in a formal contract, so a counterparty can generate code against it without ever talking to you.</p>
+
+      <div class="envelope reveal">
+        <div class="env-box">
+          <span class="env-tag">Envelope</span>
+          <div class="env-inner" style="margin-top:18px;">
+            <span class="env-tag">Header</span>
+            <div class="env-line" style="margin-top:10px;"><b>Security</b> · signature, token, who you are</div>
+            <div class="env-line"><b>Reliability</b> · message id, delivery guarantee</div>
+          </div>
+          <div class="env-inner">
+            <span class="env-tag">Body</span>
+            <div class="env-line" style="margin-top:10px;"><b>TransferFunds</b>( from, to, amount )</div>
+          </div>
+        </div>
+      </div>
+
+      <h3 class="reveal">Why it survives</h3>
+      <p class="reveal">Nobody chooses SOAP for a new consumer product, and yet it refuses to die, because it lives where regulation and trust boundaries live. Banks settling money between each other, insurance clearinghouses, government registries, hospital systems exchanging patient records. These systems change slowly, often by law, and they value a binding contract, a paper trail, and security baked into the protocol rather than bolted on afterward. When guaranteed delivery and compliance matter more than a pleasant afternoon for the developer, this is the shape that wins.</p>
+
+      <div class="note reveal"><b>Reach for SOAP</b> when you are integrating with an enterprise or regulated counterparty that already speaks it, or when you need message level security and delivery guarantees carried inside the message rather than assumed from the network. Otherwise, walk on by.</div>
+    </section>
+
+    <!-- ============ PART IV gRPC ============ -->
+    <section id="grpc" data-spy>
+      <div class="partlabel reveal">Part IV</div>
+      <h2 class="reveal">gRPC, Built for <em>Machines</em></h2>
+
+      <p class="lead reveal">Here is a first principle that reorganizes everything: text is for humans, and your services are not humans. JSON spends bytes and processor time on every single message describing its own structure, the field names, the braces, the quotes, so that a person could in theory read it. Between two of your own services that no person will ever read, that is pure waste.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Either side</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Persistent, HTTP/2</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Four kinds</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Binary, Protobuf</dd></div>
+          <div class="cell"><dt>State</dt><dd>Per call</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">gRPC answers the waste with Protocol Buffers. You define the schema once, the messages and the methods, and both sides compile against it. On the wire you then send only the values, packed into a compact binary layout, with the structure already known to both ends. The result is dramatically smaller and faster to parse, and the schema doubles as the contract. On top of that it rides HTTP/2, which carries many calls over one connection at the same time, so you stop paying the connection setup tax on every request.</p>
+
+      <h3 class="reveal">The four shapes are the design act</h3>
+      <p class="reveal">The part people miss is that gRPC is not one conversation shape but four, and choosing among them is the real work. <strong>Unary</strong> is the familiar one ask for one answer. <strong>Server streaming</strong> is one request that opens a tap of replies, the right shape for a live feed of a driver's location. <strong>Client streaming</strong> is a tap flowing the other way, a stream of telemetry or a file sent in chunks. And <strong>bidirectional</strong> lets both ends speak at once, the shape of a live negotiation between two services.</p>
+
+      <div class="viz reveal" id="viz-grpc">
+        <div class="cap"><b>Four conversation shapes</b><span>the orange travels client to server, the teal travels back</span></div>
+        <div class="stage" id="stage-grpc"></div>
+      </div>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">Binary is not friendly. You cannot read it by eye, you need code generation and tooling, and a browser cannot speak raw gRPC without a translating proxy. So gRPC lives inside your own walls, where you control both ends, where latency and throughput are real money, and where a typed contract between services is worth more than human readability you will never use.</p>
+
+      <div class="note reveal"><b>Reach for gRPC</b> for service to service traffic inside your own system, especially in a busy microservice mesh where the count of internal calls is large and every millisecond and byte adds up.</div>
+    </section>
+
+    <!-- ============ PART V GraphQL ============ -->
+    <section id="graphql" data-spy>
+      <div class="partlabel reveal">Part V</div>
+      <h2 class="reveal">GraphQL, <em>Exactly</em> What You Asked For</h2>
+
+      <p class="lead reveal">REST has a structural mismatch baked in. Its unit is the resource, and the server decides the shape of every response. The client, which actually knows what the screen needs, has no say. That mismatch produces two chronic diseases, and GraphQL is the cure for both.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Client</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Per request</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Client shapes it</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Text, JSON</dd></div>
+          <div class="cell"><dt>State</dt><dd>None held</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">The first disease is <strong>over fetching</strong>: an endpoint hands back a fat object when the screen needed three fields of it. The second is <strong>under fetching</strong>: the screen needs data from several resources, so the client fires several requests and waits on a waterfall of round trips. GraphQL inverts the authority. The client sends one query describing the exact tree of data it wants, the server resolves precisely that tree, and the answer comes back in a single response. No waste, no waterfall.</p>
+
+      <div class="viz reveal" id="viz-graphql">
+        <div class="cap"><b>Round trips</b><span>REST waterfalls across endpoints, GraphQL resolves one precise query</span></div>
+        <div class="stage" id="stage-graphql"></div>
+      </div>
+
+      <p class="reveal">There is a second, quieter gift. A GraphQL schema is self describing. The types and fields can be introspected, so a frontend engineer can discover everything available, and tools can autocomplete and validate a query, without booking a meeting with the backend team. The contract is machine readable and lives in one place.</p>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">You do not delete complexity, you move it from the network onto the server. Arbitrary client queries make caching harder, because every shape is effectively a different request. They open the door to expensive deeply nested queries that you must defend against with depth and cost limits. And the resolver layer that turns a query into data is real engineering. GraphQL earns its keep when many different clients, web, phone, partners, all need different slices of one rich, interconnected graph, and the bottleneck really is round trips and over fetching.</p>
+
+      <div class="note reveal"><b>Reach for GraphQL</b> when a complex, connected domain is consumed by varied clients with varied needs, and you want product teams to add a field to the screen without a backend change for every one.</div>
+    </section>
+
+    <!-- ============ PART VI Webhooks ============ -->
+    <section id="webhooks" data-spy>
+      <div class="partlabel reveal">Part VI</div>
+      <h2 class="reveal">Webhooks, the <em>Reverse</em> Call</h2>
+
+      <p class="lead reveal">Everything so far has the client asking and the server answering. Webhooks turn that around, and the reversal is the whole point.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Server</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Per event</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>One way notice</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Text, JSON</dd></div>
+          <div class="cell"><dt>State</dt><dd>None held</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">Without them, the only way to learn about something new is to keep asking. Your app walks to the mailbox every thirty seconds and checks. That is polling, and it is wasteful twice over: it burns requests that almost always come back empty, and the best case latency is your poll interval. The event you care about might be rare and might be urgent, and polling is bad at both. So invert it. Instead of you asking, the source tells you the instant something happens, by making an HTTP request to a URL you registered with it. The doorbell instead of the trip to the mailbox.</p>
+
+      <div class="viz reveal" id="viz-webhooks">
+        <div class="cap"><b>Polling versus push</b><span>endless empty checks, against a single notice that arrives when it matters</span></div>
+        <div class="stage" id="stage-webhooks"></div>
+      </div>
+
+      <p class="reveal">This is the natural glue between systems you do not own. You cannot hold a socket open to a payment provider forever, and the provider cannot poll you. But the provider can <code>POST</code> to your callback URL the moment a payment settles. That is why webhooks are sometimes called reverse APIs, and why they quietly power most cross company automation.</p>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">You now run a public endpoint, and that comes with duties. Anyone can send a request to it, so you must verify a signature on every delivery. Deliveries can repeat, so your handler must be idempotent, safe to receive twice. And they can retry or arrive out of order, so you cannot assume a tidy sequence. The provider owns sending. You own receiving correctly.</p>
+
+      <div class="note reveal"><b>Reach for webhooks</b> to react to events in a system you do not control, automate a workflow across a boundary, or keep two systems in sync without anyone polling. Payment settled, code pushed, order placed.</div>
+    </section>
+
+    <!-- ============ PART VII WebSockets ============ -->
+    <section id="websockets" data-spy>
+      <div class="partlabel reveal">Part VII</div>
+      <h2 class="reveal">WebSockets, the <em>Open</em> Line</h2>
+
+      <p class="lead reveal">Plain HTTP is call, answer, hang up. To talk again you dial again, and the server can never call you. For anything that changes continuously and unpredictably, a chat, a price, a game, that model fights the problem the whole way.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Either side</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Persistent</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Full duplex</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Text or binary</dd></div>
+          <div class="cell"><dt>State</dt><dd>Per connection</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">A WebSocket starts as an ordinary HTTP request and then upgrades into something different: one connection that stays open, over which both ends can send a message the instant they have one, with almost none of the overhead of opening a fresh request each time. The crucial change from REST is direction. The server can push. The moment the price ticks, the server sends it, and the client never had to ask.</p>
+
+      <div class="viz reveal" id="viz-websockets">
+        <div class="cap"><b>Reconnect versus the open line</b><span>above, a handshake every time; below, one line and the server pushing freely</span></div>
+        <div class="stage" id="stage-websockets"></div>
+      </div>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">A persistent connection is stateful, and state is what makes scaling hard. You have to track which server holds which open connection, usually with a shared message bus behind the scenes so that a message can find the right client wherever it landed. The connection survives poorly across flaky mobile networks without careful reconnect logic, and every open client ties up resources on the server. You take all of that on in exchange for one thing: the server can speak the instant it has something to say.</p>
+
+      <div class="note reveal"><b>Reach for WebSockets</b> for low latency, high frequency, two way updates in a browser. Chat, collaborative editing, live dashboards, trading screens, multiplayer state.</div>
+    </section>
+
+    <!-- ============ PART VIII WebRTC ============ -->
+    <section id="webrtc" data-spy>
+      <div class="partlabel reveal">Part VIII</div>
+      <h2 class="reveal">WebRTC, the <em>Straight</em> Line</h2>
+
+      <p class="lead reveal">The last one is the strangest, because it is barely an API at all. WebRTC is a whole framework, and its reason to exist is a single stubborn fact: for live audio and video between two people, every extra hop is latency you can hear and lag you can see. The lowest latency path is a straight line from one device to the other, with no server relaying a single byte.</p>
+
+      <div class="spec reveal">
+        <dl class="grid">
+          <div class="cell"><dt>Initiates</dt><dd>Either side</dd></div>
+          <div class="cell"><dt>Connection</dt><dd>Persistent, direct</dd></div>
+          <div class="cell"><dt>Shape</dt><dd>Full duplex</dd></div>
+          <div class="cell"><dt>Payload</dt><dd>Binary media or data</dd></div>
+          <div class="cell"><dt>State</dt><dd>Per session</dd></div>
+        </dl>
+      </div>
+
+      <p class="reveal">When you are on a video call, your picture is not travelling to a company server and then on to the other person. Where it can, it goes straight from your device to theirs, peer to peer. The hard part is not sending the bytes once you have a path. The hard part is finding the path. Both of you sit behind home routers, neither device knows its own public address, and firewalls block uninvited traffic. Two machines that do not know each other's real location somehow have to meet in the open internet.</p>
+
+      <div class="viz reveal" id="viz-webrtc">
+        <div class="cap"><b>Finding the direct path</b><span>peers swap addresses through a helper, then the media flows straight across</span></div>
+        <div class="stage" id="stage-webrtc"></div>
+      </div>
+
+      <p class="reveal">WebRTC solves this by separating the jobs. A <strong>signaling</strong> channel, which you provide, often over a WebSocket, lets the two peers exchange the metadata they need to connect. A <strong>STUN</strong> server tells each peer the public address it appears to have from the outside world. When a direct path genuinely cannot be made, a <strong>TURN</strong> server steps in to relay, trading away the low latency for a connection that at least works. Once a path is found, the media flows directly, and WebRTC handles the rest on its own: adaptive bitrate, codec negotiation, jitter buffering, packet loss concealment, all aimed at staying under the threshold where a person notices delay.</p>
+
+      <h3 class="reveal">Where it costs you</h3>
+      <p class="reveal">It is genuinely the most complex thing in this guide. The signaling is yours to build. TURN relays cost real money and quietly reintroduce the hop you were trying to avoid. And pure peer to peer stops scaling the moment a call has more than a few people, at which point you give up the straight line for a media server that mixes and forwards. The reward is that it is built into every modern browser, with no plugin, and when it works it is the fastest path two devices can share.</p>
+
+      <div class="note reveal"><b>Reach for WebRTC</b> for real time audio, video, or low latency data flowing directly between clients. Video calls, voice chat, browser to browser file transfer, latency critical multiplayer.</div>
+    </section>
+
+    <!-- ============ PART IX Choosing ============ -->
+    <section id="choosing" data-spy>
+      <div class="partlabel reveal">Part IX</div>
+      <h2 class="reveal">Choosing, in <em>Practice</em></h2>
+
+      <p class="lead reveal">Lay the seven out on the two axes that separate them most cleanly. Across the bottom, how tightly the two ends are bound together, from loose and public on the left to tightly coupled and internal on the right. Up the side, the shape of time, from a single exchange at the bottom to a continuous real time flow at the top. Almost every decision is really a question of where your problem sits on this map.</p>
+
+      <div class="viz reveal" id="viz-map">
+        <div class="cap"><b>The map</b><span>where each style lives, and therefore where your problem points</span></div>
+        <div class="stage" id="stage-map"></div>
+      </div>
+
+      <p class="reveal">A working procedure, in the order you should actually run it. <strong>Start at REST.</strong> It is the default for a reason and it clears most of the field, because most of what you build is a domain you can model as resources, read and written by clients that never need to be told something they did not ask for. <strong>If both ends are yours</strong> and you are paying for every millisecond and every byte, drop to gRPC. <strong>If many different clients</strong> each want a different slice of one rich graph and the pain is round trips, climb to GraphQL. <strong>If you are wiring into a system you do not own</strong> and need to react to its events, you do not poll, you receive webhooks. <strong>If the server has to push</strong> continuously into a browser, open a WebSocket. <strong>If two clients need a direct low latency link</strong> for media or data, build it with WebRTC. And <strong>if you are integrating with a bank, a hospital, or a government</strong>, you will probably speak SOAP, because there the contract outranks your preferences.</p>
+
+      <div class="tablewrap reveal">
+        <table>
+          <thead>
+            <tr><th>Style</th><th>Reach for it when</th><th>The cost you accept</th><th>Seen in</th></tr>
+          </thead>
+          <tbody>
+            <tr><th>REST</th><td>A domain modelled as resources, read and written by clients</td><td>Rigid shape, over fetching, extra round trips</td><td>Most public web APIs</td></tr>
+            <tr><th>SOAP</th><td>Regulated, high trust integration across organizations</td><td>Heavy, verbose, slow to build against</td><td>Banking, healthcare, government</td></tr>
+            <tr><th>gRPC</th><td>Traffic between your own services, where speed is money</td><td>Binary, needs codegen, no plain browser support</td><td>Internal service meshes</td></tr>
+            <tr><th>GraphQL</th><td>Varied clients want varied slices of one rich graph</td><td>Server complexity, harder caching, query limits</td><td>Product platforms with many clients</td></tr>
+            <tr><th>Webhooks</th><td>React to events in a system you do not control</td><td>Public endpoint, signatures, idempotency, retries</td><td>Payments, repo events, order flows</td></tr>
+            <tr><th>WebSockets</th><td>The server must push continuously to a browser</td><td>Stateful, harder to scale, fragile on mobile</td><td>Chat, live dashboards, trading</td></tr>
+            <tr><th>WebRTC</th><td>Direct low latency media or data between two clients</td><td>Complex setup, relay costs, scaling limits</td><td>Video calls, voice, peer transfer</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <p class="reveal">The seven names are not a menu you order from by mood. They are the field's accumulated answers to a few plain questions about who talks, when, in what shape, through whom, and at what cost. Most arguments about which API style is best are really arguments about which problem you are solving, conducted by people who have not noticed they disagree about that first.</p>
+
+      <div class="pullquote reveal">Learn the questions. The names will pick themselves.</div>
+    </section>
+
+  </div>
+
+  <footer>
+    <div class="mark">The <em>Trenches</em></div>
+    <p>Field notes from building real systems. Written from first principles, with the marketing stripped off.</p>
+    <div class="meta">Boyan Balev · June 2026 · Seven Ways to Talk</div>
+  </footer>
+</main>
+
+<script>
+/* ---------------- UI: theme, progress, scrollspy, reveals ---------------- */
+(function(){
+  var root=document.documentElement;
+  var btn=document.getElementById('themeBtn');
+  function setTheme(t){ root.setAttribute('data-theme',t); btn.textContent = t==='dark' ? '☀' : '☾'; }
+  try{ setTheme(matchMedia('(prefers-color-scheme: dark)').matches ? 'dark':'light'); }catch(e){ setTheme('light'); }
+  btn.addEventListener('click', function(){ setTheme(root.getAttribute('data-theme')==='dark'?'light':'dark'); });
+
+  var bar=document.getElementById('progress');
+  var topbar=document.getElementById('topbar');
+  function onScroll(){
+    var h=document.documentElement;
+    var max=(h.scrollHeight - h.clientHeight) || 1;
+    var p=Math.min(1, Math.max(0, h.scrollTop / max));
+    bar.style.width=(p*100).toFixed(2)+'%';
+    topbar.classList.toggle('scrolled', h.scrollTop>10);
+  }
+  document.addEventListener('scroll', onScroll, {passive:true});
+  onScroll();
+
+  /* reveals */
+  var rev=document.querySelectorAll('.reveal');
+  if('IntersectionObserver' in window){
+    var ro=new IntersectionObserver(function(es){
+      es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); ro.unobserve(e.target); } });
+    },{threshold:0.12, rootMargin:'0px 0px -8% 0px'});
+    rev.forEach(function(el){ ro.observe(el); });
+  } else { rev.forEach(function(el){ el.classList.add('in'); }); }
+
+  /* scrollspy dots */
+  var dotLinks=Array.prototype.slice.call(document.querySelectorAll('nav.dots a'));
+  var idMap={};
+  dotLinks.forEach(function(a){ idMap[a.getAttribute('href').slice(1)]=a; });
+  var spied=document.querySelectorAll('[data-spy], #top');
+  if('IntersectionObserver' in window){
+    var current=null;
+    var so=new IntersectionObserver(function(es){
+      es.forEach(function(e){
+        if(e.isIntersecting){
+          var id=e.target.id;
+          if(idMap[id]){
+            if(current) current.classList.remove('active');
+            current=idMap[id]; current.classList.add('active');
+          }
+        }
+      });
+    },{rootMargin:'-45% 0px -50% 0px', threshold:0});
+    spied.forEach(function(s){ so.observe(s); });
+  }
+})();
+
+/* ---------------- D3 visualizations ---------------- */
+(function(){
+  var d3=window.d3;
+  if(!d3) return;
+  var reduce=false;
+  try{ reduce=matchMedia('(prefers-reduced-motion: reduce)').matches; }catch(e){}
+
+  /* math helpers */
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function clamp(x,a,b){ return x<a?a:(x>b?b:x); }
+  function frac(x){ x=x-Math.floor(x); return x; }
+  function tri(p){ p=frac(p); return p<0.5 ? p*2 : 2-p*2; }
+  function ease(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
+  function bump(p){ /* 0 at ends, 1 in middle, for fade in/out */ return Math.sin(Math.PI*clamp(p,0,1)); }
+
+  /* global ticker */
+  var tickers=[];
+  var started=false;
+  function ensure(){ if(started||reduce) return; started=true; function frame(now){ var t=now/1000; for(var i=0;i<tickers.length;i++){ try{ tickers[i](t);}catch(e){} } requestAnimationFrame(frame);} requestAnimationFrame(frame); }
+  function register(fn){ tickers.push(fn); ensure(); if(reduce){ try{ fn(0.0001); }catch(e){} } }
+
+  function whenVisible(el, cb){
+    if(!el) return;
+    if(!('IntersectionObserver' in window)){ cb(); return; }
+    var io=new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ io.unobserve(e.target); cb(); } }); },{threshold:0.18});
+    io.observe(el);
+  }
+
+  function svg(sel,w,h){
+    return d3.select(sel).append('svg')
+      .attr('viewBox','0 0 '+w+' '+h)
+      .attr('width','100%')
+      .attr('preserveAspectRatio','xMidYMid meet')
+      .attr('role','img');
+  }
+  function node(g,x,y,r,cls,label){
+    g.append('circle').attr('class',cls).attr('cx',x).attr('cy',y).attr('r',r);
+    if(label){ g.append('text').attr('class','v-label-strong').attr('x',x).attr('y',y+r+16).attr('text-anchor','middle').text(label); }
+  }
+
+  /* ---- PART I: anatomy / conversation pulse ---- */
+  function drawShape(){
+    var W=600,H=190; var s=svg('#stage-shape',W,H); var g=s.append('g');
+    var ax=120, bx=480, y=92;
+    g.append('line').attr('class','v-dash').attr('x1',ax+38).attr('y1',y).attr('x2',bx-38).attr('y2',y);
+    node(g,ax,y,36,'v-node','CLIENT');
+    node(g,bx,y,36,'v-node-2','SERVER');
+    var ringA=g.append('circle').attr('cx',ax).attr('cy',y).attr('r',36).attr('class','v-fill-accent').attr('opacity',0).style('pointer-events','none');
+    var ringB=g.append('circle').attr('cx',bx).attr('cy',y).attr('r',36).attr('class','v-fill-spark').attr('opacity',0).style('pointer-events','none');
+    var dot=g.append('circle').attr('r',8).attr('cy',y).attr('class','v-fill-spark');
+    var tag=g.append('text').attr('class','v-label-strong').attr('text-anchor','middle').attr('y',y-18);
+    var T=4.2;
+    register(function(t){
+      var p=frac(t/T);
+      var x,dir;
+      if(p<0.42){ var u=ease(p/0.42); x=lerp(ax+40,bx-40,u); dir=1; }
+      else if(p<0.5){ x=bx-40; dir=1; }
+      else if(p<0.92){ var v=ease((p-0.5)/0.42); x=lerp(bx-40,ax+40,v); dir=-1; }
+      else { x=ax+40; dir=-1; }
+      dot.attr('cx',x).attr('class', dir>0?'v-fill-spark':'v-fill-accent');
+      tag.attr('x',x).text(dir>0?'GET':'200 OK').attr('class','v-label-strong');
+      ringB.attr('opacity', (p>0.42&&p<0.56)? (0.18*(1-Math.abs(p-0.49)/0.07)) : 0 ).attr('r',36+ (p>0.42&&p<0.56? 8:0));
+      ringA.attr('opacity', (p>0.92||p<0.06)? 0.16 : 0 );
+    });
+  }
+
+  /* ---- PART II: REST request cycle with verbs ---- */
+  function drawRest(){
+    var W=600,H=240; var s=svg('#stage-rest',W,H); var g=s.append('g');
+    var verbs=[{v:'GET',st:'200 OK'},{v:'POST',st:'201 Created'},{v:'PUT',st:'200 OK'},{v:'DELETE',st:'204 No Content'}];
+    /* chips */
+    var cw=126, gap=12, total=verbs.length*cw+(verbs.length-1)*gap, x0=(W-total)/2;
+    var chips=[];
+    verbs.forEach(function(d,i){
+      var cx=x0+i*(cw+gap);
+      var rect=g.append('rect').attr('class','v-chip').attr('x',cx).attr('y',16).attr('width',cw).attr('height',34).attr('rx',9);
+      var txt=g.append('text').attr('class','v-label-strong').attr('x',cx+cw/2).attr('y',38).attr('text-anchor','middle').text(d.v);
+      chips.push({rect:rect,txt:txt});
+    });
+    var ax=120, bx=480, y=150;
+    g.append('line').attr('class','v-dash').attr('x1',ax+36).attr('y1',y).attr('x2',bx-36).attr('y2',y);
+    node(g,ax,y,34,'v-node','CLIENT');
+    node(g,bx,y,34,'v-node-2','SERVER');
+    var ring=g.append('circle').attr('cx',bx).attr('cy',y).attr('r',34).attr('class','v-fill-spark').attr('opacity',0);
+    var dot=g.append('circle').attr('r',8).attr('cy',y).attr('class','v-fill-spark');
+    var tag=g.append('text').attr('class','v-label-strong').attr('text-anchor','middle').attr('y',y-16);
+    var T=3.4;
+    register(function(t){
+      var idx=Math.floor(t/T)%verbs.length;
+      chips.forEach(function(c,i){ c.rect.attr('class', i===idx?'v-chip-on':'v-chip'); });
+      var d=verbs[idx];
+      var p=frac(t/T), x, dir;
+      if(p<0.42){ x=lerp(ax+38,bx-38,ease(p/0.42)); dir=1; }
+      else if(p<0.5){ x=bx-38; dir=1; }
+      else if(p<0.92){ x=lerp(bx-38,ax+38,ease((p-0.5)/0.42)); dir=-1; }
+      else { x=ax+38; dir=-1; }
+      dot.attr('cx',x).attr('class', dir>0?'v-fill-spark':'v-fill-accent');
+      tag.attr('x',x).text(dir>0?d.v:d.st);
+      ring.attr('opacity', (p>0.42&&p<0.56)? 0.16 : 0).attr('r',34+(p>0.42&&p<0.56?7:0));
+    });
+  }
+
+  /* ---- PART IV: gRPC four shapes ---- */
+  function drawGrpc(){
+    var W=600,H=360; var s=svg('#stage-grpc',W,H); var g=s.append('g');
+    var rows=[
+      {label:'Unary',sub:'ask, then answer',mode:'ping'},
+      {label:'Server streaming',sub:'one ask, many answers',up:1,down:3},
+      {label:'Client streaming',sub:'many sends, one ack',up:3,down:1},
+      {label:'Bidirectional',sub:'both at once',up:3,down:3}
+    ];
+    var ax=150, bx=460;
+    var updaters=[];
+    rows.forEach(function(r,i){
+      var y=58+i*78;
+      g.append('text').attr('class','v-title').attr('x',16).attr('y',y-22).text(r.label);
+      g.append('text').attr('class','v-label').attr('x',16).attr('y',y-7).text(r.sub);
+      g.append('line').attr('class','v-line').attr('x1',ax+16).attr('y1',y).attr('x2',bx-16).attr('y2',y);
+      node(g.append('g'),ax,y,15,'v-node','');
+      node(g.append('g'),bx,y,15,'v-node-2','');
+      g.append('text').attr('class','v-label').attr('x',ax).attr('y',y+30).attr('text-anchor','middle').text('C');
+      g.append('text').attr('class','v-label').attr('x',bx).attr('y',y+30).attr('text-anchor','middle').text('S');
+      if(r.mode==='ping'){
+        var d=g.append('circle').attr('r',6).attr('cy',y).attr('class','v-fill-spark');
+        updaters.push(function(t){
+          var p=frac(t/2.6), x, dir;
+          if(p<0.5){ x=lerp(ax+18,bx-18,ease(p/0.5)); dir=1; } else { x=lerp(bx-18,ax+18,ease((p-0.5)/0.5)); dir=-1; }
+          d.attr('cx',x).attr('class',dir>0?'v-fill-spark':'v-fill-accent');
+        });
+      } else {
+        var ups=[], downs=[];
+        for(var u=0;u<r.up;u++){ ups.push(g.append('circle').attr('r',5.5).attr('cy',y).attr('class','v-fill-spark')); }
+        for(var dn=0;dn<r.down;dn++){ downs.push(g.append('circle').attr('r',5.5).attr('cy',y).attr('class','v-fill-accent')); }
+        updaters.push((function(ups,downs,nUp,nDown){
+          return function(t){
+            var sp=0.34;
+            ups.forEach(function(c,k){ var p=frac(t*sp + k/Math.max(1,nUp)); c.attr('cx',lerp(ax+18,bx-18,p)).attr('opacity', bump(p)*0.9+0.1); });
+            downs.forEach(function(c,k){ var p=frac(t*sp + k/Math.max(1,nDown)); c.attr('cx',lerp(bx-18,ax+18,p)).attr('opacity', bump(p)*0.9+0.1); });
+          };
+        })(ups,downs,r.up,r.down));
+      }
+    });
+    register(function(t){ for(var i=0;i<updaters.length;i++){ updaters[i](t); } });
+  }
+
+  /* ---- PART V: GraphQL round trips ---- */
+  function drawGraphql(){
+    var W=600,H=300; var s=svg('#stage-graphql',W,H); var g=s.append('g');
+    var ax=120, bx=440;
+    /* REST row */
+    var ry=66;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',ry-30).text('REST');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',ry-15).text('three trips, extra fields');
+    g.append('line').attr('class','v-line').attr('x1',ax+16).attr('y1',ry).attr('x2',bx-16).attr('y2',ry);
+    node(g.append('g'),ax,ry,15,'v-node','');
+    node(g.append('g'),bx,ry,15,'v-node-2','');
+    var labels=['/user','/orders','/shipping'];
+    var rdots=[];
+    labels.forEach(function(l,i){
+      var dot=g.append('circle').attr('r',6).attr('cy',ry).attr('class','v-fill-spark');
+      var tx=g.append('text').attr('class','v-label').attr('y',ry-12).attr('text-anchor','middle').text(l).attr('opacity',0.0);
+      rdots.push({dot:dot,tx:tx,i:i});
+    });
+    /* fat payload box on REST */
+    var fx=bx+30, fy=ry-26;
+    var pf=g.append('g');
+    for(var k=0;k<5;k++){ pf.append('rect').attr('x',fx).attr('y',fy+k*11).attr('width',64).attr('height',7).attr('rx',2).attr('class', k<2?'v-fill-accent':'v-fill-muted').attr('opacity',k<2?0.85:0.4); }
+    g.append('text').attr('class','v-label').attr('x',fx).attr('y',fy-6).text('returns all');
+
+    /* GraphQL row */
+    var gy=208;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',gy-30).text('GraphQL');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',gy-15).text('one trip, exact tree');
+    g.append('line').attr('class','v-line-live').attr('x1',ax+16).attr('y1',gy).attr('x2',bx-16).attr('y2',gy);
+    node(g.append('g'),ax,gy,15,'v-node','');
+    node(g.append('g'),bx,gy,15,'v-node-2','');
+    var gdot=g.append('circle').attr('r',7).attr('cy',gy).attr('class','v-fill-accent');
+    var gtag=g.append('text').attr('class','v-label').attr('y',gy-12).attr('text-anchor','middle').text('query{...}');
+    /* tidy payload on GraphQL */
+    var gx=bx+30, gfy=gy-16;
+    var pg=g.append('g');
+    for(var j=0;j<3;j++){ pg.append('rect').attr('x',gx).attr('y',gfy+j*11).attr('width',64).attr('height',7).attr('rx',2).attr('class','v-fill-accent').attr('opacity',0.85); }
+    g.append('text').attr('class','v-label').attr('x',gx).attr('y',gfy-6).text('exactly this');
+
+    var T=4.8;
+    register(function(t){
+      var p=frac(t/T);
+      /* REST: three sequential round trips across first 0.84 of cycle */
+      rdots.forEach(function(o){
+        var start=o.i*0.26, dur=0.24;
+        var lp=(p-start)/dur;
+        if(lp<0||lp>1){ o.dot.attr('opacity',0); o.tx.attr('opacity',0); return; }
+        var x, dir;
+        if(lp<0.5){ x=lerp(ax+18,bx-18,ease(lp/0.5)); dir=1; } else { x=lerp(bx-18,ax+18,ease((lp-0.5)/0.5)); dir=-1; }
+        o.dot.attr('cx',x).attr('opacity',1).attr('class',dir>0?'v-fill-spark':'v-fill-accent');
+        o.tx.attr('x', clamp(x,ax+20,bx-20)).attr('opacity',dir>0?0.9:0);
+      });
+      /* GraphQL: one round trip */
+      var x2, dir2;
+      var gp=p;
+      if(gp<0.5){ x2=lerp(ax+18,bx-18,ease(gp/0.5)); dir2=1; } else { x2=lerp(bx-18,ax+18,ease((gp-0.5)/0.5)); dir2=-1; }
+      gdot.attr('cx',x2).attr('class',dir2>0?'v-fill-accent':'v-fill-accent');
+      gtag.attr('x',clamp(x2,ax+20,bx-20)).attr('opacity',dir2>0?0.9:0.0).text(dir2>0?'query{...}':'data');
+    });
+  }
+
+  /* ---- PART VI: webhooks poll vs push ---- */
+  function drawWebhooks(){
+    var W=600,H=280; var s=svg('#stage-webhooks',W,H); var g=s.append('g');
+    var ax=130, bx=450;
+    /* poll row */
+    var py=70;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',py-30).text('Polling');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',py-15).text('ask again and again');
+    g.append('line').attr('class','v-line').attr('x1',ax+16).attr('y1',py).attr('x2',bx-16).attr('y2',py);
+    node(g.append('g'),ax,py,16,'v-node','');
+    node(g.append('g'),bx,py,16,'v-node-2','');
+    g.append('text').attr('class','v-label').attr('x',ax).attr('y',py+32).attr('text-anchor','middle').text('APP');
+    g.append('text').attr('class','v-label').attr('x',bx).attr('y',py+32).attr('text-anchor','middle').text('SERVICE');
+    var pdot=g.append('circle').attr('r',6).attr('cy',py).attr('class','v-fill-muted');
+    var presult=g.append('text').attr('class','v-label').attr('y',py-12).attr('text-anchor','middle');
+
+    /* push row */
+    var hy=210;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',hy-30).text('Webhook');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',hy-15).text('told the moment it happens');
+    g.append('line').attr('class','v-dash').attr('x1',ax+16).attr('y1',hy).attr('x2',bx-16).attr('y2',hy);
+    node(g.append('g'),ax,hy,16,'v-node','');
+    node(g.append('g'),bx,hy,16,'v-node-2','');
+    g.append('text').attr('class','v-label').attr('x',ax).attr('y',hy+32).attr('text-anchor','middle').text('APP');
+    g.append('text').attr('class','v-label').attr('x',bx).attr('y',hy+32).attr('text-anchor','middle').text('SERVICE');
+    var burst=g.append('circle').attr('cx',bx).attr('cy',hy).attr('r',16).attr('class','v-fill-spark').attr('opacity',0);
+    var hdot=g.append('circle').attr('r',7).attr('cy',hy).attr('class','v-fill-spark').attr('opacity',0);
+    var htag=g.append('text').attr('class','v-label').attr('y',hy-12).attr('text-anchor','middle').attr('opacity',0).text('event');
+
+    var Tp=1.4; /* poll period */
+    var Te=6.2; /* event period */
+    register(function(t){
+      /* polling: each cycle out then back, data only on multiples */
+      var cyc=Math.floor(t/Tp);
+      var hit=(cyc%4===3);
+      var p=frac(t/Tp), x, dir;
+      if(p<0.5){ x=lerp(ax+18,bx-18,ease(p/0.5)); dir=1; } else { x=lerp(bx-18,ax+18,ease((p-0.5)/0.5)); dir=-1; }
+      pdot.attr('cx',x);
+      if(dir>0){ pdot.attr('class','v-fill-muted').attr('opacity',0.85); presult.attr('opacity',0); }
+      else { var got=hit; pdot.attr('class',got?'v-fill-spark':'v-fill-muted').attr('opacity', got?1:0.7); presult.attr('x',clamp(x,ax+20,bx-20)).attr('opacity', got?0.95:0.6).text(got?'data':'empty'); }
+
+      /* webhook: event fires, single push */
+      var ep=frac(t/Te);
+      if(ep<0.12){ burst.attr('opacity', 0.22*(1-ep/0.12)).attr('r',16+ep*120); }
+      else { burst.attr('opacity',0).attr('r',16); }
+      if(ep>=0.1 && ep<0.55){
+        var lp=(ep-0.1)/0.45; var hx=lerp(bx-18,ax+18,ease(lp));
+        hdot.attr('cx',hx).attr('opacity',1);
+        htag.attr('x',clamp(hx,ax+20,bx-20)).attr('opacity',0.95);
+      } else { hdot.attr('opacity',0); htag.attr('opacity',0); }
+    });
+  }
+
+  /* ---- PART VII: websockets reconnect vs open line ---- */
+  function drawWebsockets(){
+    var W=600,H=280; var s=svg('#stage-websockets',W,H); var g=s.append('g');
+    var ax=130, bx=460;
+    /* http row */
+    var hy=70;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',hy-30).text('HTTP');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',hy-15).text('open, ask, close, repeat');
+    var httpLine=g.append('line').attr('class','v-dash').attr('x1',ax+16).attr('y1',hy).attr('x2',bx-16).attr('y2',hy);
+    node(g.append('g'),ax,hy,16,'v-node','');
+    node(g.append('g'),bx,hy,16,'v-node-2','');
+    var hdot=g.append('circle').attr('r',6).attr('cy',hy).attr('class','v-fill-spark');
+
+    /* ws row */
+    var wy=210;
+    g.append('text').attr('class','v-title').attr('x',16).attr('y',wy-30).text('WebSocket');
+    g.append('text').attr('class','v-label').attr('x',16).attr('y',wy-15).text('one line, server pushes freely');
+    g.append('line').attr('class','v-line-live').attr('x1',ax+16).attr('y1',wy).attr('x2',bx-16).attr('y2',wy);
+    node(g.append('g'),ax,wy,16,'v-node','');
+    node(g.append('g'),bx,wy,16,'v-node-2','');
+    var ups=[],downs=[];
+    for(var i=0;i<3;i++){ ups.push(g.append('circle').attr('r',5.5).attr('cy',wy).attr('class','v-fill-accent')); }
+    for(var j=0;j<3;j++){ downs.push(g.append('circle').attr('r',5.5).attr('cy',wy).attr('class','v-fill-spark')); }
+
+    var Th=2.4;
+    register(function(t){
+      /* http: line visible only during handshake/exchange, gap between */
+      var p=frac(t/Th);
+      if(p<0.7){
+        httpLine.attr('opacity',1);
+        var x,dir;
+        if(p<0.35){ x=lerp(ax+18,bx-18,ease(p/0.35)); dir=1; } else { x=lerp(bx-18,ax+18,ease((p-0.35)/0.35)); dir=-1; }
+        hdot.attr('opacity',1).attr('cx',x).attr('class',dir>0?'v-fill-spark':'v-fill-accent');
+      } else { httpLine.attr('opacity',0.25); hdot.attr('opacity',0); }
+
+      /* ws: continuous both directions */
+      ups.forEach(function(c,k){ var q=frac(t*0.32 + k/3); c.attr('cx',lerp(ax+18,bx-18,q)).attr('opacity',bump(q)*0.9+0.1); });
+      downs.forEach(function(c,k){ var q=frac(t*0.40 + k/3 + 0.15); c.attr('cx',lerp(bx-18,ax+18,q)).attr('opacity',bump(q)*0.9+0.1); });
+    });
+  }
+
+  /* ---- PART VIII: webrtc finding the path ---- */
+  function drawWebrtc(){
+    var W=600,H=340; var s=svg('#stage-webrtc',W,H); var g=s.append('g');
+    var ax=110, ay=250, bx=490, by=250;     /* peers */
+    var sx=300, sy=70;                       /* signaling + stun */
+    /* routers (boxes) */
+    function router(cx,cy){ g.append('rect').attr('x',cx-34).attr('y',cy-34).attr('width',68).attr('height',68).attr('rx',12).attr('class','v-dash').attr('fill','none'); }
+    router(ax,ay); router(bx,by);
+    /* helper server */
+    g.append('rect').attr('x',sx-70).attr('y',sy-26).attr('width',140).attr('height',52).attr('rx',12).attr('class','v-chip');
+    g.append('text').attr('class','v-label-strong').attr('x',sx).attr('y',sy-2).attr('text-anchor','middle').text('SIGNALING');
+    g.append('text').attr('class','v-label').attr('x',sx).attr('y',sy+14).attr('text-anchor','middle').text('+ STUN');
+    /* peers */
+    node(g.append('g'),ax,ay,26,'v-node','PEER A');
+    node(g.append('g'),bx,by,26,'v-node-2','PEER B');
+    /* signaling lines */
+    var lA=g.append('path').attr('d','M'+(ax)+','+(ay-26)+' Q'+((ax+sx)/2)+','+(sy+60)+' '+(sx-50)+','+(sy+20)).attr('class','v-line').attr('fill','none');
+    var lB=g.append('path').attr('d','M'+(bx)+','+(by-26)+' Q'+((bx+sx)/2)+','+(sy+60)+' '+(sx+50)+','+(sy+20)).attr('class','v-line').attr('fill','none');
+    /* direct media line */
+    var direct=g.append('line').attr('x1',ax+26).attr('y1',ay-10).attr('x2',bx-26).attr('y2',by-10).attr('class','v-line-live').attr('opacity',0);
+    var lenA=lA.node().getTotalLength?lA.node().getTotalLength():0;
+    var lenB=lB.node().getTotalLength?lB.node().getTotalLength():0;
+    var sigDot=g.append('circle').attr('r',6).attr('class','v-fill-accent').attr('opacity',0);
+    var sigDot2=g.append('circle').attr('r',6).attr('class','v-fill-accent').attr('opacity',0);
+    var m1=g.append('circle').attr('r',6).attr('cy',ay-10).attr('class','v-fill-spark').attr('opacity',0);
+    var m2=g.append('circle').attr('r',6).attr('cy',by-10).attr('class','v-fill-accent').attr('opacity',0);
+    var phaseTxt=g.append('text').attr('class','v-label-strong').attr('x',sx).attr('y',150).attr('text-anchor','middle');
+    var T=8.0;
+    register(function(t){
+      var p=frac(t/T);
+      if(p<0.42){
+        /* signaling + stun handshake */
+        phaseTxt.text('1 · swap addresses');
+        direct.attr('opacity',0);
+        var lp=frac(p/0.42*1.0);
+        if(lenA){ var ptA=lA.node().getPointAtLength(lp*lenA); sigDot.attr('cx',ptA.x).attr('cy',ptA.y).attr('opacity',bump(lp)); }
+        if(lenB){ var ptB=lB.node().getPointAtLength(lp*lenB); sigDot2.attr('cx',ptB.x).attr('cy',ptB.y).attr('opacity',bump(lp)); }
+        m1.attr('opacity',0); m2.attr('opacity',0);
+      } else {
+        /* direct media */
+        phaseTxt.text('2 · media flows direct');
+        sigDot.attr('opacity',0); sigDot2.attr('opacity',0);
+        lA.attr('opacity',0.3); lB.attr('opacity',0.3);
+        direct.attr('opacity',1);
+        var mp=frac((p-0.42)/0.58*1.6);
+        m1.attr('cx',lerp(ax+26,bx-26,frac(mp))).attr('opacity',1);
+        m2.attr('cx',lerp(bx-26,ax+26,frac(mp+0.5))).attr('opacity',1);
+        if(p>=0.96){ lA.attr('opacity',1); lB.attr('opacity',1); }
+      }
+    });
+  }
+
+  /* ---- PART IX: the map (one-shot scatter) ---- */
+  function drawMap(){
+    var W=640,H=470; var s=svg('#stage-map',W,H); var g=s.append('g');
+    var pad={l:64,r:30,t:34,b:60};
+    var x0=pad.l, x1=W-pad.r, y0=H-pad.b, y1=pad.t;
+    /* frame */
+    g.append('line').attr('class','v-line').attr('x1',x0).attr('y1',y0).attr('x2',x1).attr('y2',y0);
+    g.append('line').attr('class','v-line').attr('x1',x0).attr('y1',y0).attr('x2',x0).attr('y2',y1);
+    /* faint mid guides */
+    g.append('line').attr('class','v-dash').attr('x1',(x0+x1)/2).attr('y1',y1).attr('x2',(x0+x1)/2).attr('y2',y0).attr('opacity',0.5);
+    g.append('line').attr('class','v-dash').attr('x1',x0).attr('y1',(y0+y1)/2).attr('x2',x1).attr('y2',(y0+y1)/2).attr('opacity',0.5);
+    /* axis labels */
+    g.append('text').attr('class','v-label').attr('x',x0).attr('y',H-26).text('loose · public');
+    g.append('text').attr('class','v-label').attr('x',x1).attr('y',H-26).attr('text-anchor','end').text('coupled · internal');
+    g.append('text').attr('class','v-label').attr('transform','translate('+(x0-46)+','+y0+') rotate(-90)').text('one exchange');
+    g.append('text').attr('class','v-label').attr('transform','translate('+(x0-46)+','+(y1+96)+') rotate(-90)').text('continuous · real time');
+
+    var data=[
+      {n:'REST',x:0.16,y:0.18,c:'accent'},
+      {n:'SOAP',x:0.84,y:0.12,c:'accent'},
+      {n:'GraphQL',x:0.40,y:0.30,c:'accent'},
+      {n:'gRPC',x:0.80,y:0.56,c:'spark'},
+      {n:'Webhooks',x:0.26,y:0.50,c:'accent'},
+      {n:'WebSockets',x:0.52,y:0.82,c:'spark'},
+      {n:'WebRTC',x:0.72,y:0.94,c:'spark'}
+    ];
+    function px(d){ return lerp(x0+10,x1-10,d.x); }
+    function py(d){ return lerp(y0-10,y1+10,d.y); }
+    var pts=g.selectAll('g.pt').data(data).enter().append('g').attr('class','pt')
+      .attr('transform',function(d){ return 'translate('+px(d)+','+py(d)+')'; });
+    pts.append('circle').attr('r',0).attr('class',function(d){ return d.c==='spark'?'v-fill-spark':'v-fill-accent'; })
+      .transition().delay(function(d,i){ return reduce?0:i*110; }).duration(reduce?0:620).ease(d3.easeBackOut)
+      .attr('r',8);
+    pts.append('circle').attr('r',8).attr('fill','none').attr('class',function(d){ return d.c==='spark'?'v-line':'v-line'; })
+      .attr('opacity',0).transition().delay(function(d,i){ return reduce?0:i*110+200; }).duration(400)
+      .attr('r',16).attr('opacity',0.25);
+    pts.append('text').attr('class','v-label-strong').attr('x',13).attr('y',5)
+      .text(function(d){ return d.n; }).attr('opacity',0)
+      .transition().delay(function(d,i){ return reduce?0:i*110+260; }).duration(420).attr('opacity',1);
+  }
+
+  /* wire up on visibility */
+  whenVisible(document.getElementById('viz-shape'), drawShape);
+  whenVisible(document.getElementById('viz-rest'), drawRest);
+  whenVisible(document.getElementById('viz-grpc'), drawGrpc);
+  whenVisible(document.getElementById('viz-graphql'), drawGraphql);
+  whenVisible(document.getElementById('viz-webhooks'), drawWebhooks);
+  whenVisible(document.getElementById('viz-websockets'), drawWebsockets);
+  whenVisible(document.getElementById('viz-webrtc'), drawWebrtc);
+  whenVisible(document.getElementById('viz-map'), drawMap);
+})();
+</script>
+</body>
+</html>
