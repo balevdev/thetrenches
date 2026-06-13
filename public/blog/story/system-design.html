@@ -1,0 +1,1356 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Forces, Not the Parts &middot; A First Principles Guide to System Design &middot; The Trenches</title>
+<meta name="description" content="System design taught as a small set of forces and the moves engineers make to relieve them. Build the smallest thing, push until it breaks, name the force, apply the smallest fix. Ends with a full YouTube design.">
+<link rel="canonical" href="https://hundredsunited.com/blog/story/system-design.html">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://hundredsunited.com/blog/story/system-design.html">
+<meta property="og:title" content="The Forces, Not the Parts &middot; A First Principles Guide to System Design">
+<meta property="og:description" content="System design taught as a small set of forces and the moves engineers make to relieve them. Build the smallest thing, push until it breaks, name the force, apply the smallest fix. Ends with a full YouTube design.">
+<meta property="og:image" content="https://hundredsunited.com/images/story/samurai_system_desig.png">
+<meta property="og:image:secure_url" content="https://hundredsunited.com/images/story/samurai_system_desig.png">
+<meta property="og:image:width" content="1630">
+<meta property="og:image:height" content="965">
+<meta property="og:image:alt" content="Students seated before a luminous system-design mandala in a Tokyo dojo at dusk.">
+<meta property="og:site_name" content="The Trenches">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://hundredsunited.com/blog/story/system-design.html">
+<meta property="twitter:title" content="The Forces, Not the Parts &middot; A First Principles Guide to System Design">
+<meta property="twitter:description" content="System design taught as a small set of forces and the moves engineers make to relieve them. Build the smallest thing, push until it breaks, name the force, apply the smallest fix. Ends with a full YouTube design.">
+<meta property="twitter:image" content="https://hundredsunited.com/images/story/samurai_system_desig.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE TRENCHES :: token system
+   Semantic palette: COOL (teal/pine) = the move, the solution.
+   HEAT (amber/clay) = the force, the pressure, what breaks.
+   ============================================================ */
+:root{
+  --serif:"Spectral", Georgia, serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  --maxprose:42rem;
+  --maxwide:64rem;
+  --ease:cubic-bezier(.22,.7,.28,1);
+}
+
+/* DARK (default) ------------------------------------------------ */
+html[data-theme="dark"]{
+  --bg:        oklch(0.168 0.014 178);
+  --bg-grad:   oklch(0.205 0.022 182 / 0.55);
+  --surface-1: oklch(0.198 0.016 179);
+  --surface-2: oklch(0.232 0.018 180);
+  --surface-3: oklch(0.270 0.020 181);
+  --fg:        oklch(0.945 0.012 150);
+  --fg-dim:    oklch(0.785 0.014 160);
+  --fg-faint:  oklch(0.595 0.014 166);
+  --line:      oklch(0.345 0.018 180);
+  --line-soft: oklch(0.282 0.015 180);
+  --cool:      oklch(0.835 0.120 178);
+  --cool-deep: oklch(0.715 0.115 181);
+  --cool-glow: oklch(0.835 0.120 178 / 0.16);
+  --heat:      oklch(0.770 0.150 58);
+  --heat-deep: oklch(0.680 0.150 48);
+  --heat-glow: oklch(0.770 0.150 58 / 0.15);
+  --plum:      oklch(0.760 0.090 320);
+  --shadow:    0 18px 50px -22px oklch(0.06 0.02 180 / 0.9);
+}
+/* LIGHT --------------------------------------------------------- */
+html[data-theme="light"]{
+  --bg:        oklch(0.972 0.012 95);
+  --bg-grad:   oklch(0.945 0.022 170 / 0.6);
+  --surface-1: oklch(0.992 0.008 95);
+  --surface-2: oklch(0.958 0.012 120);
+  --surface-3: oklch(0.935 0.016 130);
+  --fg:        oklch(0.245 0.020 185);
+  --fg-dim:    oklch(0.405 0.020 180);
+  --fg-faint:  oklch(0.560 0.018 175);
+  --line:      oklch(0.860 0.018 150);
+  --line-soft: oklch(0.905 0.014 130);
+  --cool:      oklch(0.520 0.110 188);
+  --cool-deep: oklch(0.470 0.105 190);
+  --cool-glow: oklch(0.520 0.110 188 / 0.12);
+  --heat:      oklch(0.580 0.165 48);
+  --heat-deep: oklch(0.520 0.160 42);
+  --heat-glow: oklch(0.580 0.165 48 / 0.10);
+  --plum:      oklch(0.520 0.110 330);
+  --shadow:    0 18px 44px -26px oklch(0.45 0.04 120 / 0.45);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--serif);font-weight:400;
+  font-size:clamp(1.06rem,0.62rem + 0.9vw,1.22rem);
+  line-height:1.68;letter-spacing:.002em;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  transition:background .4s var(--ease), color .4s var(--ease);
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(120% 75% at 50% -12%, var(--bg-grad), transparent 58%),
+    radial-gradient(80% 50% at 100% 100%, var(--heat-glow), transparent 55%);
+}
+.wrap{position:relative;z-index:1}
+
+::selection{background:var(--cool-glow);color:var(--fg)}
+a{color:var(--cool);text-underline-offset:3px;text-decoration-thickness:1px}
+:focus-visible{outline:2px solid var(--cool);outline-offset:3px;border-radius:3px}
+
+/* progress + section dots -------------------------------------- */
+.progress{position:fixed;top:0;left:0;height:2px;width:0;
+  background:linear-gradient(90deg,var(--cool),var(--heat));z-index:60;transition:width .08s linear}
+
+/* header -------------------------------------------------------- */
+header.site{
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;padding:.85rem clamp(1rem,4vw,2.4rem);
+  background:color-mix(in oklab, var(--bg) 80%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+}
+.brand{display:flex;align-items:center;gap:.55rem;font-size:1.12rem;letter-spacing:.01em;white-space:nowrap;text-decoration:none;color:inherit;cursor:pointer}
+a.brand:hover .b2{color:var(--cool-deep)}
+.brand .glyph{width:1.05rem;height:1.05rem;display:inline-block;flex:0 0 auto}
+.brand .b1{font-weight:500;color:var(--fg)}
+.brand .b2{font-style:italic;font-weight:600;color:var(--cool)}
+nav.spy{display:flex;gap:.2rem;flex:1;justify-content:center;overflow:hidden}
+nav.spy a{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--fg-faint);text-decoration:none;padding:.4rem .55rem;border-radius:6px;
+  transition:color .15s var(--ease), background .15s var(--ease);white-space:nowrap;
+}
+nav.spy a:hover{color:var(--fg)}
+nav.spy a.active{color:var(--cool);background:var(--surface-2)}
+.hbtns{display:flex;gap:.5rem;align-items:center}
+.tgl{
+  width:2.2rem;height:2.2rem;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface-1);color:var(--fg-dim);cursor:pointer;display:grid;place-items:center;
+  transition:border-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
+}
+.tgl:hover{color:var(--cool);border-color:var(--cool-deep);transform:rotate(18deg)}
+.tgl svg{width:1.05rem;height:1.05rem}
+@media (max-width:880px){ nav.spy{display:none} }
+
+/* layout -------------------------------------------------------- */
+main{padding:0 clamp(1rem,5vw,2rem) 7rem}
+.prose{max-width:var(--maxprose);margin-inline:auto}
+.wide{max-width:var(--maxwide);margin-inline:auto}
+section{margin-top:clamp(3.5rem,7vw,6rem);scroll-margin-top:5rem}
+
+/* hero ---------------------------------------------------------- */
+.hero{max-width:var(--maxwide);margin:0 auto;padding:clamp(3rem,9vw,6.5rem) 0 1rem;text-align:center}
+.hero .eyebrow{justify-content:center}
+.hero .dek{margin-inline:auto}
+.hero .byline{justify-content:center}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cool);margin-bottom:1.3rem;display:flex;align-items:center;gap:.7rem}
+.eyebrow::before{content:"";width:1.6rem;height:1px;background:var(--cool-deep)}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.5rem,8.5vw,5rem);line-height:1.02;letter-spacing:-.012em;margin:0 0 1.2rem;color:var(--fg)}
+h1 em{font-style:italic;font-weight:500;color:var(--cool)}
+h1 .heat{color:var(--heat);font-style:italic;font-weight:500}
+.dek{max-width:40rem;font-size:clamp(1.15rem,0.8rem + 1vw,1.42rem);line-height:1.52;color:var(--fg-dim)}
+.byline{margin-top:2.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.74rem;letter-spacing:.05em;color:var(--fg-faint)}
+.byline .av{width:2.3rem;height:2.3rem;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--cool);font-weight:600;font-family:var(--serif);font-size:1rem;overflow:hidden}
+.byline .av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.byline b{color:var(--fg-dim);font-weight:500}
+.byline span{display:inline-flex;gap:.45rem;align-items:center}
+.dotsep{width:3px;height:3px;border-radius:50%;background:var(--fg-faint);display:inline-block}
+
+/* headings ------------------------------------------------------ */
+h2{font-family:var(--serif);font-weight:700;font-size:clamp(1.75rem,4.5vw,2.7rem);line-height:1.1;letter-spacing:-.01em;margin:0 0 .2rem;color:var(--fg)}
+h2 .num{font-family:var(--mono);font-size:.78rem;font-weight:500;color:var(--heat-deep);letter-spacing:.16em;display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;text-transform:uppercase}
+h2 .num::after{content:"";flex:1;height:1px;background:var(--line-soft);max-width:7rem}
+h3{font-family:var(--serif);font-weight:600;font-size:clamp(1.3rem,2.5vw,1.55rem);line-height:1.25;margin:2.6rem 0 .2rem;color:var(--fg)}
+.lede{font-size:clamp(1.16rem,0.9rem + .7vw,1.34rem);line-height:1.5;color:var(--fg-dim);margin:1.3rem 0 0}
+p{margin:1.35rem 0}
+.prose p:first-of-type{margin-top:1.5rem}
+strong{font-weight:600;color:var(--fg)}
+em{font-style:italic}
+.prose ul{margin:1.35rem 0;padding-left:0;list-style:none}
+.prose ul li{position:relative;padding-left:1.6rem;margin:.7rem 0;color:var(--fg-dim)}
+.prose ul li::before{content:"";position:absolute;left:.15rem;top:.7em;width:.42rem;height:.42rem;background:var(--cool-deep);border-radius:1px;transform:rotate(45deg)}
+.prose ul li strong{color:var(--fg)}
+.prose ul.heat li::before{background:var(--heat-deep)}
+
+/* chips --------------------------------------------------------- */
+.chip{font-family:var(--mono);font-size:.82em;font-weight:500;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:5px;padding:.06em .42em;color:var(--fg);white-space:nowrap}
+.chip.get{color:var(--cool)}
+.chip.write{color:var(--heat)}
+
+/* pull quote ---------------------------------------------------- */
+.pull{margin:clamp(2.4rem,5vw,3.4rem) auto;max-width:var(--maxprose);border-left:2px solid var(--cool);padding:.2rem 0 .2rem 1.6rem}
+.pull p{font-size:clamp(1.35rem,1rem + 1.1vw,1.6rem);line-height:1.38;font-weight:400;color:var(--fg);font-style:italic;margin:0}
+.pull.heat{border-left-color:var(--heat)}
+
+/* spec row ------------------------------------------------------ */
+.specrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0;background:var(--surface-1)}
+.specrow .cell{padding:1.25rem 1.35rem;border-right:1px solid var(--line-soft)}
+.specrow .cell:last-child{border-right:none}
+.specrow .lab{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool-deep);margin-bottom:.65rem}
+.specrow .val{font-size:1.02rem;line-height:1.35;color:var(--fg)}
+@media(max-width:620px){.specrow{grid-template-columns:1fr 1fr}.specrow .cell:nth-child(2n){border-right:none}}
+
+/* figure / panel ----------------------------------------------- */
+figure{margin:clamp(2rem,4vw,2.8rem) 0;padding:0}
+.panel{border:1px solid var(--line-soft);border-radius:16px;background:var(--surface-1);padding:clamp(1.1rem,3vw,1.8rem);box-shadow:var(--shadow)}
+.panel-title{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
+.panel-title .tag{margin-left:auto;color:var(--heat-deep);font-size:.62rem}
+.panel-sub{font-size:.98rem;color:var(--fg-faint);margin-bottom:1.3rem;line-height:1.45}
+figcaption{font-size:.92rem;color:var(--fg-faint);margin-top:.9rem;line-height:1.5}
+figcaption b{color:var(--fg-dim);font-weight:500}
+
+/* controls ------------------------------------------------------ */
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.3rem;align-items:center}
+.controls .clab{font-family:var(--mono);font-size:.72rem;color:var(--fg-faint);margin-right:.2rem}
+button.seg{font-family:var(--mono);font-size:.74rem;letter-spacing:.03em;background:var(--surface-2);color:var(--fg-dim);border:1px solid var(--line-soft);border-radius:8px;padding:.45rem .8rem;cursor:pointer;transition:all .12s var(--ease)}
+button.seg:hover{color:var(--fg);border-color:var(--line)}
+button.seg[aria-pressed="true"]{background:transparent;color:var(--heat);border-color:var(--heat-deep)}
+button.act{font-family:var(--mono);font-size:.78rem;letter-spacing:.03em;background:var(--cool);color:var(--bg);border:1px solid var(--cool);border-radius:8px;padding:.5rem 1rem;cursor:pointer;font-weight:600;transition:filter .12s var(--ease),transform .12s var(--ease)}
+button.act:hover{filter:brightness(1.06)}
+button.act:active{transform:translateY(1px)}
+button.ghost{font-family:var(--mono);font-size:.78rem;background:transparent;color:var(--fg-dim);border:1px solid var(--line-soft);border-radius:8px;padding:.5rem 1rem;cursor:pointer;transition:all .12s var(--ease)}
+button.ghost:hover{color:var(--fg);border-color:var(--line)}
+.pill{display:inline-flex;border:1px solid var(--line-soft);border-radius:999px;overflow:hidden;margin-bottom:1.3rem;flex-wrap:wrap}
+.pill button{font-family:var(--mono);font-size:.74rem;padding:.45rem .95rem;background:transparent;color:var(--fg-dim);border:none;cursor:pointer;transition:all .12s var(--ease)}
+.pill button[aria-pressed="true"]{background:var(--surface-2);color:var(--cool)}
+.pill button.heaton[aria-pressed="true"]{color:var(--heat)}
+
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:var(--surface-3);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--cool);border:2px solid var(--bg);box-shadow:0 0 0 1px var(--cool-deep)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--cool);border:2px solid var(--bg)}
+
+.readout{font-family:var(--mono);font-size:.82rem;color:var(--fg-dim);line-height:1.55;min-height:2.4rem;margin-top:1.2rem;border-top:1px solid var(--line-soft);padding-top:1rem}
+.readout b{color:var(--cool)}
+.readout .o{color:var(--heat)}
+
+/* svg + d3 shared ---------------------------------------------- */
+svg{display:block;width:100%;height:auto;overflow:visible}
+.node-fill{fill:var(--surface-2)}
+.node-stroke{stroke:var(--line);stroke-width:1.5;fill:none}
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.06em;fill:var(--fg-faint)}
+.lbl.t{fill:var(--cool)}
+.lbl.h{fill:var(--heat)}
+.flow{stroke:var(--line);stroke-width:1.5;fill:none}
+.packet{fill:var(--heat)}
+.d3-axis text{font-family:var(--mono);font-size:10px;fill:var(--fg-faint)}
+.d3-axis path,.d3-axis line{stroke:var(--line-soft)}
+.d3-grid line{stroke:var(--line-soft);stroke-dasharray:2 4;opacity:.6}
+
+/* takeaway ------------------------------------------------------ */
+.takeaway{border:1px solid var(--line-soft);border-left:2px solid var(--heat);border-radius:0 14px 14px 0;background:var(--surface-1);padding:1.2rem 1.45rem;margin:2.2rem auto;max-width:var(--maxprose)}
+.takeaway .tk{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--heat);margin-bottom:.55rem}
+.takeaway p{margin:0;font-size:1.1rem;line-height:1.5;color:var(--fg)}
+
+/* force/move ledger card --------------------------------------- */
+.fm{display:grid;grid-template-columns:1fr;gap:.7rem;margin:2rem auto;max-width:var(--maxprose)}
+.fm-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.7rem;border:1px solid var(--line-soft);border-radius:12px;padding:.85rem 1rem;background:var(--surface-1)}
+.fm-row .force{font-family:var(--mono);font-size:.8rem;color:var(--heat)}
+.fm-row .move{font-family:var(--mono);font-size:.8rem;color:var(--cool);text-align:right}
+.fm-row .arr{color:var(--fg-faint);font-family:var(--mono);font-size:.85rem}
+@media(max-width:540px){.fm-row{grid-template-columns:1fr;text-align:left}.fm-row .move{text-align:left}.fm-row .arr{display:none}}
+
+/* plate image --------------------------------------------------- */
+.plate{margin:clamp(2.4rem,5vw,3.5rem) auto;max-width:var(--maxwide);border-radius:18px;overflow:hidden;border:1px solid var(--line-soft);position:relative;box-shadow:var(--shadow)}
+.plate img{display:block;width:100%;height:auto}
+.plate .cap{position:absolute;left:0;right:0;bottom:0;padding:1.4rem clamp(1rem,3vw,1.8rem) 1.1rem;background:linear-gradient(to top, oklch(0.1 0.02 180 / 0.86), transparent);font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:oklch(0.92 0.01 160);text-transform:uppercase}
+
+/* cache layers -------------------------------------------------- */
+.layers{display:flex;flex-direction:column;gap:.5rem}
+.layer{display:grid;grid-template-columns:1fr 7rem;gap:1rem;align-items:center;border:1px solid var(--line-soft);border-radius:11px;padding:.85rem 1.1rem;background:var(--surface-1);transition:border-color .14s var(--ease),background .14s var(--ease);cursor:pointer}
+.layer:hover,.layer.lit{border-color:var(--cool-deep);background:var(--surface-2)}
+.layer .lname{font-family:var(--serif);font-size:1.05rem;color:var(--fg)}
+.layer .ldesc{font-size:.85rem;color:var(--fg-faint);margin-top:.12rem;line-height:1.4}
+.layer .lat{font-family:var(--mono);font-size:.82rem;color:var(--cool);text-align:right}
+@media(max-width:480px){.layer{grid-template-columns:1fr 5rem}}
+
+/* number ribbon ------------------------------------------------- */
+.ribbon{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0}
+.ribbon .r{background:var(--surface-1);padding:1.2rem 1.2rem}
+.ribbon .rn{font-family:var(--serif);font-weight:700;font-size:clamp(1.5rem,3vw,2rem);color:var(--cool);line-height:1}
+.ribbon .rl{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-faint);margin-top:.5rem;line-height:1.4}
+
+/* reveal -------------------------------------------------------- */
+.reveal{opacity:0;transform:translateY(16px)}
+.reveal.in{opacity:1;transform:none;transition:opacity .6s var(--ease),transform .6s var(--ease)}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1!important;transform:none!important}}
+
+hr.rule{max-width:var(--maxwide);margin:clamp(3.5rem,7vw,5rem) auto;border:none;border-top:1px solid var(--line-soft)}
+.divider{max-width:var(--maxprose);margin:4rem auto;border:none;border-top:1px solid var(--line-soft)}
+.note{font-size:1.02rem;color:var(--fg-faint);font-style:italic}
+
+footer{max-width:var(--maxprose);margin:5rem auto 0;padding-top:2rem;border-top:1px solid var(--line-soft);color:var(--fg-faint);font-size:.96rem}
+footer .brand{margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+
+<header class="site">
+  <a class="brand" href="/" aria-label="The Trenches — home">
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 6h18M6 12h12M9 18h6" stroke="var(--heat)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <span class="b1">The</span><span class="b2">Trenches</span>
+  </a>
+  <nav class="spy" id="spy" aria-label="Sections">
+    <a href="#frame">Frame</a>
+    <a href="#fork">Fork</a>
+    <a href="#scale">Scale</a>
+    <a href="#spof">Failure</a>
+    <a href="#queue">Queue</a>
+    <a href="#data">Data</a>
+    <a href="#cache">Cache</a>
+    <a href="#api">API</a>
+    <a href="#capstone">Capstone</a>
+  </nav>
+  <div class="hbtns">
+    <button class="tgl" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero reveal" id="top">
+    <div class="eyebrow">System Design &middot; The Long Read</div>
+    <h1>The <em>Forces</em>,<br>Not the <span class="heat">Parts</span></h1>
+    <p class="dek">Most people learn system design as a glossary. DNS, sharding, idempotency, a hundred terms with no connective tissue. Here is the other way: a small set of forces, and the moves engineers make to relieve them. Learn the pressures and the catalog falls out on its own. We start with one box, push until it breaks, and by the end we have designed YouTube together.</p>
+    <div class="byline">
+      <span class="av"><img src="/images/author/boyan-balev.jpg" alt="Boyan Balev" loading="lazy" width="37" height="37"></span>
+      <span><b>Boyan Balev</b></span>
+      <span class="dotsep"></span>
+      <span>35 min read</span>
+      <span class="dotsep"></span>
+      <span>Junior to Staff</span>
+      <span class="dotsep"></span>
+      <span>The Trenches Field Manual</span>
+    </div>
+  </div>
+
+  <!-- the image plate -->
+  <div class="plate reveal">
+    <img src="/images/story/samurai_system_desig.png" alt="The Trenches field plate" loading="eager">
+    <div class="cap">Field manual &middot; build the smallest thing, then earn every box</div>
+  </div>
+
+  <!-- HERO BLUEPRINT (assembles via GSAP) -->
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The whole arc, in one picture <span class="tag">assembles as you read</span></div>
+      <div class="panel-sub">One box on the left. Every component to its right earns its place by relieving a pressure that box could not survive. We add them one at a time, and we name the force each one answers. Cool nodes are moves we make. Warm labels are the forces that pushed us.</div>
+      <svg id="heroMap" viewBox="0 0 920 240" role="img" aria-label="A single server growing into a distributed system, each node labelled by the force it relieves">
+        <g id="hm-links"></g>
+        <g id="hm-nodes"></g>
+        <circle id="hm-packet" class="packet" r="4.5" cx="60" cy="120" opacity="0"/>
+      </svg>
+      <div class="controls" style="margin-bottom:0;margin-top:1.2rem">
+        <button class="ghost" id="hmReplay">Replay the build</button>
+        <span class="clab" id="hmStage">one server, holding everything</span>
+      </div>
+    </div>
+    <figcaption>Read it left to right. We will earn every node, in order, and you will know exactly why each one is there. Nothing here is magic, and nothing here is memorized.</figcaption>
+  </figure>
+
+  <!-- THESIS -->
+  <section class="prose reveal">
+    <p>The gap between a junior engineer and a senior one is not years. It is how they reason about systems. A junior reaches for the right noun. A senior reaches for the right tradeoff. When you can name what a system actually needs and then choose deliberately, the interview round stops being a memory test and becomes a conversation, and your day job stops being a pile of tools and becomes a sequence of decisions you can defend.</p>
+    <p>Every concept in this guide is an answer to a specific pressure. Statelessness answers "how do I add a second server without breaking logins." Caching answers "this read is too slow and the database is on fire." A message queue answers "one slow dependency keeps taking down a flow that does not need it." Learn the pressure first and the technique is obvious. Learn the technique first and you are carrying a glossary you will freeze on under stress, because you will not know which term the moment in front of you is asking for.</p>
+    <p>So we will build a system the way you actually build one in real life. Start with the smallest thing that works. Push on it until it breaks. Name the force that broke it. Apply the smallest move that fixes it. Repeat. By the end the whole picture above will be assembled, and you will have watched every piece arrive for a reason you can state in one sentence.</p>
+  </section>
+
+  <div class="pull reveal"><p>You do not study system design by collecting parts. You study the forces, and the parts arrive exactly when you need them.</p></div>
+
+  <!-- 00 THE FRAME -->
+  <section class="prose reveal" id="frame">
+    <h2><span class="num">00 / The Frame</span>How to think before you draw</h2>
+    <p class="lede">Before a single box goes on the whiteboard, there is an order of operations. It works in interviews because it works in real life, and it is the difference between a design that grows cleanly and one that gets bolted together in a panic.</p>
+    <p>The mistake under pressure is to start drawing. Resist it. Drawing first means you commit to a shape before you understand the problem, and then you spend the rest of the session defending a shape you chose blind. The same five steps that pass a system design round are the steps a careful engineer runs in their head before touching any infrastructure.</p>
+    <ul>
+      <li><strong>Requirements, in two flavors.</strong> Functional requirements are the features, the "users should be able to" statements. Non functional requirements are the qualities: scalability, latency, availability, durability, consistency. The functional list is usually short and obvious. The non functional list is where the real engineering lives, because that is where the tradeoffs hide, and tradeoffs are the entire job.</li>
+      <li><strong>Core entities.</strong> The nouns that get stored and exchanged. A video, a user, an order. You do not need the full schema yet. You need to know what the system is fundamentally about, because the entities decide what your data tier has to protect.</li>
+      <li><strong>The API.</strong> The contract with the outside world. Derive it straight from the functional requirements, roughly one endpoint per feature. This is the surface everyone downstream depends on, and it is the first thing that becomes expensive to change.</li>
+      <li><strong>High level design.</strong> The simplest set of components that satisfies the features. Not fast, not scaled, not fault tolerant. Just correct. You are proving the idea works before you make it survive the real world.</li>
+      <li><strong>Deep dives.</strong> Now walk the non functional list one item at a time and evolve the design until each quality is met. This is the fun part, and it is where senior signal shows up, because this is where you trade one thing for another out loud.</li>
+    </ul>
+    <p>Notice the shape. You earn the right to talk about scale only after the thing is correct. People who lead with "I would use Kafka and shard the database" before they know what the system does are performing competence, not demonstrating it.</p>
+
+    <h3>Learn to count before you scale</h3>
+    <p>There is one more skill that lives inside the Frame, and almost nobody teaches it: rough arithmetic. You cannot reason about scale if you cannot estimate it, and estimation is mostly knowing a handful of numbers and being willing to round hard. A day has about 86,400 seconds, which you should round to 100,000, or ten to the fifth. That single move turns "one million writes a day" into roughly ten writes per second on average, and if you assume traffic peaks at five times the average, you are designing for about fifty writes per second. That is a small number. Knowing it is small stops you from over engineering, which is the most common and most expensive mistake there is.</p>
+    <p>The other numbers worth carrying in your head are the latencies, because they decide where work is allowed to happen. They span many orders of magnitude, and the whole craft of performance is keeping hot work near the fast end of this ladder.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Numbers every engineer should know <span class="tag">log scale, one frame</span></div>
+      <div class="panel-sub">Latency, drawn on a logarithmic axis so a single picture can hold the gap between a CPU cache and a trip across the ocean. Each step right is roughly ten times slower than the one before. This is why "just put it in memory" and "just hit the database" are not the same sentence.</div>
+      <div id="latencyChart"></div>
+      <div class="readout" id="latRead">From an L1 cache hit to a packet crossing the Atlantic is a factor of about one hundred million. Every caching decision in this article is an attempt to stay on the left side of this chart.</div>
+    </div>
+    <figcaption>The useful intuition: memory is a thousand times faster than disk, disk is faster than the network within a datacenter, and crossing the planet costs you more than everything else combined. Where data lives is a latency decision before it is anything else.</figcaption>
+  </figure>
+
+  <!-- 01 THE FORK / CAP -->
+  <section class="prose reveal" id="fork">
+    <h2><span class="num">01 / The First Fork</span>Consistency or availability</h2>
+    <p class="lede">The very first deep dive, almost every time, is a single question that decides the personality of your whole system. It comes from the CAP theorem, and it is taught badly almost everywhere.</p>
+    <p>CAP is usually presented as "pick two of three: consistency, availability, partition tolerance." That framing is misleading and it makes people memorize a triangle instead of understanding a choice. In any real system spread across a network, partitions are not optional. Cables get cut, packets drop, a switch reboots, two nodes briefly lose sight of each other. Partition tolerance is a fact you live with, not a slider you set. So the triangle collapses to a line.</p>
+    <p>The real choice is between the other two, and only during a partition. <strong>Consistency</strong> means every read returns the most recent write. <strong>Availability</strong> means the system always answers, even if it cannot promise the answer is the very latest. When a partition splits your nodes, a write lands on one side, and a read arrives on the other side, you have exactly two options. Refuse to answer rather than serve data you cannot vouch for, or answer with what you have and accept it might be stale. That is the whole decision, and it is worth feeling rather than reciting.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">CAP, lived not memorized</div>
+      <div class="panel-sub">A partition splits your nodes. A write lands on Node A. Now a read arrives at Node B, which cannot reach A. What does B do? Toggle the choice and watch the answer it gives.</div>
+      <div class="pill" role="group" aria-label="choose mode">
+        <button id="cpBtn" aria-pressed="true">Choose consistency (CP)</button>
+        <button id="apBtn" class="heaton" aria-pressed="false">Choose availability (AP)</button>
+      </div>
+      <svg id="capSvg" viewBox="0 0 720 190" role="img" aria-label="A network partition with a write on one side and a read on the other">
+        <line x1="360" y1="20" x2="360" y2="178" stroke="var(--heat-deep)" stroke-width="1.5" stroke-dasharray="5 6"/>
+        <text x="360" y="12" class="lbl h" text-anchor="middle">PARTITION</text>
+        <rect x="60" y="68" width="96" height="48" rx="10" class="node-fill"/><rect x="60" y="68" width="96" height="48" rx="10" class="node-stroke"/>
+        <text x="108" y="97" class="lbl t" text-anchor="middle">NODE A</text>
+        <rect x="564" y="68" width="96" height="48" rx="10" class="node-fill"/><rect x="564" y="68" width="96" height="48" rx="10" class="node-stroke"/>
+        <text x="612" y="97" class="lbl t" text-anchor="middle">NODE B</text>
+        <text x="108" y="48" class="lbl h" text-anchor="middle">WRITE x = 2</text>
+        <text x="612" y="48" class="lbl" text-anchor="middle">READ x</text>
+        <path class="flow" d="M156,92 H300"/>
+        <path class="flow" d="M420,92 H564" id="capLink"/>
+        <text id="capAnswer" x="612" y="150" class="lbl t" text-anchor="middle">x = 2</text>
+      </svg>
+      <div class="readout" id="capRead"></div>
+    </div>
+    <figcaption>Here is the part that separates the strong answer from the weak one. Almost no real system makes this choice once and globally. Different operations choose differently. A bank transfer and a permission check demand consistency, because a stale answer is a security hole or lost money. A content feed and a view count are perfectly happy being eventually consistent, because nobody is harmed if the like count is a few seconds behind. The senior answer is never "I will use eventual consistency." It is "these operations need strong consistency and here is exactly why, these others do not and here is why they are safe."</figcaption>
+  </figure>
+
+  <!-- 02 ONE BOX -->
+  <section class="prose reveal">
+    <h2><span class="num">02 / One Box</span>Start with a single server</h2>
+    <p class="lede">Every complex system started simple. So do we. One server holds the app, the database, the cache, everything, and it serves a small group of happy users.</p>
+    <p>A user types <span class="chip">app.demo.com</span> and hits enter. Their browser asks DNS, the domain name system, which maps that human readable name to an IP address. Think of DNS as the phone book of the internet: you know the name, DNS gives you the number. It hands back your server's address. Now the client has a location, opens a connection, sends an HTTP request, and your server does the work and sends back a response. HTML for a browser, JSON for a mobile app. That is the entire loop, and for a real product with a real but modest user base, it is genuinely enough. Do not let anyone shame you out of shipping it.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The request, end to end</div>
+      <div class="panel-sub">The client asks DNS where the server lives, gets an address back, then talks to the server directly. Watch one request travel the whole loop.</div>
+      <svg id="reqSvg" viewBox="0 0 760 150" role="img" aria-label="Client resolves DNS then requests from the server">
+        <circle cx="60" cy="75" r="24" class="node-fill"/><circle cx="60" cy="75" r="24" class="node-stroke"/>
+        <text x="60" y="120" class="lbl" text-anchor="middle">CLIENT</text>
+        <rect x="320" y="20" width="120" height="44" rx="9" class="node-fill"/><rect x="320" y="20" width="120" height="44" rx="9" class="node-stroke"/>
+        <text x="380" y="47" class="lbl t" text-anchor="middle">DNS</text>
+        <rect x="640" y="50" width="100" height="50" rx="9" class="node-fill"/><rect x="640" y="50" width="100" height="50" rx="9" class="node-stroke"/>
+        <text x="690" y="80" class="lbl t" text-anchor="middle">SERVER</text>
+        <path class="flow" id="r1" d="M84,68 C200,40 240,42 320,42"/>
+        <path class="flow" id="r2" d="M84,82 C260,110 480,90 640,80"/>
+        <circle id="rp" class="packet" r="5" cx="84" cy="68"/>
+        <text id="reqStage" x="380" y="138" class="lbl t" text-anchor="middle">resolving name</text>
+      </svg>
+    </div>
+    <figcaption>This is ideal for a small user base. It is also fragile in three specific ways, and naming those three weaknesses gives us the entire roadmap for the rest of this guide.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <p>That single box has exactly three weaknesses, and almost everything that follows is a cure for one of them.</p>
+    <ul class="heat">
+      <li><strong>It has a ceiling.</strong> You can only buy so much RAM and CPU for one machine. Past a point you physically cannot grow it, no matter how much money you throw at it.</li>
+      <li><strong>It has no twin.</strong> If it dies, the whole product dies with it. There is nothing to fall back to, so a single hardware fault is a total outage.</li>
+      <li><strong>It remembers things.</strong> It holds sessions, carts, and login state in local memory. That memory feels harmless now, and it is the single hidden reason scaling is hard, as we are about to see.</li>
+    </ul>
+  </section>
+
+  <!-- 03 SCALING + STATELESSNESS -->
+  <section class="prose reveal" id="scale">
+    <h2><span class="num">03 / The Ceiling and the Twin</span>Scaling, and the catch nobody mentions</h2>
+    <p class="lede">There are two ways to grow. One is honest and limited. The other is unlimited but demands a discipline most tutorials skip right past, and that discipline is the whole game.</p>
+    <p><strong>Vertical scaling</strong>, scaling up, means a bigger box. More RAM, more CPU, faster disk, all on the same machine. It is the simplest move and it genuinely works for low and moderate traffic, often for far longer than people expect. Do not sneer at it. The catch is the two weaknesses it cannot fix: hardware has a real maximum, so the ceiling is still there, and a single box still has no twin, so a crash is still a complete outage. Vertical scaling buys you headroom, not resilience.</p>
+    <p><strong>Horizontal scaling</strong>, scaling out, means more boxes. Three servers instead of one, sharing the load behind something that spreads requests across them. This is the path past the ceiling. It gives you fault tolerance, because a death leaves survivors who keep serving. And it scales almost linearly, because growing means adding another identical machine. It is the answer for anything large, and it is what every system you admire actually does.</p>
+    <p>Here is the catch nobody mentions when they say "just add servers." You can only add servers if the servers are interchangeable. And they are only interchangeable if they are <strong>stateless</strong>, meaning no single server holds something that only it knows.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Why state decides everything</div>
+      <div class="panel-sub">A stateless server remembers nothing about you between requests. Every request carries what the server needs, usually a token the client holds. Flip the switch and watch what the load balancer is suddenly allowed to do.</div>
+      <div class="pill" role="group" aria-label="state mode">
+        <button id="stickyBtn" class="heaton" aria-pressed="true">Stateful (sticky sessions)</button>
+        <button id="freeBtn" aria-pressed="false">Stateless (shared store)</button>
+      </div>
+      <svg id="stateSvg" viewBox="0 0 760 230" role="img" aria-label="Routing under sticky sessions versus a shared store">
+        <circle cx="55" cy="115" r="22" class="node-fill"/><circle cx="55" cy="115" r="22" class="node-stroke"/>
+        <text x="55" y="158" class="lbl" text-anchor="middle">USER</text>
+        <rect x="180" y="92" width="76" height="46" rx="8" class="node-fill"/><rect x="180" y="92" width="76" height="46" rx="8" class="node-stroke"/>
+        <text x="218" y="119" class="lbl t" text-anchor="middle">LB</text>
+        <g id="srvGroup">
+          <rect x="420" y="20" width="86" height="44" rx="8" class="node-fill"/><rect x="420" y="20" width="86" height="44" rx="8" class="node-stroke"/>
+          <text x="463" y="46" class="lbl" text-anchor="middle">SERVER 1</text>
+          <rect x="420" y="93" width="86" height="44" rx="8" class="node-fill"/><rect x="420" y="93" width="86" height="44" rx="8" class="node-stroke"/>
+          <text x="463" y="119" class="lbl" text-anchor="middle">SERVER 2</text>
+          <rect x="420" y="166" width="86" height="44" rx="8" class="node-fill"/><rect x="420" y="166" width="86" height="44" rx="8" class="node-stroke"/>
+          <text x="463" y="192" class="lbl" text-anchor="middle">SERVER 3</text>
+        </g>
+        <path class="flow" d="M77,115 H180"/>
+        <g id="routeLines"></g>
+        <g id="storeNode" style="opacity:0">
+          <rect x="600" y="93" width="100" height="44" rx="8" class="node-fill"/><rect x="600" y="93" width="100" height="44" rx="8" class="node-stroke"/>
+          <text x="650" y="119" class="lbl t" text-anchor="middle">REDIS</text>
+          <path class="flow" d="M506,42 C560,42 560,108 600,112"/>
+          <path class="flow" d="M506,115 H600"/>
+          <path class="flow" d="M506,188 C560,188 560,122 600,118"/>
+        </g>
+      </svg>
+      <div class="readout" id="stateRead"></div>
+    </div>
+    <figcaption>When state lives on a specific server, that user is chained to it. The load balancer's hands are tied, the servers are not really interchangeable, and if that one box dies the session dies with it and the user gets logged out. Move the state into a shared store like Redis and every server becomes identical. Now the balancer routes freely, you add and remove servers without losing anyone's session, and you get real fault tolerance. So before you ask "how do I scale this," ask "what state is each server holding, and where should it actually live."</figcaption>
+  </figure>
+
+  <div class="takeaway reveal">
+    <div class="tk">The load bearing idea</div>
+    <p>Horizontal scaling is not really about adding machines. It is about making your machines interchangeable, and statelessness is what makes them interchangeable. Almost every hard scaling problem you will ever meet is a state problem wearing a costume.</p>
+  </div>
+
+  <!-- 04 LOAD BALANCERS -->
+  <section class="prose reveal">
+    <h2><span class="num">04 / The Traffic Cop</span>Load balancers, and how they actually decide</h2>
+    <p class="lede">Once you have twins, something has to decide which twin handles each request. That something is a load balancer, and it sits in front of your fleet as the single front door everyone walks through.</p>
+    <p>People list load balancing algorithms like trivia, as if you need to recite all seven on demand. The useful way to hold them is by the question each one answers. You almost never pick an algorithm in the abstract. You recognize the force you are facing and reach for the valve that relieves it. Play with the simulator below, then read the strategies as answers to situations rather than as a menu.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Load balancer, decision by decision <span class="tag">live simulator</span></div>
+      <div class="panel-sub">Pick a strategy, then send requests and watch where they land and why. The point is not the animation. It is feeling how each strategy spreads load differently, so you can match the algorithm to the situation in front of you.</div>
+      <div class="controls" role="group" aria-label="algorithm">
+        <button class="seg" data-alg="rr" aria-pressed="true">Round robin</button>
+        <button class="seg" data-alg="lc" aria-pressed="false">Least connections</button>
+        <button class="seg" data-alg="wt" aria-pressed="false">Weighted</button>
+        <button class="seg" data-alg="ip" aria-pressed="false">IP hash</button>
+      </div>
+      <div id="lbChart"></div>
+      <div class="controls" style="margin-top:1.2rem;margin-bottom:0">
+        <button class="act" id="lbSend">Send request</button>
+        <button class="act" id="lbBurst" style="background:var(--heat);border-color:var(--heat)">Send 12</button>
+        <button class="ghost" id="lbReset">Reset</button>
+      </div>
+      <div class="readout" id="lbRead">Round robin hands requests out in a rotation: server one, then two, then three, then back to one. The simplest thing that works when every server is roughly identical.</div>
+    </div>
+    <figcaption>The strategies, by the question each one answers.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <ul>
+      <li><strong>Round robin.</strong> Hand requests out in strict rotation. Best when every server is roughly identical and every request costs about the same. It is the boring default, and the boring default is correct more often than people admit.</li>
+      <li><strong>Least connections.</strong> Send the next request to whoever has the fewest open connections right now. Best when sessions vary wildly in length, because raw rotation would happily pile three long lived connections onto one box while another sits idle.</li>
+      <li><strong>Least response time.</strong> Favor the server that is both responsive and lightly loaded, blending latency with connection count. Best when servers differ in capability and you care most about the slowest requests.</li>
+      <li><strong>Weighted.</strong> Give bigger machines bigger shares. Best when your fleet is not uniform, say one box with sixty four gigabytes of RAM standing next to two with sixteen. You hand the strong server proportionally more work.</li>
+      <li><strong>IP hash.</strong> Hash the client address so a given client always lands on the same server. Useful when a server holds something about that client. Notice the tension though: this fights statelessness, and if you find yourself reaching for it, that is usually a sign the state belongs in a shared store instead of being pinned to a machine.</li>
+      <li><strong>Consistent hashing.</strong> The grown up version of IP hash, and important enough that we give it its own section later. Place servers and clients on a ring and route each client to the nearest server clockwise. You keep stickiness, but adding or removing a server only reshuffles a thin slice of clients instead of all of them.</li>
+      <li><strong>Geographic.</strong> Route each user to the server physically closest to them. Best for global products where the latency of crossing the planet, the right edge of that chart above, is the headline cost.</li>
+    </ul>
+    <p>How does the balancer know a server died? <strong>Health checks.</strong> It pings each server on a schedule and keeps a live list of who is up. The moment a check fails a few times in a row, it stops routing there until the check passes again. This same trick, a heartbeat plus a live roster, reappears for almost every component in this guide, which is a good sign you are learning a force and not a fact.</p>
+    <p>And now an uncomfortable observation that sets up the next idea. We added the load balancer to remove a single point of failure, and the load balancer is now itself a single point of failure. If it dies, nobody reaches anything. We have moved the fragility, not removed it.</p>
+  </section>
+
+  <!-- 05 SPOF + reliability math -->
+  <section class="prose reveal" id="spof">
+    <h2><span class="num">05 / The Lens</span>Single points of failure, and the math of staying up</h2>
+    <p class="lede">A single point of failure is any one component that takes the whole system down when it stops. Treat it as a lens you point at every box on the board, asking the same question each time: what happens if exactly this dies?</p>
+    <p>It is worth stating why these matter, because it is more than "things break." A single point of failure hurts you three ways at once. It hurts <strong>reliability</strong>, because one death is a full outage, which is usually a direct loss of money and trust. It hurts <strong>scalability</strong>, because the choke point caps the whole system no matter how much you grow around it. And it hurts <strong>security</strong>, because an attacker who finds the one fragile node can take everything down by overwhelming just that node, which is a cheap attack for a large payoff.</p>
+    <p>The cures are a small, reusable set, and you will apply the same three to load balancers, app servers, databases, and queues alike. <strong>Redundancy</strong>: run more than one of the thing, so a death leaves a survivor. Two load balancers, and if one dies the other carries the traffic. <strong>Health checks and monitoring</strong>: watch each component continuously so you learn it failed in seconds, not when a customer emails you. <strong>Self healing</strong>: when you detect a death, automatically replace it with a fresh instance, so there is no human standing in the critical path at three in the morning.</p>
+    <p>There is a deeper version of this idea that quietly reshapes how you build, and it is pure arithmetic. In a synchronous system where each step waits on the next, your end to end reliability is the <em>product</em> of every dependency's reliability. Chain services that are each up ninety nine percent of the time and the chain is not ninety nine percent. Each link multiplies, and the product only ever goes down. Watch what happens as the chain grows.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Reliability is a product, not an average <span class="tag">drag the slider</span></div>
+      <div class="panel-sub">Set how reliable each individual service is, then watch the end to end uptime fall as you chain more of them together synchronously. The lesson is brutal and simple: chaining dependencies multiplies their failure, so the fix is to stop chaining.</div>
+      <div class="controls" style="margin-bottom:1rem">
+        <span class="clab">per service uptime</span>
+        <input type="range" id="relSlider" min="90" max="99.99" step="0.01" value="99" style="flex:1;min-width:160px">
+        <span id="relVal" style="font-family:var(--mono);font-size:.82rem;color:var(--cool);min-width:4rem">99.00%</span>
+      </div>
+      <div id="relChart"></div>
+      <div class="readout" id="relRead"></div>
+    </div>
+    <figcaption>Translate the percentages into time and they get visceral. Three nines, ninety nine point nine percent, is about eight hours and forty five minutes of downtime a year. Four nines is about fifty two minutes. Five nines is around five minutes. Now notice that a chain of ten services at four nines each lands you back at roughly three nines overall, turning fifty two minutes of downtime a year into almost nine hours. This is why decoupling is not a luxury. The synchronous chain is a reliability tax you pay on every request, and the next section is how you stop paying it.</figcaption>
+  </figure>
+
+  <!-- 06 MESSAGE QUEUES -->
+  <section class="prose reveal" id="queue">
+    <h2><span class="num">06 / The Buffer</span>Message queues, or how to stop one slow thing from breaking everything</h2>
+    <p class="lede">A user places an order. In a synchronous world you call inventory, then payment, then notifications, all in real time, all before the user hears back. You have built a chain of dependencies, and the chart you just saw says the chain is only as reliable as the product of its links.</p>
+    <p>If the notification service is slow or down, the entire order fails, even though sending an email is the least important part of placing an order. That is absurd, and a message queue is how you fix it. Instead of calling each service directly and waiting, you publish an event, <span class="chip">order.placed</span>, and a broker holds it durably. Inventory, payment, and notifications each pick it up and process it on their own schedule. If notifications is down, its copy of the message simply waits in the queue and gets handled when the service recovers. The order still goes through, because the customer's success no longer depends on the email being sent this instant.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Synchronous chain versus the queue</div>
+      <div class="panel-sub">Knock the notification service offline and compare the two designs. In the chain, the whole flow fails because the last call fails. With a queue, the work simply waits and drains later, and the order succeeds.</div>
+      <div class="controls" role="group" aria-label="downed service">
+        <span class="clab">notification service is</span>
+        <button class="seg" id="upBtn" aria-pressed="true">up</button>
+        <button class="seg" id="downBtn" aria-pressed="false">down</button>
+      </div>
+      <svg id="mqSvg" viewBox="0 0 760 250" role="img" aria-label="A synchronous chain above and an asynchronous queue below">
+        <text x="20" y="24" class="lbl t">SYNCHRONOUS</text>
+        <rect x="20" y="40" width="90" height="40" rx="8" class="node-fill"/><rect x="20" y="40" width="90" height="40" rx="8" class="node-stroke"/><text x="65" y="64" class="lbl" text-anchor="middle">ORDER</text>
+        <rect x="170" y="40" width="90" height="40" rx="8" class="node-fill"/><rect x="170" y="40" width="90" height="40" rx="8" class="node-stroke"/><text x="215" y="64" class="lbl" text-anchor="middle">INVENTORY</text>
+        <rect x="320" y="40" width="90" height="40" rx="8" class="node-fill"/><rect x="320" y="40" width="90" height="40" rx="8" class="node-stroke"/><text x="365" y="64" class="lbl" text-anchor="middle">PAYMENT</text>
+        <rect id="syncNotif" x="470" y="40" width="100" height="40" rx="8" class="node-fill"/><rect x="470" y="40" width="100" height="40" rx="8" class="node-stroke"/><text x="520" y="64" class="lbl" text-anchor="middle">NOTIFY</text>
+        <path class="flow" d="M110,60 H170"/><path class="flow" d="M260,60 H320"/><path class="flow" d="M410,60 H470"/>
+        <text id="syncResult" x="620" y="64" class="lbl t">ok</text>
+        <text x="20" y="150" class="lbl t">ASYNCHRONOUS</text>
+        <rect x="20" y="166" width="90" height="40" rx="8" class="node-fill"/><rect x="20" y="166" width="90" height="40" rx="8" class="node-stroke"/><text x="65" y="190" class="lbl" text-anchor="middle">ORDER</text>
+        <rect x="175" y="160" width="120" height="52" rx="8" class="node-fill"/><rect x="175" y="160" width="120" height="52" rx="8" class="node-stroke"/><text x="235" y="190" class="lbl t" text-anchor="middle">QUEUE</text>
+        <rect x="360" y="130" width="90" height="36" rx="8" class="node-fill"/><rect x="360" y="130" width="90" height="36" rx="8" class="node-stroke"/><text x="405" y="152" class="lbl" text-anchor="middle">INVENTORY</text>
+        <rect x="360" y="176" width="90" height="36" rx="8" class="node-fill"/><rect x="360" y="176" width="90" height="36" rx="8" class="node-stroke"/><text x="405" y="198" class="lbl" text-anchor="middle">PAYMENT</text>
+        <rect id="asyncNotif" x="360" y="222" width="90" height="36" rx="8" class="node-fill"/><rect x="360" y="222" width="90" height="36" rx="8" class="node-stroke"/><text x="405" y="244" class="lbl" text-anchor="middle">NOTIFY</text>
+        <path class="flow" d="M110,186 H175"/>
+        <path class="flow" d="M295,186 C330,186 330,148 360,148"/>
+        <path class="flow" d="M295,186 H360"/>
+        <path class="flow" d="M295,186 C330,186 330,240 360,240"/>
+        <text id="asyncResult" x="560" y="190" class="lbl t">order placed</text>
+      </svg>
+      <div class="readout" id="mqRead"></div>
+    </div>
+    <figcaption>The trade is real and worth naming out loud. You gain resilience and decoupling. You give up the simplicity of a direct call and immediate consistency, and you take on a broker to run and monitor. Brokers like Kafka, RabbitMQ, and SQS let you fan one message out to many consumers, route by topic, or deliver point to point. Reach for a queue when a slow or flaky dependency must not be allowed to fail the main path.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <h3>The catch that queues hand you: idempotency</h3>
+    <p>Asynchronous systems retry. The network drops a confirmation, the consumer crashes after doing the work but before acknowledging it, the broker redelivers to be safe. This means a message can arrive more than once, and most queues honestly promise "at least once" delivery, not "exactly once." So your handlers must be <strong>idempotent</strong>, which means applying the same operation many times leaves the system in the same state as applying it once.</p>
+    <p>The classic example is charging a card. "Charge fifty dollars" is not idempotent: run it twice and the customer pays a hundred. "Charge fifty dollars for order 12345, and ignore it if order 12345 was already charged" is idempotent, because the second attempt sees the order is settled and does nothing. The usual mechanism is an idempotency key: the caller attaches a unique id, the handler records which ids it has processed, and a repeat is a no op. This is also why REST gives <span class="chip get">GET</span>, <span class="chip write">PUT</span>, and <span class="chip write">DELETE</span> idempotent semantics while <span class="chip write">POST</span> is not. Idempotency is the discipline that makes "at least once" safe, and once you internalize it, distributed systems stop feeling so frightening.</p>
+  </section>
+
+  <!-- 07 DATA TIER -->
+  <section class="prose reveal" id="data">
+    <h2><span class="num">07 / THE DATA TIER</span>SQL or NoSQL is the wrong question</h2>
+    <p class="lede">As traffic grows we split the web tier from the data tier so each scales on its own load. Then we pick a database, and the usual debate is framed as old versus new, or relational versus web scale. That framing is noise. The real question hides one level down.</p>
+    <p>The question is not which family is better. It is: <strong>what guarantees does this particular data need.</strong> Ask that, and the choice usually makes itself. Relational databases are built around ACID, and these four letters are worth understanding for real, not just recognizing on a slide.</p>
+    <ul>
+      <li><strong>Atomicity.</strong> A transaction is all or nothing. Moving money debits one account and credits another, and either both land or neither does. You never strand a balance halfway between two accounts.</li>
+      <li><strong>Consistency.</strong> Every committed transaction leaves the database in a valid state. Constraints, foreign keys, and rules hold at all times. You cannot write a row that breaks them, the database refuses.</li>
+      <li><strong>Isolation.</strong> Concurrent transactions do not see each other's half finished work. Two writers at the same instant get a clean result, as if they had run one after the other.</li>
+      <li><strong>Durability.</strong> Once committed, it survives. A crash one millisecond later does not lose it, because it is already on disk. Committed means permanent.</li>
+    </ul>
+    <p>NoSQL databases trade some of these guarantees for scale and flexibility, and that trade is a feature for the right workload, not a defect. Dropping the rigid schema and relaxing consistency is precisely what lets them spread across many machines so cleanly. They come in four shapes, and each shape is really a different answer to "what does my access pattern look like."</p>
+    <ul>
+      <li><strong>Document stores</strong> (MongoDB). Records are JSON like documents with flexible nested structure. A user, their profile, and their recent orders can live in one document you fetch in a single read.</li>
+      <li><strong>Wide column stores</strong> (Cassandra). Tables with dynamic columns, tuned for enormous write volume and predictable reads at massive scale. The shape behind time series and event firehoses.</li>
+      <li><strong>Key value stores</strong> (Redis, Memcached). The simplest model there is: a key, a value, blistering speed, often entirely in memory. The workhorse of caches, sessions, and rate limiters.</li>
+      <li><strong>Graph stores</strong> (Neo4j). First class entities and the relationships between them. When the question is "who is connected to whom, and how," as in social graphs or recommendations, this shape answers in one hop what relational joins answer in ten.</li>
+    </ul>
+    <p>So the decision was never SQL versus NoSQL. It is: does this data need ACID. Money, inventory, orders, anything where a partial write is a small disaster, belongs in a relational database. Activity feeds, product catalogs, telemetry, real time analytics where slightly stale is perfectly fine, often fit NoSQL better. And most serious systems run both, each holding the slice of the workload it suits. The data tier is now also a single point of failure, exactly as the lens in section 05 warned. Curing that is the next move.</p>
+  </section>
+
+  <!-- 08 SPREADING DATA -->
+  <section class="prose reveal">
+    <h2><span class="num">08 / SPREADING THE DATA</span>Replication, read replicas, and the sharding tax</h2>
+    <p class="lede">One database box has the same three weaknesses as one server box. It has a ceiling, it has no twin, and now it also holds the one thing you truly cannot afford to lose. We relieve each pressure with a different move, in order.</p>
+    <p>The first move is <strong>replication</strong>. Keep one primary that takes writes and one or more replicas that copy from it. If the primary dies, a replica is promoted and the system survives. That cures the missing twin and gives durability a second home. The catch is the same CAP tradeoff from section 01, now made physical: replicas lag the primary by milliseconds to seconds, so a read from a replica can be slightly stale. For a bank balance that matters, so you read from the primary. For a follower count it does not, so you read from a replica and save the primary's capacity.</p>
+    <p>That observation leads straight to the second move. Most systems read far more than they write, often by ten or a hundred to one. So point all reads at the <strong>read replicas</strong> and reserve the primary for writes. You have just multiplied read capacity without touching the write path, and you did it by accepting a little staleness exactly where staleness is harmless. This is the cheapest large win in the whole data tier, and it costs you nothing but the discipline to decide per query.</p>
+    <p>Replicas solve reads. They do nothing for a write ceiling, because every write still funnels through one primary, and one machine can only absorb so many. When writes themselves outgrow a single box, you reach for the heaviest move in the article: <strong>sharding</strong>, splitting the data across many primaries so each owns a slice. Sharding is a tax, not a gift. Cross shard queries get slow or impossible, transactions across shards get painful, and rebalancing is a project. Do not shard until a named write pressure forces it. But when you must, how you place keys decides whether the next resize is a shrug or an outage.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Placing keys on the ring<span class="tag">interactive</span></div>
+      <div class="panel-sub">Naive hashing assigns a key with hash(key) mod N, where N is the node count. It is balanced and simple, until N changes. Consistent hashing places nodes and keys on a ring and walks clockwise to the next node. Add or remove a node, and watch how many keys have to move under each scheme.</div>
+      <div class="pill" role="group" aria-label="hashing scheme">
+        <button id="ringConsistent" aria-pressed="true">Consistent hashing</button>
+        <button id="ringModulo" class="heaton" aria-pressed="false">hash mod N</button>
+      </div>
+      <div id="ringChart"></div>
+      <div class="controls" style="margin-top:1.2rem;margin-bottom:0">
+        <button class="act" id="ringAdd">Add a node</button>
+        <button class="ghost" id="ringRemove">Remove a node</button>
+        <button class="ghost" id="ringRehash">Reshuffle keys</button>
+      </div>
+      <div class="readout" id="ringRead"></div>
+    </div>
+    <figcaption>This is the whole reason consistent hashing exists. Under hash mod N, changing N reassigns nearly every key at once, which for a cache means a near total miss storm the instant you add a node, exactly when you were already under load. On the ring, adding a node only steals keys from its immediate neighbor, so roughly one in N keys moves and the rest stay put. Real deployments place each physical node at many points on the ring, called virtual nodes, so the slices stay even. Same idea as IP hash from section 04, grown up enough to survive resizing.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <h3>Indexes: the other half of database speed</h3>
+    <p>Spreading data across machines handles volume. Most slow queries on a single machine are a different problem with a simpler fix. Without an index, finding a row means scanning the whole table, which is fine at a thousand rows and ruinous at fifty million. An <strong>index</strong> is a sorted lookup structure, usually a B tree, that turns a full scan into a direct jump, taking a query from seconds to milliseconds. The cost is honest and worth stating: every index you add makes writes a little slower, because each insert and update must also maintain the index, and indexes take disk space. So you index the columns you filter and join on, not every column out of habit. The senior instinct is the same as everywhere else in this article. Add the index when a named slow query demands it, measure, and stop. Speed is not free, it is bought with write cost, and you should know the price you are paying.</p>
+  </section>
+
+  <div class="pull heat reveal"><p>Replicas buy read scale by spending freshness. Sharding buys write scale by spending simplicity. Every move in the data tier is a purchase, and the senior skill is knowing the price before you pay it.</p></div>
+
+  <!-- 09 CACHING -->
+  <section class="prose reveal" id="cache">
+    <h2><span class="num">09 / SPEED FOR FRESHNESS</span>Caching is one trade, made in many places</h2>
+    <p class="lede">Caching shows up in your browser, your CDN, your app server, and your database, and it can feel like a dozen unrelated topics. It is one topic wearing four hats. Every cache makes the identical trade: speed now, in exchange for the risk that the copy is slightly out of date.</p>
+    <p>You keep a copy of data somewhere faster and closer to where it is needed, and you accept that the copy might trail the source of truth. Once that single idea clicks, you stop memorizing "Redis versus CDN" as separate flashcards and start asking the only two questions that matter. Where is the bottleneck, and how stale can this data afford to be. The answers place the cache for you.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The cache stack, by distance and latency<span class="tag">interactive</span></div>
+      <div class="panel-sub">Click any layer. The chart shows where a read could be answered and how long it takes. Every layer above the database trades a little freshness for a large drop in latency, and the closer to the user a layer sits, the faster it is and the staler it is allowed to be.</div>
+      <div class="layers" id="cacheLayers">
+        <div class="layer" data-lat="1" data-stale="high"><div><div class="lname">Browser cache</div><div class="ldesc">On the device itself. Static assets and responses that rarely change.</div></div><div class="lat">~0 ms</div></div>
+        <div class="layer" data-lat="30" data-stale="high"><div><div class="lname">CDN edge</div><div class="ldesc">A server geographically near the user. Static content and popular files.</div></div><div class="lat">~10 to 50 ms</div></div>
+        <div class="layer" data-lat="3" data-stale="medium"><div><div class="lname">Application cache (Redis)</div><div class="ldesc">In front of the database. Hot read heavy queries that need millisecond answers.</div></div><div class="lat">~1 to 5 ms</div></div>
+        <div class="layer" data-lat="20" data-stale="low"><div><div class="lname">Database query cache</div><div class="ldesc">Inside the database. The last cheap stop before the disk.</div></div><div class="lat">~5 to 30 ms</div></div>
+        <div class="layer" data-lat="120" data-stale="none"><div><div class="lname">Database (source of truth)</div><div class="ldesc">Always correct, never the fastest. Everything above exists to avoid coming here.</div></div><div class="lat">slowest</div></div>
+      </div>
+      <div id="cacheChart"></div>
+      <div class="readout" id="cacheRead">Click a layer to see what answering a read there costs, and what it risks.</div>
+    </div>
+    <figcaption>The vocabulary that covers almost every caching question, and it is small. A <strong>TTL</strong> (time to live) is how long a copy may live before it expires and must be refetched. <strong>Cache aside</strong> means the app checks the cache, and on a miss reads the database and fills the cache for next time, which is the default pattern. <strong>Write through</strong> writes to cache and database together so the two never drift, paying latency on every write for that safety. <strong>Write back</strong> writes to the cache first and the database soon after, which is faster but risks losing the most recent writes if the cache dies before it flushes. Notice the through line: the shared Redis that made statelessness possible in section 03 is this same box, doing this same job. The ideas keep reinforcing each other.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <h3>The failure mode worth knowing by name</h3>
+    <p>Caches have one classic way of turning into a weapon against you, and it ties straight back to consistent hashing. A popular key expires, and in the same instant a thousand requests miss the cache and stampede the database all at once, each trying to recompute the same value. This is the <strong>thundering herd</strong>, also called a cache stampede, and it can take down a database that was comfortably idle a second earlier. The cures are small and worth carrying: stagger expirations by adding a little randomness to each TTL so keys do not all die together, or let only the first request recompute while the rest briefly wait on it, a trick called request coalescing or a mutex lock. The lesson generalizes past caches. Anything that makes many clients act in lockstep, synchronized retries, synchronized expirations, synchronized cron jobs, is a load spike waiting to happen, and a pinch of randomness is often the entire fix.</p>
+  </section>
+
+  <!-- 10 API DESIGN -->
+  <section class="prose reveal" id="api">
+    <h2><span class="num">10 / THE CONTRACT</span>API design, where mistakes are expensive forever</h2>
+    <p class="lede">Your API is a contract with every client that depends on it. Once it ships, changing it is not a code edit, it is a coordinated migration that touches everyone downstream, some of whom you have never met. Design it like it is permanent, because for your callers it very nearly is.</p>
+    <p>Three styles dominate, and once more the right one falls out of the force you are actually under, not out of fashion.</p>
+    <ul>
+      <li><strong>REST.</strong> Resource based, stateless, built on the plain HTTP verbs. <span class="chip get">GET</span> to read, <span class="chip write">POST</span> to create, <span class="chip write">PUT</span> or <span class="chip write">PATCH</span> to update, <span class="chip write">DELETE</span> to remove. Simple, cacheable, easy to reason about and document. The right default for public APIs, mobile clients, and anywhere a stable documented surface matters more than squeezing out every round trip.</li>
+      <li><strong>GraphQL.</strong> One endpoint, and the client asks for exactly the fields it wants, no more and no less. It kills the over fetching and under fetching that forces REST clients to make three calls to paint one screen. Reach for it when many different clients with different data needs hit the same backend, or when your UIs are deeply nested.</li>
+      <li><strong>gRPC.</strong> A high performance framework over HTTP/2 using protocol buffers, with streaming built in. Browsers do not speak it natively, which is exactly why it shines for internal service to service traffic where raw speed and tight contracts are the whole point and no browser is involved.</li>
+    </ul>
+    <p>The protocol underneath shapes what the API can even do, so it is worth seeing the layers honestly. Plain request and response over HTTP fits REST and hands you status codes for free. <strong>WebSockets</strong> hold a two way connection open so the server can push without being asked, which is what live chat, presence, and real time feeds need. gRPC over HTTP/2 is for fast internal calls. And below all of those sit the two transport choices everything is built on. <strong>TCP</strong> guarantees delivery and ordering through a handshake and retransmission, which is why anything where correctness is non negotiable, payments, auth, loading a web page, rides on it. <strong>UDP</strong> is faster and lighter and makes no promise that a packet arrives or arrives in order, which is exactly right for video calls and games, where a packet that shows up late is worse than useless and is better dropped than resent.</p>
+    <h3>What good REST actually looks like</h3>
+    <p>Model your domain as resources and name them with plural nouns. <span class="chip get">GET /api/v1/products</span> returns the collection, <span class="chip get">GET /api/v1/products/123</span> returns one, and <span class="chip get">GET /api/v1/products/123/reviews</span> reads a nested resource. Let the verb carry the action, never the URL. No <span class="chip">/getProducts</span>, no <span class="chip">/deleteUser</span>, because the method already says what you are doing and baking it into the path is how you end up with a thousand bespoke endpoints nobody can cache.</p>
+    <p>Return the right status codes, because callers branch on them. The 200 range means success, with 201 for "created" and 204 for "no content." The 400 range means the client erred, so 400 for a malformed request, 401 for not authenticated, 403 for authenticated but not allowed, 404 for not found. The 500 range means the server erred, and the client is not at fault. Support filtering, sorting, and pagination through query parameters, because you almost never want to return fifty thousand rows in one response. And version your API from the first day with a <span class="chip">/v1</span> prefix, so the day you must make a breaking change, old clients keep working against the old version while new clients move to the next one, and nobody's app breaks on a Tuesday.</p>
+    <p>GraphQL has its own grain and its own footguns. One endpoint, queries to read and mutations to write, and a typed schema that is the contract. It returns HTTP 200 even when something failed, so errors travel inside an <span class="chip">errors</span> field in the body rather than in the status line, which trips up anyone expecting REST conventions. Keep schemas modular, cap query depth so a client cannot nest itself into a denial of service, and use input types for mutations. The flexibility that makes GraphQL pleasant for clients is the same flexibility that lets a careless query melt your backend, so the guardrails are not optional.</p>
+  </section>
+
+  <!-- 11 AUTH -->
+  <section class="prose reveal">
+    <h2><span class="num">11 / THE DOORS</span>Who you are, and what you may do</h2>
+    <p class="lede">Two different questions, constantly confused for one. Authentication asks who you are. Authorization asks what you are allowed to do. You cannot answer the second until you have answered the first, and conflating them is the root of a surprising share of security bugs.</p>
+    <p>Before untangling them, name the pieces, because the names alone trip up experienced engineers. A <strong>JWT</strong> is a token format, not an authentication method. A <strong>bearer token</strong> is a pattern, "whoever holds this token gets in," and a JWT is the most common kind of bearer token. <strong>OAuth 2</strong> is an authorization framework, not a login method. <strong>Single sign on</strong> is a user experience goal, not a protocol. Keeping these four straight is genuinely half the battle, because most confusion in this area is people using one word for two different things.</p>
+    <h3>Authentication, by evolution</h3>
+    <p>The ladder runs from simple and weak to modern and strong, and seeing it in order makes the modern choices obvious. Basic auth sends a reversible encoding of username and password on every single request, which is unsafe without HTTPS and rarely used in production. Digest auth improved on it with hashing and is now dated. API keys are random strings a client sends with each request, simple but with no built in expiry and no embedded identity, so the server has to look each one up. Then comes the fork that matters.</p>
+    <p><strong>Session based</strong> auth stores the session on the server and hands the client a cookie that points at it. It is <em>stateful</em>: the server must remember every active session, usually in Redis, which is the exact statelessness tension from section 03 wearing an auth costume. <strong>Token based</strong> auth, usually a JWT, hands the client a signed object that carries the user id, an expiry, and claims like roles. The server verifies the signature locally, with no database lookup, which is why it scales so cleanly. In practice you issue two tokens: a short lived access token for API calls, and a long lived refresh token kept in an HTTP only cookie, used to mint fresh access tokens so the user is not forced to log in every fifteen minutes. Short access token life limits the damage if one leaks, long refresh token life keeps the experience smooth. The two token split is itself a tradeoff between security and convenience, made deliberately.</p>
+    <p>On top of these sit the protocols people actually name. <strong>OAuth 2</strong> lets one app act on a service on your behalf, handing over a scoped token instead of your password, which is how you grant an app access to your calendar without giving it your Google password. <strong>OpenID Connect</strong> adds an identity layer on top of OAuth 2, returning an ID token that states who you are, and that is what powers "sign in with Google." <strong>Single sign on</strong> uses these underneath so you authenticate once and reach many services. None of this is new machinery, it is the token ideas above, composed.</p>
+    <h3>Authorization, by model</h3>
+    <ul>
+      <li><strong>Role based (RBAC).</strong> Users get roles, roles carry permissions. Admin, editor, viewer. The most common model and the correct default for most systems. Think repository access on a code host.</li>
+      <li><strong>Attribute based (ABAC).</strong> Decisions come from attributes of the user, the resource, and the environment. "Allow if the user is in HR and the resource is internal and it is during work hours." More expressive, more complex, easier to tangle yourself into rules that contradict.</li>
+      <li><strong>Access control list (ACL).</strong> Each resource carries its own list of who may do what to it. This is how a shared document grants specific people specific rights. Precise and user centric, harder to scale to hundreds of millions of objects, but clearly workable since the largest products on earth do exactly this.</li>
+    </ul>
+    <p>Real systems combine them. The token carries identity and claims, the authorization model decides what those claims are allowed to touch. The token is the mechanism, the model is the policy, and keeping that line clear keeps the system reasoned about rather than guessed at.</p>
+    <h3>Guarding the doors</h3>
+    <p>An API is a set of doors into your system, and unguarded doors get walked through. The defenses are a checklist of specific forces, not a single product you buy. <strong>Rate limiting</strong> caps requests per user, per IP, and overall, which blunts brute force and absorbs abuse. <strong>CORS</strong> controls which browser origins may call your API at all. <strong>Parameterized queries</strong> stop SQL and NoSQL injection by never letting user input become query structure, only query data. <strong>CSRF tokens</strong> stop a logged in user's browser from being tricked into firing a hidden request they never intended. <strong>Output escaping</strong> stops cross site scripting, where an attacker stores a script that later runs in another user's browser. <strong>Firewalls and private networks</strong> keep internal tools off the public internet entirely. Each one locks a specific door against a specific attack. You do not need to fear them all at once, you need to recognize which door each one closes, and then close the ones your system actually exposes.</p>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 12 CAPSTONE -->
+  <section class="prose reveal" id="capstone">
+    <h2><span class="num">12 / THE CAPSTONE</span>We design YouTube, and every force shows up</h2>
+    <p class="lede">Now we run the frame from section 00 end to end on a real and famous problem, and watch every force we named earn its place. This is the payoff. Not new tricks, just the same principles arriving exactly when the design needs them, in the order the pressures appear.</p>
+    <p><strong>Requirements.</strong> Functional is short: users upload videos, and users watch and stream videos. Then we ask about scale and get honest numbers to design against.</p>
+    <div class="ribbon">
+      <div class="r"><div class="rn">~12 / s</div><div class="rl">uploads, from 1M a day</div></div>
+      <div class="r"><div class="rn">100M</div><div class="rl">daily active viewers</div></div>
+      <div class="r"><div class="rn">256 GB</div><div class="rl">max single video size</div></div>
+      <div class="r"><div class="rn">AP</div><div class="rl">availability over consistency</div></div>
+    </div>
+    <p>Non functional follows from those numbers: availability over consistency, support for very large uploads and streams, low latency playback even on a weak connection, and the scale to match a hundred million viewers. Notice that the very first non functional decision is CAP, exactly as in section 01. When someone uploads in Germany, does a viewer in America need that video the same second? No. A few seconds to a few minutes of propagation is completely fine. So we choose <strong>availability over consistency</strong>, and video upload becomes eventually consistent. Everyone keeps watching everything else while a new upload spreads. One honest question about the product, answered, and the personality of the whole system is set.</p>
+    <p><strong>Core entities.</strong> A user, and a video. The video splits immediately into two very different things that want to be stored in two very different places: the raw bytes you watch, which are enormous, and the metadata, the title, description, and status, which is tiny. We keep them separate from the very first sketch, because pretending they are one thing is the mistake that haunts the rest of the design.</p>
+    <p><strong>API and high level design.</strong> An upload endpoint and a watch endpoint. The raw bytes go to blob storage like S3, which is cheap and effectively infinite. The metadata goes to a separate relational database. Correct, and naive, which is exactly what section 00 asked for first. Now the deep dives break it, one quality at a time, and each fix is something we already built earlier in this article.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The upload path<span class="tag">animated</span></div>
+      <div class="panel-sub">A 256 GB file cannot ride through an API gateway, which caps a request body at a few megabytes. So the client uploads in chunks straight to S3, and your servers never touch the bytes. Watch the chunks flow direct.</div>
+      <svg id="ytUpload" viewBox="0 0 800 220" role="img" aria-label="Chunked multipart upload directly to blob storage">
+        <circle cx="55" cy="60" r="22" class="node-fill"/><circle cx="55" cy="60" r="22" class="node-stroke"/><text x="55" y="103" class="lbl" text-anchor="middle">CLIENT</text>
+        <rect x="180" y="38" width="110" height="44" rx="8" class="node-fill"/><rect x="180" y="38" width="110" height="44" rx="8" class="node-stroke"/><text x="235" y="65" class="lbl t" text-anchor="middle">VIDEO SVC</text>
+        <ellipse cx="470" cy="60" rx="56" ry="34" class="node-fill"/><ellipse cx="470" cy="60" rx="56" ry="34" class="node-stroke"/><text x="470" y="64" class="lbl t" text-anchor="middle">S3 (BLOB)</text>
+        <rect x="640" y="38" width="120" height="44" rx="8" class="node-fill"/><rect x="640" y="38" width="120" height="44" rx="8" class="node-stroke"/><text x="700" y="65" class="lbl" text-anchor="middle">METADATA DB</text>
+        <rect x="320" y="150" width="120" height="44" rx="8" class="node-fill"/><rect x="320" y="150" width="120" height="44" rx="8" class="node-stroke"/><text x="380" y="177" class="lbl t" text-anchor="middle">WORKER</text>
+        <path class="flow" id="yu1" d="M77,52 C130,40 150,40 180,48"/>
+        <path class="flow" id="yu2" d="M290,52 C420,40 560,46 640,52"/>
+        <text x="235" y="22" class="lbl" text-anchor="middle">1. post metadata, get presigned urls</text>
+        <path class="flow" id="yu3" d="M77,70 C200,140 300,90 416,72"/>
+        <text x="250" y="132" class="lbl t" text-anchor="middle">2. put chunks direct</text>
+        <path class="flow" d="M462,94 C440,130 420,150 440,160"/>
+        <text x="548" y="150" class="lbl" text-anchor="middle">3. s3 notifies worker</text>
+        <path class="flow" d="M440,165 C520,165 600,110 660,84"/>
+        <text x="612" y="182" class="lbl" text-anchor="middle">4. worker marks uploaded</text>
+        <circle id="ytPacket" class="packet" r="5" cx="77" cy="70"/>
+      </svg>
+    </div>
+    <figcaption>The flow: the client posts metadata first and gets back a set of presigned URLs. It then uploads chunks directly to S3 using multipart upload, so the bytes never pass through your servers and the gateway size cap never applies. When S3 finishes, it fires a notification to a worker, which marks the video uploaded and records its location. We never trust the client to tell us it finished, because a client can lie or simply crash mid upload. We let storage itself confirm. That single instinct, never trust the client for state that must be true, is pure senior reflex, and it shows up far beyond video.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <p>Streaming is the harder half, and it hides a lovely subtlety. Downloading a ten gigabyte file before the first frame plays is unacceptable, so we chunk again, but differently, and the difference is the whole point. The upload chunks were large, five to ten megabytes, sized to minimize request overhead. The streaming chunks are tiny, two to ten second clips cut at video keyframes, sized for fast playback start and quick switching. Same word, chunk, two completely different jobs, two completely different sizes. That is why we chunk twice, and noticing that you must is exactly the kind of thing that separates a memorized answer from an understood one.</p>
+    <p>Then we <strong>transcode</strong>. Each chunk is re encoded into several resolutions, from 4K down to 240p, so a viewer on a weak connection can be handed a smaller stream instead of a stalled one. We store these back in S3 and write a <strong>manifest file</strong> that lists, per resolution, the ordered chunk URLs. On playback the client fetches the manifest, then pulls chunks at the resolution its current bandwidth can sustain, reassessing every few seconds. This is <strong>adaptive bitrate</strong>: start a video in 4K on home wifi, walk out to a weak cellular signal, and the next chunks quietly drop to 720p without the video ever stopping. All of it, the chunking, the manifest, the adaptive fetch, is what streaming protocols like HLS and DASH handle for you. Drag the bandwidth below and watch the player choose.</p>
+  </section>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">Adaptive bitrate, live<span class="tag">interactive</span></div>
+      <div class="panel-sub">Move the slider to change the viewer's available bandwidth. The player picks the highest resolution the connection can sustain, chunk by chunk, the same decision the real client makes continuously.</div>
+      <div class="controls" style="margin-bottom:1.2rem">
+        <input type="range" id="abrSlider" min="0.4" max="30" step="0.1" value="22" style="flex:1;min-width:180px" aria-label="bandwidth in megabits per second">
+        <span id="abrVal" style="font-family:var(--mono);font-size:.82rem;color:var(--cool);min-width:8rem;text-align:right">22.0 Mbps</span>
+      </div>
+      <div id="abrChart"></div>
+      <div class="readout" id="abrRead"></div>
+    </div>
+    <figcaption>The ladder is not magic, it is a table of bitrate floors. 4K wants roughly 18 Mbps, 1080p around 6, 720p around 3, 480p around 1.2, and 240p well under that. The player keeps a buffer, watches its download speed, and steps down the instant the buffer is at risk and back up when there is headroom. Buffering happens when the player guesses too high and the buffer drains to empty, which is why a conservative ladder beats a greedy one for perceived quality.</figcaption>
+  </figure>
+
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The streaming path<span class="tag">animated</span></div>
+      <div class="panel-sub">Chunk, transcode into a ladder of resolutions, cache the popular ones near the viewer, and let the client adapt to its bandwidth chunk by chunk.</div>
+      <svg id="ytStream" viewBox="0 0 800 220" role="img" aria-label="Chunking, transcoding, CDN caching, and adaptive playback">
+        <ellipse cx="60" cy="60" rx="48" ry="30" class="node-fill"/><ellipse cx="60" cy="60" rx="48" ry="30" class="node-stroke"/><text x="60" y="64" class="lbl t" text-anchor="middle">S3</text>
+        <rect x="170" y="40" width="86" height="40" rx="8" class="node-fill"/><rect x="170" y="40" width="86" height="40" rx="8" class="node-stroke"/><text x="213" y="64" class="lbl t" text-anchor="middle">CHUNKER</text>
+        <rect x="320" y="6" width="86" height="32" rx="7" class="node-fill"/><rect x="320" y="6" width="86" height="32" rx="7" class="node-stroke"/><text x="363" y="26" class="lbl" text-anchor="middle">4K</text>
+        <rect x="320" y="44" width="86" height="32" rx="7" class="node-fill"/><rect x="320" y="44" width="86" height="32" rx="7" class="node-stroke"/><text x="363" y="64" class="lbl" text-anchor="middle">1080p</text>
+        <rect x="320" y="82" width="86" height="32" rx="7" class="node-fill"/><rect x="320" y="82" width="86" height="32" rx="7" class="node-stroke"/><text x="363" y="102" class="lbl" text-anchor="middle">240p</text>
+        <text x="363" y="130" class="lbl t" text-anchor="middle">TRANSCODE</text>
+        <rect x="470" y="44" width="86" height="40" rx="8" class="node-fill"/><rect x="470" y="44" width="86" height="40" rx="8" class="node-stroke"/><text x="513" y="68" class="lbl t" text-anchor="middle">CDN</text>
+        <circle cx="700" cy="64" r="24" class="node-fill"/><circle cx="700" cy="64" r="24" class="node-stroke"/><text x="700" y="107" class="lbl" text-anchor="middle">VIEWER</text>
+        <path class="flow" d="M108,60 H170"/>
+        <path class="flow" d="M256,56 C290,56 300,22 320,22"/>
+        <path class="flow" d="M256,60 H320"/>
+        <path class="flow" d="M256,64 C290,64 300,98 320,98"/>
+        <path class="flow" d="M406,40 C440,40 450,60 470,62"/>
+        <path class="flow" d="M406,98 C440,98 450,70 470,68"/>
+        <path class="flow" d="M556,64 H676" id="ytStreamLink"/>
+        <text x="616" y="50" class="lbl t" text-anchor="middle">adaptive</text>
+        <circle id="ytStreamPacket" class="packet" r="5" cx="556" cy="64"/>
+      </svg>
+    </div>
+    <figcaption>The CDN here is section 09 again, no new idea required. Popular chunks and the manifest sit on edge servers near the viewer, so a request from New York is answered in New York instead of crossing the country to S3. Caching where it is hot, exactly the trade we already named, applied to the most bandwidth hungry workload in the design.</figcaption>
+  </figure>
+
+  <section class="prose reveal">
+    <h3>Does it scale? Walk the bottlenecks.</h3>
+    <p>This is the section 05 lens pointed at the finished design, component by component, and the satisfying part is that every answer traces back to something we already built. The video service is stateless, so it scales horizontally to any size, which is section 03. The API gateway doubles as a load balancer, which is section 04. S3 is effectively infinite, so the raw bytes are never the constraint. The metadata is tiny, about a kilobyte per video, so a million videos a day is roughly 365 GB a year, comfortable on a single relational instance for years, and if we ever outgrow that we shard by video id, which is section 08. The chunker and transcoders are stateless workers that scale out under CPU and memory pressure, section 03 again. The CDN is the genuinely expensive part, and that is a budget decision, not an architecture flaw. Every scaling story in this enormous system is a principle from earlier in this one article, arriving exactly where the pressure demanded it.</p>
+    <p>And the level ladder is the honest part to say out loud, because it is what the room is really measuring. A mid level engineer reaches chunking and CDNs with some prompting. A senior arrives at multipart upload and the need to chunk twice without being led there, and handles transcoding and adaptive bitrate when nudged. A staff engineer gets there proactively, splits bytes from metadata on instinct, and might teach the interviewer something about failure handling in the transcode pipeline or back pressure when the upload firehose outruns the workers. The difference was never vocabulary. It is how early, and how independently, the right tradeoff surfaces. Which is the entire thesis of this piece, now demonstrated on something real.</p>
+  </section>
+
+  <div class="pull reveal"><p>Good system design is choosing the right tradeoff for the circumstance you are in. Not reciting the catalog. Naming what the system actually needs, then deciding deliberately, out loud, with the reason attached.</p></div>
+
+  <!-- 13 META -->
+  <section class="prose reveal">
+    <h2><span class="num">13 / THE META LESSON</span>What you actually carry out of here</h2>
+    <p class="lede">You will not be asked to recite these definitions, on the job or in the room. You will be handed a pressure and asked which release valve fits, and why. That is the only skill underneath all of this, and three habits separate the people who have it from the people who memorized a list.</p>
+    <p>First, they decide per operation, not per system. CAP is chosen one endpoint at a time. SQL and NoSQL live side by side, each on the workload it suits. Read replicas serve the queries that tolerate staleness and the primary serves the ones that do not. Caches go only where a read is genuinely hot. The lazy answer reaches for one global setting and applies it everywhere. The strong answer says "this operation needs strong consistency and here is the reason, this one does not and here is the reason," and means both halves.</p>
+    <p>Second, they trace every component back to the force that justifies it. If you cannot say what pressure a box on the board relieves, the box should not be on the board. A load balancer answers "I have interchangeable twins now." A queue answers "one slow dependency must not be allowed to fail the whole flow." A read replica answers "reads dwarf writes and most reads tolerate lag." A CDN answers "this viewer is far from the source." When you can narrate the why for every node, the design defends itself, and the conversation stops being a quiz.</p>
+    <p>Third, they respect simple solutions, which is the rarest and most senior habit of the three. Vertical scaling is real and serves moderate load honestly. A single relational database with good indexes runs enormous products for years. The instinct to reach immediately for the most distributed, most fault tolerant, most fashionable option is the same instinct that builds a system nobody can operate at three in the morning. The senior move is to add complexity only when a named pressure forces it, and not one component sooner, because every box you add is a box that can fail, page someone, and need to be understood.</p>
+    <p>That is the whole craft, and it fits in one line. Start with the smallest thing that works, push on it until it breaks, name the force that broke it, apply the smallest move that relieves it, and repeat. Do that honestly and the giant diagram at the top of this page stops being something you memorize and becomes something you could have derived yourself, on a whiteboard, from nothing but the pressures. Which, when you strip away the vocabulary, is exactly what being good at system design has always meant.</p>
+  </section>
+
+  <section class="wide reveal">
+    <h3 style="max-width:var(--maxprose);margin-inline:auto">The whole article as a lookup table</h3>
+    <p class="note" style="max-width:var(--maxprose);margin:.6rem auto 0">Every force in this piece, paired with the smallest move that relieves it. If you remember nothing else, remember the shape: a pressure on the left, a deliberate move on the right, and a reason connecting them.</p>
+    <div class="fm">
+      <div class="fm-row"><span class="force">one box, traffic grows</span><span class="arr">&rarr;</span><span class="move">scale up, then out</span></div>
+      <div class="fm-row"><span class="force">servers not interchangeable</span><span class="arr">&rarr;</span><span class="move">make them stateless</span></div>
+      <div class="fm-row"><span class="force">which twin handles this?</span><span class="arr">&rarr;</span><span class="move">load balancer</span></div>
+      <div class="fm-row"><span class="force">one component kills the system</span><span class="arr">&rarr;</span><span class="move">redundancy, health checks</span></div>
+      <div class="fm-row"><span class="force">chained reliability decays</span><span class="arr">&rarr;</span><span class="move">stop chaining, go async</span></div>
+      <div class="fm-row"><span class="force">slow dependency fails the flow</span><span class="arr">&rarr;</span><span class="move">message queue</span></div>
+      <div class="fm-row"><span class="force">queue redelivers messages</span><span class="arr">&rarr;</span><span class="move">idempotent handlers</span></div>
+      <div class="fm-row"><span class="force">data needs all or nothing</span><span class="arr">&rarr;</span><span class="move">ACID, relational</span></div>
+      <div class="fm-row"><span class="force">data needs spread and scale</span><span class="arr">&rarr;</span><span class="move">NoSQL by shape</span></div>
+      <div class="fm-row"><span class="force">reads dwarf writes</span><span class="arr">&rarr;</span><span class="move">read replicas</span></div>
+      <div class="fm-row"><span class="force">writes outgrow one box</span><span class="arr">&rarr;</span><span class="move">shard, pay the tax</span></div>
+      <div class="fm-row"><span class="force">resize remaps every key</span><span class="arr">&rarr;</span><span class="move">consistent hashing</span></div>
+      <div class="fm-row"><span class="force">this read is too slow</span><span class="arr">&rarr;</span><span class="move">cache by distance</span></div>
+      <div class="fm-row"><span class="force">popular key expires at once</span><span class="arr">&rarr;</span><span class="move">jitter the TTL</span></div>
+      <div class="fm-row"><span class="force">over and under fetching</span><span class="arr">&rarr;</span><span class="move">GraphQL grain</span></div>
+      <div class="fm-row"><span class="force">who are you, what may you do</span><span class="arr">&rarr;</span><span class="move">tokens plus a model</span></div>
+      <div class="fm-row"><span class="force">file too big for the gateway</span><span class="arr">&rarr;</span><span class="move">chunked direct to blob</span></div>
+      <div class="fm-row"><span class="force">weak connection, no stalls</span><span class="arr">&rarr;</span><span class="move">adaptive bitrate</span></div>
+    </div>
+  </section>
+
+
+  <footer class="reveal">
+    <div class="brand">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M6 12h12M9 18h6" stroke="var(--heat)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span class="b1">The</span><span class="b2">Trenches</span>
+    </div>
+    <p>Written for engineers who would rather understand the forces than memorize the parts. The method is the message: start with the smallest thing that works, push until it breaks, name the force that broke it, apply the smallest move that fixes it, repeat. Do that honestly and the giant diagram at the top stops being something you memorize and becomes something you could have derived yourself.</p>
+    <p style="margin-top:1.4rem;color:var(--fg-faint);font-size:.85rem;font-family:var(--mono);letter-spacing:.04em">BY BOYAN BALEV &middot; THE TRENCHES &middot; FIELD MANUAL SERIES</p>
+  </footer>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hasGSAP = typeof gsap !== 'undefined';
+  var hasD3 = typeof d3 !== 'undefined';
+  if (hasGSAP && typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
+  var $ = function(id){ return document.getElementById(id); };
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(name, attrs){ var e = document.createElementNS(SVGNS, name); if(attrs){ for(var k in attrs) e.setAttribute(k, attrs[k]); } return e; }
+
+  /* ---------- THEME (session only, no storage) ---------- */
+  (function(){
+    var root = document.documentElement, btn = $('themeBtn'), icon = $('themeIcon');
+    var moon = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>';
+    var sun = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+    var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    function apply(t){ root.setAttribute('data-theme', t); if(icon) icon.innerHTML = (t === 'dark') ? sun : moon; }
+    apply(prefersLight ? 'light' : 'dark');
+    if(btn) btn.addEventListener('click', function(){ apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+  })();
+
+  /* ---------- PROGRESS BAR ---------- */
+  (function(){
+    var bar = $('progress'); if(!bar) return;
+    function on(){ var h = document.documentElement, max = h.scrollHeight - h.clientHeight; bar.style.width = (max > 0 ? (h.scrollTop / max * 100) : 0) + '%'; }
+    document.addEventListener('scroll', on, {passive:true}); window.addEventListener('resize', on); on();
+  })();
+
+  /* ---------- REVEALS ---------- */
+  (function(){
+    var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+    if(reduce || !els.length){ els.forEach(function(e){ e.classList.add('in'); }); return; }
+    if(hasGSAP && typeof ScrollTrigger !== 'undefined'){
+      els.forEach(function(el){
+        ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function(){ el.classList.add('in'); } });
+      });
+    } else {
+      var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, {threshold:0.1, rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){ io.observe(el); });
+    }
+  })();
+
+  /* ---------- SCROLL SPY ---------- */
+  (function(){
+    var nav = $('spy'); if(!nav) return;
+    var links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+    var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+    function on(){
+      var y = window.scrollY + 140, best = -1;
+      targets.forEach(function(t, i){ if(t && t.offsetTop <= y) best = i; });
+      links.forEach(function(a, i){ a.classList.toggle('active', i === best); });
+    }
+    document.addEventListener('scroll', on, {passive:true}); on();
+  })();
+
+  /* generic packet loop along an existing path id */
+  function packetLoop(pathId, dotId, dur){
+    var path = $(pathId), dot = $(dotId);
+    if(!path || !dot) return;
+    var len = path.getTotalLength();
+    if(reduce){ var e = path.getPointAtLength(len); dot.setAttribute('cx', e.x); dot.setAttribute('cy', e.y); dot.setAttribute('opacity', 1); return; }
+    dot.setAttribute('opacity', 1);
+    var start = null;
+    function step(ts){ if(!start) start = ts; var t = ((ts - start) % dur) / dur; var p = path.getPointAtLength(t * len); dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); requestAnimationFrame(step); }
+    requestAnimationFrame(step);
+  }
+
+  /* ---------- HERO BLUEPRINT ---------- */
+  (function(){
+    var links = $('hm-links'), nodes = $('hm-nodes'), packet = $('hm-packet'), stage = $('hmStage'), replay = $('hmReplay');
+    if(!links || !nodes) return;
+    var N = {
+      client: {x:60,  y:120, r:22, label:'CLIENT', kind:'c'},
+      lb:     {x:215, y:120, w:84, h:46, label:'LB', t:1, kind:'r'},
+      s1:     {x:390, y:54,  w:78, h:38, label:'APP', kind:'r'},
+      s2:     {x:390, y:101, w:78, h:38, label:'APP', kind:'r'},
+      s3:     {x:390, y:148, w:78, h:38, label:'APP', kind:'r'},
+      cache:  {x:585, y:58,  w:92, h:40, label:'CACHE', t:1, kind:'r'},
+      queue:  {x:585, y:150, w:92, h:40, label:'QUEUE', t:1, kind:'r'},
+      data:   {x:820, y:120, rx:48, ry:32, label:'DATA', t:1, kind:'e'}
+    };
+    var L = [
+      ['client','lb'], ['lb','s1'], ['lb','s2'], ['lb','s3'],
+      ['s2','cache'], ['s2','queue'], ['s1','data'], ['s2','data'], ['s3','data']
+    ];
+    var steps = [
+      {nodes:['client'], say:'one box, holding everything'},
+      {nodes:['lb'], say:'traffic grows: a load balancer to spread it'},
+      {nodes:['s1','s2','s3'], say:'stateless twins, scaled horizontally'},
+      {nodes:['cache'], say:'hot reads: a cache for speed'},
+      {nodes:['queue'], say:'slow dependency: a queue to decouple it'},
+      {nodes:['data'], say:'the source of truth, replicated and sharded'}
+    ];
+    function center(n){ if(n.kind==='c') return {x:n.x, y:n.y}; if(n.kind==='e') return {x:n.x, y:n.y}; return {x:n.x + n.w/2, y:n.y + n.h/2}; }
+    function edge(a, b){ var ca = center(a), cb = center(b); var ax = ca.x, bx = cb.x; if(a.w) ax = ca.x + (cb.x>ca.x? a.w/2 : -a.w/2); else if(a.r) ax = ca.x + (cb.x>ca.x? a.r : -a.r); else if(a.rx) ax = ca.x + (cb.x>ca.x? a.rx : -a.rx); var bxx = cb.x + (ca.x>cb.x? (b.w? b.w/2 : b.r||b.rx||0) : -(b.w? b.w/2 : b.r||b.rx||0)); return 'M'+ax+','+ca.y+' C'+(ax+ (bxx-ax)/2)+','+ca.y+' '+(ax+(bxx-ax)/2)+','+cb.y+' '+bxx+','+cb.y; }
+    var linkEls = {};
+    L.forEach(function(pair){ var p = svgEl('path', {d: edge(N[pair[0]], N[pair[1]]), class:'flow', opacity:0}); links.appendChild(p); linkEls[pair.join('-')] = p; });
+    var nodeEls = {};
+    Object.keys(N).forEach(function(key){
+      var n = N[key]; var g = svgEl('g', {opacity:0}); var shape;
+      if(n.kind==='c'){ shape = svgEl('circle', {cx:n.x, cy:n.y, r:n.r}); }
+      else if(n.kind==='e'){ shape = svgEl('ellipse', {cx:n.x, cy:n.y, rx:n.rx, ry:n.ry}); }
+      else { shape = svgEl('rect', {x:n.x, y:n.y, width:n.w, height:n.h, rx:8}); }
+      var fill = shape.cloneNode(); fill.setAttribute('class','node-fill'); var stroke = shape.cloneNode(); stroke.setAttribute('class','node-stroke');
+      var c = center(n); var ly = n.kind==='c'? c.y+n.r+18 : (n.kind==='e'? c.y+n.ry+18 : c.y);
+      var label = svgEl('text', {x:c.x, y:(n.kind==='r'? c.y+4 : ly), 'text-anchor':'middle', class:'lbl' + (n.t? ' t' : '')}); label.textContent = n.label;
+      g.appendChild(fill); g.appendChild(stroke); g.appendChild(label); nodes.appendChild(g); nodeEls[key] = g;
+    });
+    function reveal(){
+      var seen = {};
+      if(reduce || !hasGSAP){
+        Object.keys(nodeEls).forEach(function(k){ nodeEls[k].setAttribute('opacity',1); });
+        L.forEach(function(p){ linkEls[p.join('-')].setAttribute('opacity', .85); });
+        if(stage) stage.textContent = 'every node earns its place';
+        packetLoop2(); return;
+      }
+      var tl = gsap.timeline();
+      steps.forEach(function(st){
+        st.nodes.forEach(function(k){ seen[k] = true; tl.fromTo(nodeEls[k], {opacity:0, transformOrigin:'center', scale:.6}, {opacity:1, scale:1, duration:.5, ease:'back.out(1.7)'}, '<+0.08'); });
+        L.forEach(function(p){ if(seen[p[0]] && seen[p[1]]){ var el = linkEls[p.join('-')]; if(el && !el._lit){ el._lit = true; tl.to(el, {opacity:.85, duration:.4}, '<'); } } });
+        if(stage) tl.call(function(msg){ stage.textContent = msg; }, [st.say], '<');
+        tl.to({}, {duration:.5});
+      });
+      tl.call(packetLoop2);
+    }
+    function packetLoop2(){
+      if(!packet) return;
+      var d = edge(N.client, N.lb) + ' ' + edge(N.lb, N.s2).slice(1) + ' ' + edge(N.s2, N.data).slice(1);
+      var tmp = svgEl('path', {d:d}); tmp.style.visibility='hidden'; $('heroMap').appendChild(tmp);
+      var len = tmp.getTotalLength();
+      if(reduce){ var e = tmp.getPointAtLength(len); packet.setAttribute('cx', e.x); packet.setAttribute('cy', e.y); packet.setAttribute('opacity',1); return; }
+      packet.setAttribute('opacity', 1); var start = null, dur = 4200;
+      function step(ts){ if(!start) start = ts; var t = ((ts - start) % dur) / dur; var p = tmp.getPointAtLength(t * len); packet.setAttribute('cx', p.x); packet.setAttribute('cy', p.y); requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    }
+    if(hasGSAP && typeof ScrollTrigger !== 'undefined' && !reduce){
+      ScrollTrigger.create({ trigger:'#heroMap', start:'top 80%', once:true, onEnter: reveal });
+    } else { reveal(); }
+    if(replay) replay.addEventListener('click', function(){
+      Object.keys(nodeEls).forEach(function(k){ nodeEls[k].setAttribute('opacity', 0); });
+      L.forEach(function(p){ var el = linkEls[p.join('-')]; el.setAttribute('opacity', 0); el._lit = false; });
+      reveal();
+    });
+  })();
+
+  /* ---------- LATENCY CHART (D3, log scale) ---------- */
+  (function(){
+    var host = $('latencyChart'); if(!host || !hasD3) return;
+    var data = [
+      {name:'L1 cache', ns:1, note:'1 ns'},
+      {name:'Main memory', ns:100, note:'100 ns'},
+      {name:'SSD read', ns:100000, note:'100 us'},
+      {name:'Network, same datacenter', ns:500000, note:'500 us'},
+      {name:'Across the country', ns:50000000, note:'50 ms'},
+      {name:'Across the ocean', ns:150000000, note:'150 ms'}
+    ];
+    var W = 700, rowH = 46, m = {l:170, r:64, t:14, b:14}, H = m.t + m.b + data.length * rowH;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%').attr('role','img').attr('aria-label','Latency from L1 cache to crossing the ocean, on a log scale');
+    var x = d3.scaleLog().domain([0.8, 2e8]).range([m.l, W - m.r]);
+    var maxNs = d3.max(data, function(d){ return d.ns; });
+    data.forEach(function(d, i){
+      var y = m.t + i * rowH, frac = Math.log(d.ns) / Math.log(maxNs);
+      var col = 'color-mix(in oklch, var(--cool) ' + Math.round((1 - frac) * 100) + '%, var(--heat))';
+      svg.append('text').attr('x', m.l - 12).attr('y', y + rowH/2 + 4).attr('text-anchor','end').attr('class','lbl').text(d.name);
+      svg.append('rect').attr('x', m.l).attr('y', y + 9).attr('height', rowH - 22).attr('rx', 4).attr('fill', col).attr('width', 0)
+         .transition().delay(i * 90).duration(reduce?0:700).attr('width', Math.max(2, x(d.ns) - m.l));
+      svg.append('text').attr('x', m.l + 8).attr('y', y + rowH/2 + 4).attr('class','lbl').style('fill','var(--bg)').style('font-weight','700').attr('opacity',0).text(d.note)
+         .transition().delay(i*90 + 300).duration(reduce?0:300).attr('opacity', frac > 0.18 ? 1 : 0);
+      if(frac <= 0.18){ svg.append('text').attr('x', x(d.ns) + 8).attr('y', y + rowH/2 + 4).attr('class','lbl').style('fill','var(--cool)').text(d.note); }
+    });
+  })();
+
+  /* ---------- CAP TOGGLE ---------- */
+  (function(){
+    var cp = $('cpBtn'), ap = $('apBtn'), ans = $('capAnswer'), link = $('capLink'), read = $('capRead');
+    if(!cp) return;
+    function set(mode){
+      var isCP = mode === 'cp';
+      cp.setAttribute('aria-pressed', isCP); ap.setAttribute('aria-pressed', !isCP);
+      if(isCP){
+        ans.textContent = 'error'; ans.setAttribute('fill','var(--heat)');
+        link.setAttribute('stroke','var(--heat-deep)'); link.setAttribute('stroke-dasharray','4 5');
+        read.innerHTML = '<span class="o">CP, consistency.</span> Node B cannot confirm it holds the newest value, so it refuses rather than serve something possibly stale. The read returns an <b>error</b>. You kept correctness and gave up availability during the partition. The right call for money, inventory, and permissions.';
+      } else {
+        ans.textContent = 'x = 1 (stale)'; ans.setAttribute('fill','var(--cool)');
+        link.setAttribute('stroke','var(--line)'); link.removeAttribute('stroke-dasharray');
+        read.innerHTML = '<span>AP, availability.</span> Node B answers with what it has, the old value <b>x = 1</b>, and reconciles once the partition heals. You stayed up and accepted staleness. The right call for feeds, view counts, and anything eventually consistent.';
+      }
+    }
+    cp.addEventListener('click', function(){ set('cp'); });
+    ap.addEventListener('click', function(){ set('ap'); });
+    set('cp');
+  })();
+
+  /* ---------- REQUEST LIFECYCLE ---------- */
+  (function(){
+    var dot = $('rp'), stage = $('reqStage'), p1 = $('r1'), p2 = $('r2'); if(!dot || !p1 || !p2) return;
+    if(reduce){ var e = p2.getPointAtLength(p2.getTotalLength()); dot.setAttribute('cx', e.x); dot.setAttribute('cy', e.y); if(stage) stage.textContent = 'server responds'; return; }
+    var phase = 0, start = null, d1 = 1500, pause = 650, d2 = 1700;
+    function step(ts){ if(!start) start = ts; var el = ts - start;
+      if(phase === 0){ var t = Math.min(el/d1, 1); var p = p1.getPointAtLength(t * p1.getTotalLength()); dot.setAttribute('cx', p.x); dot.setAttribute('cy', p.y); if(stage) stage.textContent = 'resolving the name'; if(t >= 1){ phase = 1; start = ts; } }
+      else if(phase === 1){ if(stage) stage.textContent = 'got the ip address'; if(el > pause){ phase = 2; start = ts; } }
+      else { var t2 = Math.min(el/d2, 1); var p2p = p2.getPointAtLength(t2 * p2.getTotalLength()); dot.setAttribute('cx', p2p.x); dot.setAttribute('cy', p2p.y); if(stage) stage.textContent = 'request to the server'; if(t2 >= 1){ phase = 0; start = ts; var s = p1.getPointAtLength(0); dot.setAttribute('cx', s.x); dot.setAttribute('cy', s.y); } }
+      requestAnimationFrame(step);
+    }
+    requestAnimationFrame(step);
+  })();
+
+  /* ---------- STATELESSNESS TOGGLE ---------- */
+  (function(){
+    var sticky = $('stickyBtn'), free = $('freeBtn'), lines = $('routeLines'), store = $('storeNode'), read = $('stateRead');
+    if(!sticky) return;
+    function draw(mode){
+      lines.innerHTML = '';
+      if(mode === 'sticky'){
+        sticky.setAttribute('aria-pressed', true); free.setAttribute('aria-pressed', false); store.style.opacity = 0;
+        var live = svgEl('path', {d:'M256,115 C340,115 360,115 420,115', class:'flow', stroke:'var(--heat-deep)', 'stroke-width':2.4}); lines.appendChild(live);
+        ['M256,115 C320,115 340,42 420,42','M256,115 C320,115 340,188 420,188'].forEach(function(d){ lines.appendChild(svgEl('path', {d:d, class:'flow', stroke:'var(--line-soft)', 'stroke-dasharray':'3 6'})); });
+        read.innerHTML = '<span class="o">Sticky sessions.</span> The session lives on server 2, so the user is chained to server 2. The other servers cannot help, and if server 2 dies the session dies with it. The load balancer has no freedom to route.';
+      } else {
+        sticky.setAttribute('aria-pressed', false); free.setAttribute('aria-pressed', true); store.style.opacity = 1;
+        ['M256,115 C320,115 340,42 420,42','M256,115 C340,115 360,115 420,115','M256,115 C320,115 340,188 420,188'].forEach(function(d){ lines.appendChild(svgEl('path', {d:d, class:'flow', stroke:'var(--cool-deep)', 'stroke-width':1.8})); });
+        read.innerHTML = '<span>Stateless.</span> The session lives in <b>Redis</b>, so every server is identical. The load balancer routes to any of them, you add and remove servers freely, and a single death loses nothing.';
+      }
+    }
+    sticky.addEventListener('click', function(){ draw('sticky'); });
+    free.addEventListener('click', function(){ draw('free'); });
+    draw('sticky');
+  })();
+
+  /* ---------- LOAD BALANCER SIMULATOR (D3 bars) ---------- */
+  (function(){
+    var host = $('lbChart'), read = $('lbRead'); if(!host || !hasD3) return;
+    var counts = [0,0,0], conns = [0,0,0], weights = [3,2,1], rr = 0, ip = 0, alg = 'rr';
+    var names = ['server 1', 'server 2', 'server 3'];
+    var W = 700, rowH = 56, m = {l:96, r:54, t:8, b:8}, H = m.t + m.b + 3 * rowH;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%');
+    var x = d3.scaleLinear().domain([0, 10]).range([m.l, W - m.r]);
+    var rows = names.map(function(n, i){
+      var y = m.t + i * rowH;
+      svg.append('text').attr('x', m.l - 12).attr('y', y + rowH/2 + 4).attr('text-anchor','end').attr('class','lbl').text(n);
+      svg.append('rect').attr('x', m.l).attr('y', y + 10).attr('width', W - m.r - m.l).attr('height', rowH - 22).attr('rx', 6).attr('fill','var(--surface-2)').attr('stroke','var(--line-soft)');
+      var fill = svg.append('rect').attr('x', m.l).attr('y', y + 10).attr('width', 0).attr('height', rowH - 22).attr('rx', 6).attr('fill','var(--cool-deep)');
+      var lab = svg.append('text').attr('x', W - m.r + 8).attr('y', y + rowH/2 + 4).attr('class','lbl').attr('fill','var(--fg-faint)').text('0');
+      return {fill:fill, lab:lab};
+    });
+    var descs = {
+      rr:'Round robin hands requests out in a strict rotation. Best when servers are identical.',
+      lc:'Least connections sends the next request to whoever has the fewest open connections. Best when sessions vary wildly in length.',
+      wt:'Weighted gives bigger machines bigger shares. Here server 1 is weight 3, server 2 is weight 2, server 3 is weight 1.',
+      ip:'IP hash sends a given client to the same server every time. Deterministic, but it fights statelessness.'
+    };
+    function render(){
+      var max = Math.max(10, d3.max(counts)); x.domain([0, max]);
+      var hot = d3.max(counts), cold = d3.min(counts);
+      rows.forEach(function(r, i){ r.fill.transition().duration(reduce?0:350).attr('width', Math.max(0, x(counts[i]) - m.l)).attr('fill', (counts[i] === hot && hot > cold) ? 'var(--heat)' : 'var(--cool-deep)'); r.lab.text(counts[i]); });
+    }
+    function pick(){
+      if(alg === 'rr'){ var s = rr; rr = (rr + 1) % 3; return {s:s, why:'rotation sends it to <b>server ' + (s+1) + '</b>'}; }
+      if(alg === 'lc'){ var m2 = 0; for(var i=1;i<3;i++){ if(conns[i] < conns[m2]) m2 = i; } conns[m2]++; return {s:m2, why:'<b>server ' + (m2+1) + '</b> had the fewest open connections'}; }
+      if(alg === 'wt'){ var seq = []; for(var k=0;k<3;k++){ for(var w=0;w<weights[k];w++) seq.push(k); } var s2 = seq[rr % seq.length]; rr++; return {s:s2, why:'<b>server ' + (s2+1) + '</b>, it carries more weight'}; }
+      var ips = [0,0,1,2,1,0,2,2]; var s3 = ips[ip % ips.length]; ip++; return {s:s3, why:'this client hashes to <b>server ' + (s3+1) + '</b> every time'};
+    }
+    function send(){ var r = pick(); counts[r.s]++; render(); read.innerHTML = descs[alg].split('.')[0] + '. This one: ' + r.why + '.'; }
+    $('lbSend').addEventListener('click', send);
+    $('lbBurst').addEventListener('click', function(){ for(var i=0;i<12;i++) send(); read.innerHTML = 'Sent twelve requests under this strategy. Watch how the spread reflects the rule it follows.'; });
+    $('lbReset').addEventListener('click', function(){ counts = [0,0,0]; conns = [0,0,0]; rr = 0; ip = 0; render(); read.innerHTML = descs[alg]; });
+    document.querySelectorAll('[data-alg]').forEach(function(btn){
+      btn.addEventListener('click', function(){ document.querySelectorAll('[data-alg]').forEach(function(b){ b.setAttribute('aria-pressed', b === btn); }); alg = btn.getAttribute('data-alg'); rr = 0; ip = 0; read.innerHTML = descs[alg]; });
+    });
+    render();
+  })();
+
+  /* ---------- RELIABILITY DECAY (D3 line) ---------- */
+  (function(){
+    var host = $('relChart'), slider = $('relSlider'), val = $('relVal'), read = $('relRead'); if(!host || !hasD3) return;
+    var W = 700, H = 280, m = {l:52, r:24, t:18, b:40};
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%').attr('role','img').attr('aria-label','How chained reliability decays as you add dependencies');
+    var x = d3.scaleLinear().domain([1, 8]).range([m.l, W - m.r]);
+    var y = d3.scaleLinear().domain([0, 100]).range([H - m.b, m.t]);
+    svg.append('g').attr('transform','translate(0,'+(H-m.b)+')').call(d3.axisBottom(x).ticks(7).tickFormat(function(d){ return d; })).attr('color','var(--line)').selectAll('text').attr('class','lbl').attr('fill','var(--fg-faint)');
+    svg.append('g').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(5).tickFormat(function(d){ return d + '%'; })).attr('color','var(--line)').selectAll('text').attr('class','lbl').attr('fill','var(--fg-faint)');
+    svg.append('text').attr('x', (W)/2).attr('y', H - 6).attr('text-anchor','middle').attr('class','lbl').attr('fill','var(--fg-faint)').text('dependencies chained in series');
+    var line = d3.line().x(function(d){ return x(d.n); }).y(function(d){ return y(d.up); });
+    var path = svg.append('path').attr('fill','none').attr('stroke','var(--cool)').attr('stroke-width', 2.4);
+    var dots = svg.append('g');
+    var endLab = svg.append('text').attr('class','lbl').attr('fill','var(--heat)').attr('text-anchor','end').attr('stroke','var(--bg)').attr('stroke-width',3).attr('paint-order','stroke');
+    function update(p){
+      var pf = p / 100, pts = [];
+      for(var n=1;n<=8;n++){ pts.push({n:n, up: Math.pow(pf, n) * 100}); }
+      path.datum(pts).transition().duration(reduce?0:250).attr('d', line);
+      var sel = dots.selectAll('circle').data(pts);
+      sel.enter().append('circle').attr('r', 3.5).merge(sel).attr('cx', function(d){ return x(d.n); }).attr('cy', function(d){ return y(d.up); }).attr('fill','var(--cool)');
+      var end = pts[7];
+      endLab.attr('x', x(end.n) - 6).attr('y', y(end.up) - 8).text(end.up.toFixed(1) + '% over 8');
+      var four = Math.pow(pf, 4) * 100;
+      read.innerHTML = 'Each link is up <b>' + p.toFixed(2) + '%</b> of the time. Chain four of them and end to end uptime is <b>' + four.toFixed(1) + '%</b>, not ' + p.toFixed(2) + '%. The product decays fast, which is the whole argument for breaking the chain with queues and async work. For scale: three nines is about 8 hours 45 minutes of downtime a year, four nines about 52 minutes, five nines about 5 minutes.';
+    }
+    slider.addEventListener('input', function(){ var p = parseFloat(slider.value); val.textContent = p.toFixed(2) + '%'; update(p); });
+    val.textContent = parseFloat(slider.value).toFixed(2) + '%'; update(parseFloat(slider.value));
+  })();
+
+  /* ---------- MESSAGE QUEUE TOGGLE ---------- */
+  (function(){
+    var up = $('upBtn'), down = $('downBtn'), sN = $('syncNotif'), aN = $('asyncNotif'), sR = $('syncResult'), aR = $('asyncResult'), read = $('mqRead');
+    if(!up) return;
+    function set(state){
+      var isDown = state === 'down';
+      up.setAttribute('aria-pressed', !isDown); down.setAttribute('aria-pressed', isDown);
+      if(isDown){
+        sN.setAttribute('stroke','var(--heat)'); sN.style.fill = 'var(--bg)'; aN.setAttribute('stroke','var(--heat)');
+        sR.textContent = 'FLOW FAILS'; sR.setAttribute('fill','var(--heat)'); aR.textContent = 'order placed'; aR.setAttribute('fill','var(--cool)');
+        read.innerHTML = '<span class="o">Notification is down.</span> In the chain the order cannot complete, because the final call fails and takes the whole flow with it. In the queue the message simply waits, the order succeeds, and notifications drain once the service recovers. Same outage, two very different outcomes.';
+      } else {
+        sN.setAttribute('stroke','var(--line)'); sN.style.fill = ''; aN.setAttribute('stroke','var(--line)');
+        sR.textContent = 'ok'; sR.setAttribute('fill','var(--cool)'); aR.textContent = 'order placed'; aR.setAttribute('fill','var(--cool)');
+        read.innerHTML = 'Everything healthy. Both designs work, and look equivalent. The difference only appears under failure, which is exactly when it matters most.';
+      }
+    }
+    up.addEventListener('click', function(){ set('up'); });
+    down.addEventListener('click', function(){ set('down'); });
+    set('up');
+  })();
+
+  /* ---------- CONSISTENT HASHING RING (D3) ---------- */
+  (function(){
+    var host = $('ringChart'), read = $('ringRead'); if(!host || !hasD3) return;
+    var W = 560, H = 360, cx = W/2, cy = H/2, R = 128;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%').style('max-width','520px').style('margin','0 auto').style('display','block').attr('role','img').attr('aria-label','Keys placed on a hash ring across a changing set of nodes');
+    svg.append('circle').attr('cx', cx).attr('cy', cy).attr('r', R).attr('fill','none').attr('stroke','var(--line)').attr('stroke-width', 1.5);
+    var palette = ['var(--cool)','var(--heat)','var(--cool-deep)','var(--plum)','var(--heat-deep)','color-mix(in oklch, var(--cool) 50%, var(--plum))'];
+    var mode = 'consistent';
+    var nodeAngles = [20, 140, 260];
+    var KEYS = 28;
+    var keys = [];
+    function seedKeys(){ keys = []; for(var i=0;i<KEYS;i++){ var a = (i * 360 / KEYS + (i*53 % 17) - 8 + 360) % 360; keys.push({i:i, a:a, owner:0}); } }
+    seedKeys();
+    function ang(a){ var r = (a - 90) * Math.PI / 180; return {x: cx + R * Math.cos(r), y: cy + R * Math.sin(r)}; }
+    function ownerConsistent(a){ var best = 0, bestGap = 999; for(var n=0;n<nodeAngles.length;n++){ var gap = (nodeAngles[n] - a + 360) % 360; if(gap < bestGap){ bestGap = gap; best = n; } } return best; }
+    function ownerModulo(i){ return i % nodeAngles.length; }
+    function compute(){ keys.forEach(function(k){ k.owner = (mode === 'consistent') ? ownerConsistent(k.a) : ownerModulo(k.i); }); }
+    var keyG = svg.append('g'), nodeG = svg.append('g');
+    function drawNodes(){
+      var sel = nodeG.selectAll('g.node').data(nodeAngles, function(d, i){ return i + '-' + d; });
+      sel.exit().remove();
+      var en = sel.enter().append('g').attr('class','node');
+      en.append('rect').attr('width', 54).attr('height', 24).attr('rx', 6).attr('fill','var(--surface-2)').attr('stroke','var(--line)');
+      en.append('text').attr('class','lbl').attr('text-anchor','middle');
+      var all = en.merge(sel);
+      all.each(function(d, i){ var p = ang(d); var g = d3.select(this); g.select('rect').attr('x', p.x - 27).attr('y', p.y - 12).attr('stroke', palette[i % palette.length]).attr('stroke-width', 1.8); g.select('text').attr('x', p.x).attr('y', p.y + 4).attr('fill', palette[i % palette.length]).text('N' + (i+1)); });
+    }
+    function drawKeys(animate){
+      var sel = keyG.selectAll('circle').data(keys, function(d){ return d.i; });
+      sel.enter().append('circle').attr('r', 4.5).attr('cx', function(d){ return ang(d.a).x; }).attr('cy', function(d){ return ang(d.a).y; }).merge(sel)
+        .transition().duration(reduce||!animate?0:450)
+        .attr('cx', function(d){ return ang(d.a).x; }).attr('cy', function(d){ return ang(d.a).y; })
+        .attr('fill', function(d){ return palette[d.owner % palette.length]; });
+    }
+    function refresh(prevOwners, label){
+      compute();
+      var moved = 0; if(prevOwners){ keys.forEach(function(k, i){ if(prevOwners[i] !== k.owner) moved++; }); }
+      drawNodes(); drawKeys(true);
+      if(label){ var pct = Math.round(moved / keys.length * 100); read.innerHTML = label.replace('{pct}', '<b>' + pct + '%</b>').replace('{moved}', moved); }
+    }
+    function snapshot(){ return keys.map(function(k){ return k.owner; }); }
+    compute(); drawNodes(); drawKeys(false);
+    read.innerHTML = 'Consistent hashing. ' + nodeAngles.length + ' nodes on the ring, each key owned by the next node clockwise. Add or remove a node and watch how few keys change color.';
+    $('ringConsistent').addEventListener('click', function(){ mode='consistent'; this.setAttribute('aria-pressed',true); $('ringModulo').setAttribute('aria-pressed',false); refresh(snapshot(), 'Consistent hashing. Each key belongs to the next node clockwise. Switching schemes reassigned {moved} keys.'); });
+    $('ringModulo').addEventListener('click', function(){ mode='modulo'; this.setAttribute('aria-pressed',true); $('ringConsistent').setAttribute('aria-pressed',false); refresh(snapshot(), 'hash mod N. Ownership is now i mod N, ignoring position on the ring. Switching schemes reassigned {moved} keys, and the next resize will be far worse.'); });
+    $('ringAdd').addEventListener('click', function(){ if(nodeAngles.length >= 6) return; var prev = snapshot(); var a = (nodeAngles[nodeAngles.length-1] + 75) % 360; nodeAngles.push(a); refresh(prev, mode==='consistent' ? 'Added a node. Under consistent hashing only {pct} of keys moved, stolen from one neighbor. The rest stayed put.' : 'Added a node. Under hash mod N, {pct} of keys had to move, because changing N reshuffles almost everything. This is the cache stampede.'); });
+    $('ringRemove').addEventListener('click', function(){ if(nodeAngles.length <= 2) return; var prev = snapshot(); nodeAngles.pop(); refresh(prev, mode==='consistent' ? 'Removed a node. Only {pct} of keys moved, absorbed by the next node clockwise.' : 'Removed a node. {pct} of keys moved, since every key is remapped against the new N.'); });
+    $('ringRehash').addEventListener('click', function(){ var prev = snapshot(); for(var i=0;i<keys.length;i++){ keys[i].a = (keys[i].a + 37 + i*7) % 360; } refresh(prev, 'Reshuffled the keys to fresh positions. {pct} landed on a different node.'); });
+  })();
+
+  /* ---------- CACHE LAYERS + CHART (D3) ---------- */
+  (function(){
+    var host = $('cacheChart'), read = $('cacheRead'), layers = document.querySelectorAll('#cacheLayers .layer'); if(!host || !hasD3) return;
+    var data = [
+      {n:'Browser', lat:0.5, stale:'high'}, {n:'CDN edge', lat:30, stale:'high'},
+      {n:'Redis', lat:3, stale:'medium'}, {n:'DB cache', lat:20, stale:'low'}, {n:'Database', lat:120, stale:'none'}
+    ];
+    var W = 700, rowH = 40, m = {l:96, r:60, t:8, b:8}, H = m.t + m.b + data.length * rowH;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%');
+    var x = d3.scaleSqrt().domain([0, 120]).range([m.l, W - m.r]);
+    var bars = data.map(function(d, i){
+      var yy = m.t + i * rowH;
+      svg.append('text').attr('x', m.l - 12).attr('y', yy + rowH/2 + 4).attr('text-anchor','end').attr('class','lbl').text(d.n);
+      var b = svg.append('rect').attr('x', m.l).attr('y', yy + 8).attr('height', rowH - 18).attr('rx', 4).attr('width', 0).attr('fill', i === data.length-1 ? 'var(--heat)' : 'var(--cool-deep)').attr('opacity', .55);
+      b.transition().delay(i*70).duration(reduce?0:600).attr('width', Math.max(3, x(d.lat) - m.l));
+      svg.append('text').attr('x', x(d.lat) + 8).attr('y', yy + rowH/2 + 4).attr('class','lbl').attr('fill','var(--fg-faint)').text(d.lat < 1 ? '~0 ms' : '~' + d.lat + ' ms');
+      return b;
+    });
+    var staleText = { high:'staleness risk is high, and that is fine here. Static assets and popular files barely change.', medium:'staleness risk is moderate. Use a TTL and cache aside, refresh on miss.', low:'staleness risk is low, the data is close to the source.', none:'no staleness, this is the source of truth. Always correct, never the fastest.' };
+    layers.forEach(function(layer, i){
+      layer.addEventListener('click', function(){
+        layers.forEach(function(l){ l.classList.remove('lit'); }); layer.classList.add('lit');
+        bars.forEach(function(b, j){ b.attr('opacity', j === i ? 1 : .35); });
+        var name = layer.querySelector('.lname').textContent, st = layer.getAttribute('data-stale');
+        read.innerHTML = 'Answering the read at <b>' + name + '</b>: ' + staleText[st];
+      });
+    });
+  })();
+
+  /* ---------- ADAPTIVE BITRATE (D3) ---------- */
+  (function(){
+    var host = $('abrChart'), slider = $('abrSlider'), val = $('abrVal'), read = $('abrRead'); if(!host || !hasD3) return;
+    var tiers = [
+      {name:'4K', floor:18}, {name:'1080p', floor:6}, {name:'720p', floor:3}, {name:'480p', floor:1.2}, {name:'240p', floor:0.4}
+    ];
+    var W = 700, rowH = 48, m = {l:78, r:120, t:8, b:8}, H = m.t + m.b + tiers.length * rowH;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%');
+    var x = d3.scaleLinear().domain([0, 30]).range([m.l, W - m.r]);
+    var bandLine = svg.append('line').attr('y1', m.t).attr('y2', H - m.b).attr('stroke','var(--heat)').attr('stroke-width', 2).attr('stroke-dasharray','4 4');
+    var bandLab = svg.append('text').attr('class','lbl').attr('fill','var(--heat)').attr('text-anchor','middle');
+    var rows = tiers.map(function(t, i){
+      var yy = m.t + i * rowH;
+      svg.append('text').attr('x', m.l - 12).attr('y', yy + rowH/2 + 4).attr('text-anchor','end').attr('class','lbl').text(t.name);
+      svg.append('rect').attr('x', m.l).attr('y', yy + 9).attr('width', x(t.floor) - m.l).attr('height', rowH - 20).attr('rx', 5).attr('fill','var(--surface-2)').attr('stroke','var(--line-soft)');
+      var fill = svg.append('rect').attr('x', m.l).attr('y', yy + 9).attr('width', x(t.floor) - m.l).attr('height', rowH - 20).attr('rx', 5).attr('fill','var(--cool-deep)').attr('opacity', .25);
+      var tag = svg.append('text').attr('x', W - m.r + 10).attr('y', yy + rowH/2 + 4).attr('class','lbl').attr('fill','var(--fg-faint)').text(t.floor + ' Mbps');
+      return {fill:fill, tag:tag, y:yy};
+    });
+    function update(bw){
+      bandLine.attr('x1', x(bw)).attr('x2', x(bw));
+      bandLab.attr('x', x(bw)).attr('y', H - 12).text(bw.toFixed(1));
+      var chosen = tiers.length - 1;
+      for(var i=0;i<tiers.length;i++){ if(bw >= tiers[i].floor){ chosen = i; break; } }
+      rows.forEach(function(r, i){ var ok = bw >= tiers[i].floor; r.fill.attr('opacity', i === chosen ? 1 : (ok ? .4 : .12)).attr('fill', i === chosen ? 'var(--cool)' : 'var(--cool-deep)'); r.tag.attr('fill', i === chosen ? 'var(--cool)' : 'var(--fg-faint)'); });
+      var c = tiers[chosen];
+      var headroom = bw - c.floor;
+      read.innerHTML = 'At <b>' + bw.toFixed(1) + ' Mbps</b> the player serves <b>' + c.name + '</b>. ' + (chosen === 0 ? 'Plenty of bandwidth, top quality.' : (headroom < c.floor * 0.25 ? 'Headroom is thin, so the player stays conservative to protect the buffer.' : 'Comfortable headroom above the ' + c.name + ' floor.')) + (bw < 0.4 ? ' Below every floor, playback would buffer.' : '');
+    }
+    slider.addEventListener('input', function(){ var bw = parseFloat(slider.value); val.textContent = bw.toFixed(1) + ' Mbps'; update(bw); });
+    val.textContent = parseFloat(slider.value).toFixed(1) + ' Mbps'; update(parseFloat(slider.value));
+  })();
+
+  /* ---------- YOUTUBE PACKET LOOPS ---------- */
+  packetLoop('yu3', 'ytPacket', 1700);
+  packetLoop('ytStreamLink', 'ytStreamPacket', 1400);
+
+})();
+</script>
+</body>
+</html>
