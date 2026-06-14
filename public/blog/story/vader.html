@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vader, Rule The Galaxy &middot; How Vader Keeps an Agent From Decaying Your Code &middot; The Trenches</title>
+<meta name="description" content="An agent loop has no memory of what it meant, so the architecture quietly decays. Vader moves the meaning outside the loop: a human writes a constitution of invariants, a compiler turns each into a check the agent cannot argue with, and a lock stops the agent from silencing it. Gate the model, free the code.">
+<link rel="canonical" href="https://hundredsunited.com/blog/story/vader.html">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://hundredsunited.com/blog/story/vader.html">
+<meta property="og:title" content="Vader, Rule The Galaxy &middot; How Vader Keeps an Agent From Decaying Your Code">
+<meta property="og:description" content="Move the meaning outside the loop. A human freezes the distinctions that must never collapse, a compiler turns each into a deterministic check, and a lock makes the check immutable to the agent. Gate the model, free the code.">
+<meta property="og:image" content="https://hundredsunited.com/images/story/vader.png">
+<meta property="og:image:secure_url" content="https://hundredsunited.com/images/story/vader.png">
+<meta property="og:image:width" content="1630">
+<meta property="og:image:height" content="965">
+<meta property="og:image:alt" content="A field plate for an autonomous software factory.">
+<meta property="og:site_name" content="The Trenches">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://hundredsunited.com/blog/story/vader.html">
+<meta property="twitter:title" content="Vader, Rule The Galaxy &middot; How Vader Keeps an Agent From Decaying Your Code">
+<meta property="twitter:description" content="Move the meaning outside the loop. A human freezes the distinctions that must never collapse, a compiler turns each into a deterministic check, and a lock makes the check immutable to the agent.">
+<meta property="twitter:image" content="https://hundredsunited.com/images/story/vader.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE TRENCHES :: token system (Vader edition)
+   Star Wars duality. The primary saber flips with the theme:
+   COOL = the move, the gate, the order. Blue in light, red in dark.
+   HEAT = gold. The force, the drift, the pressure, what breaks.
+   ============================================================ */
+:root{
+  --serif:"Spectral", Georgia, serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  --maxprose:42rem;
+  --maxwide:64rem;
+  --ease:cubic-bezier(.22,.7,.28,1);
+}
+
+/* DARK (default) :: deep space, red Sith primary ---------------- */
+html[data-theme="dark"]{
+  --bg:        oklch(0.165 0.012 25);
+  --bg-grad:   oklch(0.235 0.060 25 / 0.50);
+  --surface-1: oklch(0.205 0.014 25);
+  --surface-2: oklch(0.248 0.018 25);
+  --surface-3: oklch(0.292 0.022 25);
+  --fg:        oklch(0.948 0.010 60);
+  --fg-dim:    oklch(0.788 0.013 50);
+  --fg-faint:  oklch(0.598 0.015 42);
+  --line:      oklch(0.352 0.022 25);
+  --line-soft: oklch(0.288 0.017 25);
+  --cool:      oklch(0.645 0.232 26);
+  --cool-deep: oklch(0.560 0.220 26);
+  --cool-glow: oklch(0.645 0.232 26 / 0.18);
+  --heat:      oklch(0.840 0.155 88);
+  --heat-deep: oklch(0.760 0.150 82);
+  --heat-glow: oklch(0.840 0.155 88 / 0.14);
+  --plum:      oklch(0.730 0.110 300);
+  --shadow:    0 18px 50px -22px oklch(0.05 0.03 25 / 0.92);
+}
+/* LIGHT :: clean, blue Jedi primary ---------------------------- */
+html[data-theme="light"]{
+  --bg:        oklch(0.975 0.008 240);
+  --bg-grad:   oklch(0.945 0.030 252 / 0.60);
+  --surface-1: oklch(0.993 0.005 240);
+  --surface-2: oklch(0.958 0.013 245);
+  --surface-3: oklch(0.933 0.018 248);
+  --fg:        oklch(0.238 0.022 252);
+  --fg-dim:    oklch(0.400 0.022 250);
+  --fg-faint:  oklch(0.558 0.020 248);
+  --line:      oklch(0.855 0.020 245);
+  --line-soft: oklch(0.905 0.013 245);
+  --cool:      oklch(0.520 0.185 256);
+  --cool-deep: oklch(0.458 0.182 258);
+  --cool-glow: oklch(0.520 0.185 256 / 0.12);
+  --heat:      oklch(0.620 0.150 68);
+  --heat-deep: oklch(0.540 0.150 62);
+  --heat-glow: oklch(0.620 0.150 68 / 0.10);
+  --plum:      oklch(0.520 0.140 300);
+  --shadow:    0 18px 44px -26px oklch(0.45 0.05 250 / 0.42);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--serif);font-weight:400;
+  font-size:clamp(1.06rem,0.62rem + 0.9vw,1.22rem);
+  line-height:1.68;letter-spacing:.002em;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  transition:background .4s var(--ease), color .4s var(--ease);
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    radial-gradient(120% 75% at 50% -12%, var(--bg-grad), transparent 58%),
+    radial-gradient(80% 50% at 100% 100%, var(--cool-glow), transparent 55%);
+}
+.wrap{position:relative;z-index:1}
+
+::selection{background:var(--cool-glow);color:var(--fg)}
+a{color:var(--cool);text-underline-offset:3px;text-decoration-thickness:1px}
+:focus-visible{outline:2px solid var(--cool);outline-offset:3px;border-radius:3px}
+
+/* progress + section dots -------------------------------------- */
+.progress{position:fixed;top:0;left:0;height:2px;width:0;
+  background:linear-gradient(90deg,var(--cool),var(--heat));z-index:60;transition:width .08s linear}
+
+/* header -------------------------------------------------------- */
+header.site{
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;padding:.85rem clamp(1rem,4vw,2.4rem);
+  background:color-mix(in oklab, var(--bg) 80%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+}
+.brand{display:flex;align-items:center;gap:.55rem;font-size:1.12rem;letter-spacing:.01em;white-space:nowrap;text-decoration:none;color:inherit;cursor:pointer}
+a.brand:hover .b2{color:var(--cool-deep)}
+.brand .glyph{width:1.05rem;height:1.05rem;display:inline-block;flex:0 0 auto}
+.brand .b1{font-weight:500;color:var(--fg)}
+.brand .b2{font-style:italic;font-weight:600;color:var(--cool)}
+nav.spy{display:flex;gap:.2rem;flex:1;justify-content:center;overflow:hidden}
+nav.spy a{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--fg-faint);text-decoration:none;padding:.4rem .55rem;border-radius:6px;
+  transition:color .15s var(--ease), background .15s var(--ease);white-space:nowrap;
+}
+nav.spy a:hover{color:var(--fg)}
+nav.spy a.active{color:var(--cool);background:var(--surface-2)}
+.hbtns{display:flex;gap:.5rem;align-items:center}
+.tgl{
+  width:2.2rem;height:2.2rem;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface-1);color:var(--fg-dim);cursor:pointer;display:grid;place-items:center;
+  transition:border-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
+}
+.tgl:hover{color:var(--cool);border-color:var(--cool-deep);transform:rotate(18deg)}
+.tgl svg{width:1.05rem;height:1.05rem}
+@media (max-width:880px){ nav.spy{display:none} }
+
+/* layout -------------------------------------------------------- */
+main{padding:0 clamp(1rem,5vw,2rem) 7rem}
+.prose{max-width:var(--maxprose);margin-inline:auto}
+.wide{max-width:var(--maxwide);margin-inline:auto}
+section{margin-top:clamp(3.5rem,7vw,6rem);scroll-margin-top:5rem}
+
+/* hero ---------------------------------------------------------- */
+.hero{max-width:var(--maxwide);margin:0 auto;padding:clamp(3rem,9vw,6.5rem) 0 1rem;text-align:center}
+.hero .eyebrow{justify-content:center}
+.hero .dek{margin-inline:auto}
+.hero .byline{justify-content:center}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cool);margin-bottom:1.3rem;display:flex;align-items:center;gap:.7rem}
+.eyebrow::before{content:"";width:1.6rem;height:1px;background:var(--cool-deep)}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.5rem,8.5vw,5rem);line-height:1.02;letter-spacing:-.012em;margin:0 0 1.2rem;color:var(--fg)}
+h1 em{font-style:italic;font-weight:500;color:var(--cool)}
+h1 .heat{color:var(--heat);font-style:italic;font-weight:500}
+.dek{max-width:40rem;font-size:clamp(1.15rem,0.8rem + 1vw,1.42rem);line-height:1.52;color:var(--fg-dim)}
+.byline{margin-top:2.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.74rem;letter-spacing:.05em;color:var(--fg-faint)}
+.byline .av{width:2.3rem;height:2.3rem;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--cool);font-weight:600;font-family:var(--serif);font-size:1rem;overflow:hidden}
+.byline .av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.byline b{color:var(--fg-dim);font-weight:500}
+
+/* smuggled link to the skill source ---------------------------- */
+.skill-link{
+  color:var(--cool);font-weight:600;font-style:italic;
+  text-decoration:none;
+  background-image:linear-gradient(var(--cool),var(--cool));
+  background-size:100% 1px;background-repeat:no-repeat;background-position:0 1.08em;
+  transition:background-size .35s var(--ease), color .25s var(--ease), filter .25s var(--ease);
+}
+.skill-link::after{
+  content:"\2197";font-family:var(--mono);font-style:normal;
+  font-size:.62em;vertical-align:.42em;margin-left:.12em;opacity:.7;
+}
+.skill-link:hover{filter:brightness(1.12)}
+.skill-link:hover::after{opacity:1}
+.byline span{display:inline-flex;gap:.45rem;align-items:center}
+.dotsep{width:3px;height:3px;border-radius:50%;background:var(--fg-faint);display:inline-block}
+
+/* headings ------------------------------------------------------ */
+h2{font-family:var(--serif);font-weight:700;font-size:clamp(1.75rem,4.5vw,2.7rem);line-height:1.1;letter-spacing:-.01em;margin:0 0 .2rem;color:var(--fg)}
+h2 .num{font-family:var(--mono);font-size:.78rem;font-weight:500;color:var(--heat-deep);letter-spacing:.16em;display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;text-transform:uppercase}
+h2 .num::after{content:"";flex:1;height:1px;background:var(--line-soft);max-width:7rem}
+h3{font-family:var(--serif);font-weight:600;font-size:clamp(1.3rem,2.5vw,1.55rem);line-height:1.25;margin:2.6rem 0 .2rem;color:var(--fg)}
+.lede{font-size:clamp(1.16rem,0.9rem + .7vw,1.34rem);line-height:1.5;color:var(--fg-dim);margin:1.3rem 0 0}
+p{margin:1.35rem 0}
+.prose p:first-of-type{margin-top:1.5rem}
+strong{font-weight:600;color:var(--fg)}
+em{font-style:italic}
+.prose ul{margin:1.35rem 0;padding-left:0;list-style:none}
+.prose ul li{position:relative;padding-left:1.6rem;margin:.7rem 0;color:var(--fg-dim)}
+.prose ul li::before{content:"";position:absolute;left:.15rem;top:.7em;width:.42rem;height:.42rem;background:var(--cool-deep);border-radius:1px;transform:rotate(45deg)}
+.prose ul li strong{color:var(--fg)}
+.prose ul.heat li::before{background:var(--heat-deep)}
+
+/* chips --------------------------------------------------------- */
+.chip{font-family:var(--mono);font-size:.82em;font-weight:500;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:5px;padding:.06em .42em;color:var(--fg);white-space:nowrap}
+.chip.get{color:var(--cool)}
+.chip.write{color:var(--heat)}
+
+/* pull quote ---------------------------------------------------- */
+.pull{margin:clamp(2.4rem,5vw,3.4rem) auto;max-width:var(--maxprose);border-left:2px solid var(--cool);padding:.2rem 0 .2rem 1.6rem}
+.pull p{font-size:clamp(1.35rem,1rem + 1.1vw,1.6rem);line-height:1.38;font-weight:400;color:var(--fg);font-style:italic;margin:0}
+.pull.heat{border-left-color:var(--heat)}
+
+/* spec row ------------------------------------------------------ */
+.specrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0;background:var(--surface-1)}
+.specrow .cell{padding:1.25rem 1.35rem;border-right:1px solid var(--line-soft)}
+.specrow .cell:last-child{border-right:none}
+.specrow .lab{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool-deep);margin-bottom:.65rem}
+.specrow .val{font-size:1.02rem;line-height:1.35;color:var(--fg)}
+@media(max-width:620px){.specrow{grid-template-columns:1fr 1fr}.specrow .cell:nth-child(2n){border-right:none}}
+
+/* figure / panel ----------------------------------------------- */
+figure{margin:clamp(2rem,4vw,2.8rem) 0;padding:0}
+.panel{border:1px solid var(--line-soft);border-radius:16px;background:var(--surface-1);padding:clamp(1.1rem,3vw,1.8rem);box-shadow:var(--shadow)}
+.panel-title{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem}
+.panel-title .tag{margin-left:auto;color:var(--heat-deep);font-size:.62rem}
+.panel-sub{font-size:.98rem;color:var(--fg-faint);margin-bottom:1.3rem;line-height:1.45}
+figcaption{font-size:.92rem;color:var(--fg-faint);margin-top:.9rem;line-height:1.5}
+figcaption b{color:var(--fg-dim);font-weight:500}
+
+/* controls ------------------------------------------------------ */
+.controls{display:flex;flex-wrap:wrap;gap:.5rem;margin:0 0 1.3rem;align-items:center}
+.controls .clab{font-family:var(--mono);font-size:.72rem;color:var(--fg-faint);margin-right:.2rem}
+button.seg{font-family:var(--mono);font-size:.74rem;letter-spacing:.03em;background:var(--surface-2);color:var(--fg-dim);border:1px solid var(--line-soft);border-radius:8px;padding:.45rem .8rem;cursor:pointer;transition:all .12s var(--ease)}
+button.seg:hover{color:var(--fg);border-color:var(--line)}
+button.seg[aria-pressed="true"]{background:transparent;color:var(--heat);border-color:var(--heat-deep)}
+button.act{font-family:var(--mono);font-size:.78rem;letter-spacing:.03em;background:var(--cool);color:var(--bg);border:1px solid var(--cool);border-radius:8px;padding:.5rem 1rem;cursor:pointer;font-weight:600;transition:filter .12s var(--ease),transform .12s var(--ease)}
+button.act:hover{filter:brightness(1.06)}
+button.act:active{transform:translateY(1px)}
+button.ghost{font-family:var(--mono);font-size:.78rem;background:transparent;color:var(--fg-dim);border:1px solid var(--line-soft);border-radius:8px;padding:.5rem 1rem;cursor:pointer;transition:all .12s var(--ease)}
+button.ghost:hover{color:var(--fg);border-color:var(--line)}
+.pill{display:inline-flex;border:1px solid var(--line-soft);border-radius:999px;overflow:hidden;margin-bottom:1.3rem;flex-wrap:wrap}
+.pill button{font-family:var(--mono);font-size:.74rem;padding:.45rem .95rem;background:transparent;color:var(--fg-dim);border:none;cursor:pointer;transition:all .12s var(--ease)}
+.pill button[aria-pressed="true"]{background:var(--surface-2);color:var(--cool)}
+.pill button.heaton[aria-pressed="true"]{color:var(--heat)}
+
+input[type=range]{-webkit-appearance:none;appearance:none;height:4px;border-radius:99px;background:var(--surface-3);outline:none;cursor:pointer}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--cool);border:2px solid var(--bg);box-shadow:0 0 0 1px var(--cool-deep)}
+input[type=range]::-moz-range-thumb{width:16px;height:16px;border-radius:50%;background:var(--cool);border:2px solid var(--bg)}
+
+.readout{font-family:var(--mono);font-size:.82rem;color:var(--fg-dim);line-height:1.55;min-height:2.4rem;margin-top:1.2rem;border-top:1px solid var(--line-soft);padding-top:1rem}
+.readout b{color:var(--cool)}
+.readout .o{color:var(--heat)}
+
+/* svg + d3 shared ---------------------------------------------- */
+svg{display:block;width:100%;height:auto;overflow:visible}
+.node-fill{fill:var(--surface-2)}
+.node-stroke{stroke:var(--line);stroke-width:1.5;fill:none}
+.lbl{font-family:var(--mono);font-size:11px;letter-spacing:.06em;fill:var(--fg-faint)}
+.lbl.t{fill:var(--cool)}
+.lbl.h{fill:var(--heat)}
+.flow{stroke:var(--line);stroke-width:1.5;fill:none}
+.packet{fill:var(--cool)}
+.d3-axis text{font-family:var(--mono);font-size:10px;fill:var(--fg-faint)}
+.d3-axis path,.d3-axis line{stroke:var(--line-soft)}
+.d3-grid line{stroke:var(--line-soft);stroke-dasharray:2 4;opacity:.6}
+
+/* takeaway ------------------------------------------------------ */
+.takeaway{border:1px solid var(--line-soft);border-left:2px solid var(--heat);border-radius:0 14px 14px 0;background:var(--surface-1);padding:1.2rem 1.45rem;margin:2.2rem auto;max-width:var(--maxprose)}
+.takeaway .tk{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--heat);margin-bottom:.55rem}
+.takeaway p{margin:0;font-size:1.1rem;line-height:1.5;color:var(--fg)}
+
+/* force/move ledger card --------------------------------------- */
+.fm{display:grid;grid-template-columns:1fr;gap:.7rem;margin:2rem auto;max-width:var(--maxprose)}
+.fm-row{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:.7rem;border:1px solid var(--line-soft);border-radius:12px;padding:.85rem 1rem;background:var(--surface-1)}
+.fm-row .force{font-family:var(--mono);font-size:.8rem;color:var(--heat)}
+.fm-row .move{font-family:var(--mono);font-size:.8rem;color:var(--cool);text-align:right}
+.fm-row .arr{color:var(--fg-faint);font-family:var(--mono);font-size:.85rem}
+@media(max-width:540px){.fm-row{grid-template-columns:1fr;text-align:left}.fm-row .move{text-align:left}.fm-row .arr{display:none}}
+
+/* plate image --------------------------------------------------- */
+.plate{margin:clamp(2.4rem,5vw,3.5rem) auto;max-width:var(--maxwide);border-radius:18px;overflow:hidden;border:1px solid var(--line-soft);position:relative;box-shadow:var(--shadow)}
+.plate img{display:block;width:100%;height:auto}
+.plate .cap{position:absolute;left:0;right:0;bottom:0;padding:1.4rem clamp(1rem,3vw,1.8rem) 1.1rem;background:linear-gradient(to top, oklch(0.08 0.02 25 / 0.88), transparent);font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:oklch(0.94 0.01 80);text-transform:uppercase}
+
+/* invariant cards ---------------------------------------------- */
+.kinds{display:flex;flex-direction:column;gap:.5rem}
+.kind{display:grid;grid-template-columns:1fr 7.5rem;gap:1rem;align-items:center;border:1px solid var(--line-soft);border-radius:11px;padding:.85rem 1.1rem;background:var(--surface-1);transition:border-color .14s var(--ease),background .14s var(--ease);cursor:pointer}
+.kind:hover,.kind.lit{border-color:var(--cool-deep);background:var(--surface-2)}
+.kind .kname{font-family:var(--serif);font-size:1.05rem;color:var(--fg)}
+.kind .kdesc{font-size:.85rem;color:var(--fg-faint);margin-top:.12rem;line-height:1.4}
+.kind .kstr{font-family:var(--mono);font-size:.72rem;text-align:right}
+.kind .kstr.strong{color:var(--cool)}
+.kind .kstr.medium{color:var(--heat-deep)}
+.kind .kstr.weak{color:var(--heat)}
+.kind .kstr.opaque{color:var(--fg-faint)}
+@media(max-width:480px){.kind{grid-template-columns:1fr 5.5rem}}
+
+/* code block --------------------------------------------------- */
+.code{font-family:var(--mono);font-size:.8rem;line-height:1.65;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:10px;padding:1rem 1.15rem;overflow-x:auto;color:var(--fg-dim);white-space:pre;margin:0}
+.code .c-key{color:var(--cool)}
+.code .c-heat{color:var(--heat)}
+.code .c-mut{color:var(--fg-faint)}
+.codepair{display:grid;grid-template-columns:1fr 1fr;gap:.8rem;margin-top:1rem}
+.codepair .clabel{font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:.4rem}
+@media(max-width:640px){.codepair{grid-template-columns:1fr}}
+
+/* strength meter ----------------------------------------------- */
+.meter{height:6px;border-radius:99px;background:var(--surface-3);overflow:hidden;margin-top:.2rem}
+.meter > i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--cool),var(--heat));transition:width .35s var(--ease)}
+
+/* number ribbon ------------------------------------------------- */
+.ribbon{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0}
+.ribbon .r{background:var(--surface-1);padding:1.2rem 1.2rem}
+.ribbon .rn{font-family:var(--serif);font-weight:700;font-size:clamp(1.5rem,3vw,2rem);color:var(--cool);line-height:1}
+.ribbon .rl{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-faint);margin-top:.5rem;line-height:1.4}
+
+/* three layers -------------------------------------------------- */
+.layers3{display:grid;grid-template-columns:1fr;gap:.7rem;margin:1.4rem 0}
+.l3{border:1px solid var(--line-soft);border-radius:12px;background:var(--surface-1);padding:1rem 1.15rem;display:grid;grid-template-columns:8.5rem 1fr;gap:1rem;align-items:baseline}
+.l3 .l3n{font-family:var(--mono);font-size:.78rem;letter-spacing:.04em;color:var(--cool);text-transform:uppercase}
+.l3 .l3d{font-size:.96rem;color:var(--fg-dim);line-height:1.5}
+.l3 .l3d b{color:var(--fg)}
+@media(max-width:560px){.l3{grid-template-columns:1fr;gap:.3rem}}
+
+/* reveal -------------------------------------------------------- */
+.reveal{opacity:0;transform:translateY(16px)}
+.reveal.in{opacity:1;transform:none;transition:opacity .6s var(--ease),transform .6s var(--ease)}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1!important;transform:none!important}}
+
+hr.rule{max-width:var(--maxwide);margin:clamp(3.5rem,7vw,5rem) auto;border:none;border-top:1px solid var(--line-soft)}
+.divider{max-width:var(--maxprose);margin:4rem auto;border:none;border-top:1px solid var(--line-soft)}
+.note{font-size:1.02rem;color:var(--fg-faint);font-style:italic}
+
+footer{max-width:var(--maxprose);margin:5rem auto 0;padding-top:2rem;border-top:1px solid var(--line-soft);color:var(--fg-faint);font-size:.96rem}
+footer .brand{margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+
+<header class="site">
+  <a class="brand" href="/" aria-label="The Trenches home">
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 6h18M6 12h12M9 18h6" stroke="var(--cool)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <span class="b1">The</span><span class="b2">Trenches</span>
+  </a>
+  <nav class="spy" id="spy" aria-label="Sections">
+    <a href="#drift">Drift</a>
+    <a href="#idea">Idea</a>
+    <a href="#compile">Compile</a>
+    <a href="#lock">Lock</a>
+    <a href="#loop">Loop</a>
+    <a href="#fanout">Fan-out</a>
+    <a href="#memory">Memory</a>
+    <a href="#drive">Drive</a>
+    <a href="#honest">Honest</a>
+    <a href="#verdict">Verdict</a>
+  </nav>
+  <div class="hbtns">
+    <button class="tgl" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero reveal" id="top">
+    <div class="eyebrow">Agentic Software Factory &middot; The Long Read</div>
+    <h1><em>Vader</em><br>Rule The Galaxy</h1>
+    <p class="dek">An agent loop has no memory of what it meant. Each tick optimizes locally, and across hundreds of ticks the architecture quietly decays, because nothing outside the loop holds the intent fixed. <a class="skill-link" href="https://github.com/balevdev/agentique/tree/main/skills/vader" target="_blank" rel="noopener">Vader</a> is one idea against that decay: move the meaning out of the box. A human freezes the distinctions that must never collapse, a compiler turns each into a check the agent cannot argue with, and a lock stops the agent from silencing it. Gate the model, free the code.</p>
+    <div class="byline">
+      <span class="av"><img src="/images/author/boyan-balev.jpg" alt="Boyan Balev" loading="lazy" width="37" height="37"></span>
+      <span><b>Boyan Balev</b></span>
+      <span class="dotsep"></span>
+      <span>10 min read</span>
+      <span class="dotsep"></span>
+      <span>First principles</span>
+      <span class="dotsep"></span>
+      <span>The Trenches Field Manual</span>
+    </div>
+  </div>
+
+  <!-- the image plate -->
+  <div class="plate reveal">
+    <img src="/images/story/vader.png" alt="The Trenches field plate" loading="eager">
+    <div class="cap">Field manual &middot; Vader &middot; Rule The Galaxy</div>
+  </div>
+
+  <!-- HERO BLUEPRINT (assembles via GSAP) -->
+  <figure class="wide reveal">
+    <div class="panel">
+      <div class="panel-title">The loop, in one picture <span class="tag">assembles as you read</span></div>
+      <div class="panel-sub">A human freezes the meaning once, on the left. Everything to its right is autonomous, one tick at a time: decompose, build in parallel, verify against the gate, persist what survives, then loop. Two gold rings are the only two places a human must stand. The rest the agent runs alone.</div>
+      <svg id="heroMap" viewBox="0 0 940 250" role="img" aria-label="The vader phase pipeline assembling from conceive through persist, with two human gates marked in gold">
+        <g id="hm-links"></g>
+        <g id="hm-nodes"></g>
+        <circle id="hm-packet" class="packet" r="4.5" cx="60" cy="125" opacity="0"/>
+      </svg>
+      <div class="controls" style="margin-bottom:0;margin-top:1.2rem">
+        <button class="ghost" id="hmReplay">Replay the build</button>
+        <span class="clab" id="hmStage">a human freezes the model</span>
+      </div>
+    </div>
+    <figcaption>Read it left to right. Gold is a human gate. Blue or red, depending on your theme, is the agent working unsupervised. The whole point of the design is how few gold rings there are.</figcaption>
+  </figure>
+
+  <!-- THESIS -->
+  <section class="prose reveal">
+    <p>Hand an agent a goal and a loop, and it will get further than you expect, then quietly ruin the thing you cared about. Not through malice and not through stupidity. Through local optimization. Each tick has one job: make this test pass, satisfy this prompt, close this ticket. None of those jobs is "preserve the distinction the architect cared about three hundred ticks ago." So the first time collapsing that distinction makes a local task easier, the agent collapses it, marks the task done, and moves on. A temporal point becomes a temporal interval. Money becomes a float. The module that was never allowed to import the database imports the database. Each step looked reasonable. The sum is rot.</p>
+    <p>This is the central failure of long horizon agent work, and it is not fixed by a better prompt. A prompt is a request, and a request is exactly the thing an agent under local pressure learns to route around. You can write "never let common import etl" in capital letters at the top of every file and the agent will, on tick two hundred, import etl, because importing etl made the failing test pass and the capital letters were just text. The meaning lived inside the loop, where the loop could erode it.</p>
+    <p>Vader's answer is narrow and, on its own terms, correct. Put the meaning outside the box. Have a human write down the handful of distinctions that must never collapse. Compile each into the strongest deterministic check the toolchain allows. Run those checks on every tick, and fail on a named one. The agent cannot argue with a failed compile. That is the whole idea, and the rest of this piece is the machinery that makes it hold.</p>
+  </section>
+
+  <div class="pull reveal"><p>A prompt asks the agent to respect the architecture. A gate makes respecting it the only way forward. Under pressure, only one of those survives.</p></div>
+
+  <hr class="rule reveal">
+
+  <!-- 01 DRIFT -->
+  <section class="prose reveal" id="drift">
+    <h2><span class="num">01 &middot; The force</span></h2>
+    <h2>Drift is the default</h2>
+    <p class="lede">Before the fix, feel the pressure. An unconstrained loop does not hold a line. It walks away from it, one small reasonable step at a time, and the walk compounds.</p>
+    <p>Think of architectural integrity as a percentage: how many of the distinctions you originally cared about are still intact. Every tick, the agent touches the code, and every tick there is some chance that the easiest local move erodes one of them. A single tick almost never breaks anything you would notice. The problem is the product. A ninety four percent survival per tick is not ninety four percent after forty ticks, it is the forty fourth power of it, and that number is small. Compounding is merciless in exactly the direction you do not want.</p>
+    <p>A gate changes the arithmetic. It does not make the agent wiser. It removes the option. The move that would erode a guarded distinction now fails a check, bounces, and never lands. Drag the slider to set how fragile your architecture is, how many distinctions sit one convenient shortcut away from collapse, and watch the two futures separate.</p>
+
+    <figure class="wide">
+      <div class="panel">
+        <div class="panel-title">Architectural integrity over a long run <span class="tag">drag the slider</span></div>
+        <div class="panel-sub">One curve is a prompt only loop, where the architecture is a request. The other is the same agent behind a gate, where a guarded distinction simply cannot be collapsed. Same model, same tickets. The difference is whether the meaning lives inside the loop or outside it.</div>
+        <div class="controls">
+          <span class="clab">fragility</span>
+          <input type="range" id="driftSlider" min="1" max="12" value="6" step="1" style="flex:1;min-width:160px;max-width:340px">
+          <span class="clab" id="driftVal" style="color:var(--heat)">6 fragile distinctions</span>
+        </div>
+        <div id="driftChart"></div>
+        <div class="readout" id="driftRead"></div>
+      </div>
+      <figcaption>The gated line is not flat because the agent stopped trying the bad move. It is flat because the bad move keeps bouncing off a check and never reaches the tree. <b>Determinism beats discipline.</b></figcaption>
+    </figure>
+
+    <div class="takeaway"><div class="tk">The force</div><p>Local optimization plus a long horizon equals drift. You cannot out-prompt it, because the prompt is the first thing pressure teaches the agent to ignore.</p></div>
+  </section>
+
+  <!-- 02 THE IDEA -->
+  <section class="prose reveal" id="idea">
+    <h2><span class="num">02 &middot; The move</span></h2>
+    <h2>Move the meaning outside the loop</h2>
+    <p class="lede">If meaning inside the loop erodes, put it where the loop cannot reach. That single relocation is the entire thesis, and everything else is plumbing to make it real.</p>
+    <p>A human writes a <span class="chip">constitution.model</span>: a small file naming the invariants that must hold no matter what. Not style preferences, not a wish list. The few distinctions whose collapse would quietly break the system. Then a compiler, <span class="chip">vader gen</span>, turns each invariant into the strongest deterministic check the language allows, and <span class="chip">vader gate</span> runs them all and fails on the name of any that breaks. The agent never sees a polite instruction it can rationalize past. It sees a red build with an invariant id on it.</p>
+    <p>The slogan for the whole system is four words: <strong>gate the model, free the code</strong>. The model, the set of invariants, is sacred and slow and human owned. The code beneath it is cheap and fast and the agent's to rewrite however it likes, as long as the gate stays green. You stop reviewing diffs line by line and start owning the boundary. The agent gets maximum freedom inside a boundary it cannot move.</p>
+
+    <div class="fm reveal">
+      <div class="fm-row"><span class="force">agent collapses a distinction</span><span class="arr">is answered by</span><span class="move">compile it into the gate</span></div>
+      <div class="fm-row"><span class="force">agent deletes the check to pass</span><span class="arr">is answered by</span><span class="move">lock the model hash</span></div>
+      <div class="fm-row"><span class="force">fresh session forgets the intent</span><span class="arr">is answered by</span><span class="move">the recall packet</span></div>
+      <div class="fm-row"><span class="force">silent debt rides along to done</span><span class="arr">is answered by</span><span class="move">triage gated persist</span></div>
+      <div class="fm-row"><span class="force">verifier is an optimist</span><span class="arr">is answered by</span><span class="move">refute first, cross owner, majority</span></div>
+    </div>
+
+    <p>Read that ledger as the map of the rest of this article. Each force is a specific way an agent erodes a system over a long run, and each move is a specific mechanism Vader uses to deny it. We will walk the important ones in order.</p>
+
+    <div class="pull heat reveal"><p>Gate the model, free the code. The boundary is human and immutable. Everything inside it is the agent's to redo a thousand times.</p></div>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 03 COMPILE -->
+  <section class="prose reveal" id="compile">
+    <h2><span class="num">03 &middot; The mechanism</span></h2>
+    <h2>Compile a distinction into a check</h2>
+    <p class="lede">The real move is converting a semantic distinction into a mechanical one. A compile error beats a paragraph asking the agent to please respect the architecture, because a compile error is not addressed to anyone. It just is.</p>
+    <p>An invariant is one of four kinds, plus a raw escape hatch. The compiler dispatches on the shape of the check, not on a label, and it emits the strongest enforcement that shape allows. This is also where the honesty lives: the four kinds are not equal. Two compile to hard static checks. Two reduce to tests, and a test only checks the path you wrote. Click each kind to see exactly what it becomes, and how much that enforcement is actually worth.</p>
+
+    <figure class="wide">
+      <div class="panel">
+        <div class="panel-title">The compiler, by invariant kind <span class="tag">click a kind</span></div>
+        <div class="panel-sub">On the left, what the human writes in the model. On the right, what the compiler emits to enforce it. The meter is how much confidence a green gate actually earns you for that kind.</div>
+        <div class="kinds" id="kindList">
+          <div class="kind lit" data-k="shape">
+            <div><div class="kname">shape</div><div class="kdesc">two ideas must not be one. A point is not an interval.</div></div>
+            <div class="kstr strong">static type</div>
+          </div>
+          <div class="kind" data-k="dependency">
+            <div><div class="kname">dependency</div><div class="kdesc">this layer must never import that one.</div></div>
+            <div class="kstr strong">static scan</div>
+          </div>
+          <div class="kind" data-k="data">
+            <div><div class="kname">data</div><div class="kdesc">a law that must hold. merge of x and x is x.</div></div>
+            <div class="kstr medium">property test</div>
+          </div>
+          <div class="kind" data-k="behavioral">
+            <div><div class="kname">behavioral</div><div class="kdesc">a contract a component must honor at runtime.</div></div>
+            <div class="kstr weak">contract test</div>
+          </div>
+          <div class="kind" data-k="rawCheck">
+            <div><div class="kname">rawCheck</div><div class="kdesc">a literal shell command. the escape hatch.</div></div>
+            <div class="kstr opaque">opaque</div>
+          </div>
+        </div>
+        <div class="codepair">
+          <div><div class="clabel">the human writes</div><pre class="code" id="codeModel"></pre></div>
+          <div><div class="clabel">the compiler emits</div><pre class="code" id="codeGen"></pre></div>
+        </div>
+        <div style="margin-top:1.2rem">
+          <div class="clabel" style="font-family:var(--mono);font-size:.64rem;letter-spacing:.14em;text-transform:uppercase;color:var(--fg-faint);margin-bottom:.4rem">confidence a green gate earns</div>
+          <div class="meter"><i id="kindMeter" style="width:92%"></i></div>
+        </div>
+        <div class="readout" id="kindRead"></div>
+      </div>
+      <figcaption>The strongest case, a branded type whose collapse is a real compile error, is genuinely airtight. The weakest, a behavioral contract, is only as good as the path the test exercises. <b>Read the meter before you trust the green.</b></figcaption>
+    </figure>
+
+    <div class="takeaway"><div class="tk">The mechanism</div><p>Shape and dependency invariants become static checks with teeth. Data and behavioral invariants become tests, which check what you remembered to test. The confidence a green gate gives you is inversely proportional to how behavioral the invariant is.</p></div>
+  </section>
+
+  <!-- 04 THE LOCK -->
+  <section class="prose reveal" id="lock">
+    <h2><span class="num">04 &middot; The cheat it kills</span></h2>
+    <h2>Lock the gate against the agent</h2>
+    <p class="lede">There is an obvious way to defeat a check that has nothing to do with satisfying it. Delete it. An agent under pressure will find that move on its own, and a factory that does not anticipate it is theater.</p>
+    <p>So the constitution is a protected artifact. When <span class="chip">vader gen</span> compiles the model, it writes the hash of that compiled model into locked state. The agent owns every line of application code, but it cannot edit <span class="chip">constitution.model</span> or the generated checks. On every run, <span class="chip">vader gate</span> recomputes the hash and compares. If the model the agent ran against is not the model the human froze, the gate fails closed, before it even looks at the code. There is no version of "make the build green" that runs through tampering with the model, because tampering with the model is itself a red build.</p>
+    <p>The only path to change what is enforced is a human gate. A run may notice a missing distinction and <em>propose</em> a model change, but the proposal is parked, never applied. A person reviews it, and only then does the model recompile and the lock refreeze. Try both moves below: satisfy the invariant the honest way, or try to silence the check the way an unconstrained agent would.</p>
+
+    <figure class="wide">
+      <div class="panel">
+        <div class="panel-title">Two ways to face a failing check <span class="tag">pick one</span></div>
+        <div class="panel-sub">The agent has a red gate. It can do the work, or it can try to make the red go away by editing the thing that produces it. Watch what the lock does to the second move.</div>
+        <div class="pill" role="tablist" aria-label="Agent strategy">
+          <button id="lockHonest" aria-pressed="true">satisfy the invariant</button>
+          <button id="lockCheat" class="heaton" aria-pressed="false">silence the check</button>
+        </div>
+        <svg id="lockSvg" viewBox="0 0 700 220" role="img" aria-label="The model, its locked hash, and the gate verdict">
+          <g id="lock-static"></g>
+        </svg>
+        <div class="readout" id="lockRead"></div>
+      </div>
+      <figcaption>The lock does not make the agent honest. It makes dishonesty louder than honesty, by turning the cheat into the single most obvious red on the board. <b>The only door out of the boundary is a human one.</b></figcaption>
+    </figure>
+
+    <div class="pull reveal"><p>The most common way an agent beats a check is not by passing it. It is by deleting it. Vader's answer is to make the check the one file the agent's hands cannot reach.</p></div>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 05 THE LOOP -->
+  <section class="prose reveal" id="loop">
+    <h2><span class="num">05 &middot; The pipeline</span></h2>
+    <h2>One tick, end to end</h2>
+    <p class="lede">With the gate and the lock in place, the loop can be aggressive. Between the two human gates, the agent runs the full cycle alone, and runs it again, and again, because the boundary makes autonomy safe rather than reckless.</p>
+    <p>A run is a sequence of phases. Ground establishes a trustworthy baseline and refuses to believe stale memory. Conceive is the first human gate: a person writes the spec and the model and approves them. Decompose cuts the work into disjoint slices that cannot collide, and <span class="chip">vader gen</span> compiles and locks the model. Implement fans out: a critic red teams the plan, the seam owner builds the shared interface alone so the others fork from something settled, and the sibling owners build in parallel, each in an isolated worktree so a failed slice never poisons the tree. Verify cross assigns refuters and runs the gate. Persist closes the tick, but only after every open risk has been triaged.</p>
+
+    <div class="specrow reveal">
+      <div class="cell"><div class="lab">P-1 ground</div><div class="val">verify before trust. Stale memory is re-checked against reality.</div></div>
+      <div class="cell"><div class="lab">P0 conceive</div><div class="val">human gate. Spec and model written and frozen.</div></div>
+      <div class="cell"><div class="lab">P1 decompose</div><div class="val">disjoint slices. gen compiles and locks the model.</div></div>
+      <div class="cell"><div class="lab">P2 implement</div><div class="val">critic, seam first, siblings in parallel worktrees.</div></div>
+      <div class="cell"><div class="lab">P3 verify</div><div class="val">refute first verifiers, then the deterministic gate.</div></div>
+      <div class="cell"><div class="lab">P4 persist</div><div class="val">triage gated. No tick closes on an untriaged risk.</div></div>
+    </div>
+
+    <p>Notice how little of that needs a human. Two gates, both about the model: freeze it at the start, approve any change to it later. Everything between, the decomposition, the building, the verifying, the bookkeeping, is autonomous, and autonomous on purpose. The design's whole bet is that if the boundary is solid you can let the inside run free, because the worst the inside can do is bounce off the gate.</p>
+
+    <div class="takeaway"><div class="tk">The pipeline</div><p>Two human gates, both about the model. The rest of the tick is the agent alone. A solid boundary is what makes that delegation safe instead of negligent.</p></div>
+  </section>
+
+  <!-- 06 FAN-OUT -->
+  <section class="prose reveal" id="fanout">
+    <h2><span class="num">06 &middot; The fan-out</span></h2>
+    <h2>Build in parallel, verify where it hurts</h2>
+    <p class="lede">A tick is not one agent doing one thing. It is a small fleet, and the shape of that fleet is computed, not improvised. One pure function turns the recall packet into the plan, so every host runs the identical decomposition.</p>
+    <p>The seam slice goes first, alone, because everything else forks from the interface it defines. Then the sibling slices run in parallel, each owner in its own worktree. The interesting part is verification. A verifier is an LLM judging an LLM's work, so a single optimistic pass is worth little. Vader scales the panel by evidence: a slice that touches a seam, or a class that has bounced before, or a class flagged never-to-be-trusted-cheaply, gets three refute first verifiers and passes only on a majority. A calm, well behaved class gets one. Spend the scrutiny where history says it is needed, not uniformly.</p>
+
+    <figure class="wide">
+      <div class="panel">
+        <div class="panel-title">planTick, on a real partition <span class="tag">toggle the history</span></div>
+        <div class="panel-sub">The same nine slices, planned two ways. With a calm ledger, only the seams earn extra scrutiny. With a bruised one, the class that keeps bouncing, the etl fetchers, gets a three voter panel each. The voter count is gold when history pushed it above one.</div>
+        <div class="pill" role="tablist" aria-label="Bounce history">
+          <button id="histCalm" aria-pressed="true">calm history</button>
+          <button id="histBruised" class="heaton" aria-pressed="false">bruised history</button>
+        </div>
+        <svg id="fanMap" viewBox="0 0 940 300" role="img" aria-label="A recall packet planned into a seam-first slice graph with per slice voter counts">
+          <g id="fan-links"></g>
+          <g id="fan-nodes"></g>
+        </svg>
+        <div class="controls" style="margin-bottom:0;margin-top:1.1rem">
+          <button class="ghost" id="fanReplay">Replay the plan</button>
+          <span class="clab" id="fanStage">seams first, then siblings in parallel</span>
+        </div>
+      </div>
+      <figcaption>Nothing here is hand tuned per run. The plan is a pure function of the recall packet, so the Claude Code path, the Pi path, and a plain sequential fallback all build the same shape. <b>Only the wall clock differs.</b></figcaption>
+    </figure>
+
+    <div class="takeaway"><div class="tk">The fan-out</div><p>Seam first so siblings fork from a settled interface, parallel after, and verification weighted by the bounce ledger. The decomposition is computed once and shared, so harnesses cannot disagree on what runs.</p></div>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 07 MEMORY -->
+  <section class="prose reveal" id="memory">
+    <h2><span class="num">07 &middot; The memory</span></h2>
+    <h2>Earn autonomy, lose it on contact</h2>
+    <p class="lede">An agent with no memory re-derives everything every session, including its own mistakes. Vader keeps a small, append only memory so each tick starts from what is known, and so trust is something a class earns through evidence rather than something asserted.</p>
+    <p>Three pieces. The <strong>recall packet</strong> rehydrates a fresh session in one call: the next item, what has gone stale, the open risks, the bounce trends, the parked model change. The <strong>ledger</strong> records every run and every bounce, append only, the factory's flight recorder. The <strong>ratchet</strong> reads that ledger and computes how much human gating each class of work still needs. A class that has shipped clean, run after run, ratchets up toward autonomy. The moment it produces a defect, it demotes straight back to the bottom. And some classes, the seam, anything touching security or a migration, never ratchet at all, no matter how long their clean streak.</p>
+
+    <figure class="wide">
+      <div class="panel">
+        <div class="panel-title">The ratchet for one class of work <span class="tag">run some ticks</span></div>
+        <div class="panel-sub">Trust is asymmetric on purpose. Clean runs raise autonomy one notch at a time, slowly. A single dirty run drops it to the floor, instantly. The system is hard to trust and easy to distrust, which is the correct direction for a machine writing your code.</div>
+        <div class="controls">
+          <button class="act" id="ratClean">clean run</button>
+          <button class="seg" id="ratDirty" aria-pressed="false" style="color:var(--heat);border-color:var(--heat-deep)">dirty run</button>
+          <button class="ghost" id="ratReset">reset</button>
+        </div>
+        <div id="ratChart"></div>
+        <div class="readout" id="ratRead"></div>
+      </div>
+      <figcaption>The honest caveat: the ledger records defects that were <em>caught</em>, not defects that exist. A quietly fragile class that never bounced, because nobody tested the right thing, sits at full autonomy it did not earn. The ratchet is a good instinct on a small sample, not a measurement. <b>More on that in a moment.</b></figcaption>
+    </figure>
+
+    <div class="pull reveal"><p>Hard to trust, easy to distrust. A clean streak is built one notch at a time. A single defect spends all of it at once.</p></div>
+  </section>
+
+  <!-- 08 DRIVE -->
+  <section class="prose reveal" id="drive">
+    <h2><span class="num">08 &middot; The control surface</span></h2>
+    <h2>How an agent actually drives it</h2>
+    <p class="lede">Vader does not run the agent. The agent runs Vader. The engine is a deterministic command line tool the agent shells out to, the knowledge is a skill it loads, and the parallelism is the agent's own native primitive. Three layers, one spine.</p>
+
+    <div class="layers3 reveal">
+      <div class="l3"><div class="l3n">the skill</div><div class="l3d"><b>Knowledge.</b> The loop, the phases, the gates, how to author the model, the owner and verifier prompts. The agent loads it into context. It is the manual, not code that executes.</div></div>
+      <div class="l3"><div class="l3n">the command</div><div class="l3d"><b>The driver.</b> A slash command that scopes one tick: run the cycle once, from ground to persist, then pace the next one. It is the start button, and it points at the skill.</div></div>
+      <div class="l3"><div class="l3n">the cli</div><div class="l3d"><b>The spine.</b> A zero dependency tool: init, gen, gate, recall, triage, persist, ratchet. All the judgment that must be reproducible lives here, once, so the answer is identical on every host.</div></div>
+      <div class="l3"><div class="l3n">the fan-out</div><div class="l3d"><b>The hands.</b> The agent's own subagent primitive does the parallel build and verify, fed by the shared plan. A thin adapter binds that plan to each host, or runs it sequentially where there is none.</div></div>
+    </div>
+
+    <p>Concretely, a tick on a host with subagents looks like this. The command loads the skill, then the agent shells out to <span class="chip">recall</span> and reads a JSON packet. It runs the pure planner to get the seam first, siblings, and voter counts. It spawns its subagents to build and verify. It shells out to <span class="chip">gate</span>, the deterministic arbiter, and a failed invariant id sends a slice back. It shells out to <span class="chip">triage</span> and then <span class="chip">persist</span>, which appends the ledger and closes the tick. Then it schedules the next one. The agent is the conductor in the middle. The CLI is what it consults whenever the answer must not depend on a mood.</p>
+
+    <div class="ribbon reveal">
+      <div class="r"><div class="rn">4</div><div class="rl">invariant kinds, plus one escape hatch</div></div>
+      <div class="r"><div class="rn">2</div><div class="rl">human gates in the whole loop</div></div>
+      <div class="r"><div class="rn">7</div><div class="rl">commands in one zero dep CLI</div></div>
+      <div class="r"><div class="rn">1</div><div class="rl">pure planner shared by every host</div></div>
+    </div>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 09 HONEST -->
+  <section class="prose reveal" id="honest">
+    <h2><span class="num">09 &middot; The honest part</span></h2>
+    <h2>Where it helps, where it does not</h2>
+    <p class="lede">A tool sold as more than it is gets abandoned after the first green gate that shipped a bug. So here is the fair read, with the marketing removed.</p>
+    <p>Vader is strongest exactly where software is most structural, and weakest exactly where software is hardest. It genuinely helps on long horizon autonomous work, where drift across many ticks is the real risk and a few critical distinctions, money precision, a security boundary, a dependency direction, can be named and compiled. It helps most in typed languages, where the compiled checks have real teeth. It rewards teams that will actually invest in writing a rich constitution, and the value is proportional to that investment.</p>
+    <p>It is limited everywhere else. The gate is exactly as good as the constitution, and authoring a good constitution is the hard, expert, judgment heavy work that Vader does not reduce, it front loads. The distinctions that bite in practice are usually the ones nobody anticipated, and Vader does nothing for an unnamed distinction. Verifiers are LLMs judging LLM work, and a majority vote over correlated voters is weaker than the count suggests. The ratchet calibrates on a tiny sample and measures detected defects, not actual ones. And the whole dance has a real cost: a rich partition with several three voter classes is twenty or more agent invocations a tick, expensive exactly when the constitution is rich enough to be worth it.</p>
+
+    <ul class="heat reveal">
+      <li><strong>Hollow satisfaction.</strong> A behavioral invariant passed by a test that never exercises the real path. The gate goes green and the invariant is violated in production. The most dangerous mode, because it looks like success.</li>
+      <li><strong>Over-trust in green.</strong> A green gate means the named invariants hold on the checked paths and the toolchain passed. It does not mean correct. The framing invites reading it as the latter.</li>
+      <li><strong>Constitution rot.</strong> The lock that stops the agent from decaying the model also stops it from fixing a model that is wrong, until a human intervenes.</li>
+      <li><strong>Weak author ceiling.</strong> A thin constitution still produces a gate that looks rigorous, which is worse than obviously having none.</li>
+    </ul>
+
+    <div class="takeaway"><div class="tk">The honest part</div><p>Two things ship under one name: a deterministic invariant gate, which is strong but narrow, and a style philosophy, which is broad but soft and lives in prompts like any other. Keep them separate, so the rigor of the first does not lend borrowed authority to the second.</p></div>
+  </section>
+
+  <!-- 10 VERDICT -->
+  <section class="prose reveal" id="verdict">
+    <h2><span class="num">10 &middot; The verdict</span></h2>
+    <h2>A durability harness, not a miracle</h2>
+    <p>The central idea is genuinely good and answers a real, specific failure of long horizon agent loops: compile the distinctions you care about into a gate the agent cannot silence, and lock that gate against the agent. It does not make agents correct. It makes a named set of architectural decisions durable across many ticks, which is a real but bounded win. The surrounding ratchet and voter machinery is reasonable but unproven on small samples, and it measures what was caught rather than what is true.</p>
+    <p>Sold honestly, as a durability harness for the invariants you can express, Vader is a sharp tool with a clear niche and clean engineering. Sold as a factory that ships correct software, it overpromises. The difference between those two pitches is the difference between a tool people trust after a year and one they abandon after the first green gate that shipped a bug. The honest pitch is the smaller one, and it is the one worth standing behind.</p>
+    <p>Start where the win is real. Pick the two or three distinctions whose collapse would actually hurt. Write them as invariants. Compile them. Lock them. Then let the agent run, and spend your attention on the boundary instead of the diff. That is the whole discipline, and it is enough.</p>
+
+    <div class="pull reveal"><p>It does not make the agent good. It makes a handful of decisions you cannot afford to lose impossible to lose quietly. On a long enough run, that is most of the battle.</p></div>
+  </section>
+
+  <footer class="reveal">
+    <a class="brand" href="/" style="display:inline-flex">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M6 12h12M9 18h6" stroke="var(--cool)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span class="b1">The</span><span class="b2">Trenches</span>
+    </a>
+    <p>A field manual for building under pressure. Gate the model, free the code.</p>
+  </footer>
+
+</main>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var hasGSAP = typeof gsap !== 'undefined';
+  var hasD3 = typeof d3 !== 'undefined';
+  if (hasGSAP && typeof ScrollTrigger !== 'undefined') gsap.registerPlugin(ScrollTrigger);
+  var $ = function(id){ return document.getElementById(id); };
+  var SVGNS = 'http://www.w3.org/2000/svg';
+  function svgEl(name, attrs){ var e = document.createElementNS(SVGNS, name); if(attrs){ for(var k in attrs) e.setAttribute(k, attrs[k]); } return e; }
+
+  /* ---------- THEME (session only, no storage) ---------- */
+  (function(){
+    var root = document.documentElement, btn = $('themeBtn'), icon = $('themeIcon');
+    var moon = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>';
+    var sun = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+    var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    function apply(t){ root.setAttribute('data-theme', t); if(icon) icon.innerHTML = (t === 'dark') ? sun : moon; }
+    apply(prefersLight ? 'light' : 'dark');
+    if(btn) btn.addEventListener('click', function(){ apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+  })();
+
+  /* ---------- PROGRESS BAR ---------- */
+  (function(){
+    var bar = $('progress'); if(!bar) return;
+    function on(){ var h = document.documentElement, max = h.scrollHeight - h.clientHeight; bar.style.width = (max > 0 ? (h.scrollTop / max * 100) : 0) + '%'; }
+    document.addEventListener('scroll', on, {passive:true}); window.addEventListener('resize', on); on();
+  })();
+
+  /* ---------- REVEALS ---------- */
+  (function(){
+    var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+    if(reduce || !els.length){ els.forEach(function(e){ e.classList.add('in'); }); return; }
+    if(hasGSAP && typeof ScrollTrigger !== 'undefined'){
+      els.forEach(function(el){
+        ScrollTrigger.create({ trigger: el, start: 'top 88%', once: true, onEnter: function(){ el.classList.add('in'); } });
+      });
+    } else {
+      var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, {threshold:0.1, rootMargin:'0px 0px -8% 0px'});
+      els.forEach(function(el){ io.observe(el); });
+    }
+  })();
+
+  /* ---------- SCROLL SPY ---------- */
+  (function(){
+    var nav = $('spy'); if(!nav) return;
+    var links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+    var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+    function on(){
+      var y = window.scrollY + 140, best = -1;
+      targets.forEach(function(t, i){ if(t && t.offsetTop <= y) best = i; });
+      links.forEach(function(a, i){ a.classList.toggle('active', i === best); });
+    }
+    document.addEventListener('scroll', on, {passive:true}); on();
+  })();
+
+  /* ---------- HERO BLUEPRINT (the loop assembling) ---------- */
+  (function(){
+    var links = $('hm-links'), nodes = $('hm-nodes'), packet = $('hm-packet'), stage = $('hmStage'), replay = $('hmReplay');
+    if(!links || !nodes) return;
+    var N = {
+      conceive:{x:70,  y:125, w:96, h:48, label:'CONCEIVE', gate:1, kind:'r'},
+      decomp:  {x:236, y:125, w:96, h:48, label:'DECOMPOSE', kind:'r'},
+      seam:    {x:418, y:60,  w:84, h:40, label:'SEAM', t:1, kind:'r'},
+      sib1:    {x:418, y:112, w:84, h:40, label:'OWNER', kind:'r'},
+      sib2:    {x:418, y:164, w:84, h:40, label:'OWNER', kind:'r'},
+      verify:  {x:600, y:125, w:96, h:48, label:'VERIFY', kind:'r'},
+      gate:    {x:600, y:200, w:96, h:30, label:'GATE', t:1, kind:'r'},
+      persist: {x:790, y:125, w:96, h:48, label:'PERSIST', gate:1, kind:'r'}
+    };
+    var L = [
+      ['conceive','decomp'], ['decomp','seam'], ['decomp','sib1'], ['decomp','sib2'],
+      ['seam','verify'], ['sib1','verify'], ['sib2','verify'], ['verify','gate'], ['verify','persist']
+    ];
+    var steps = [
+      {nodes:['conceive'], say:'a human freezes the spec and the model'},
+      {nodes:['decomp'], say:'cut into disjoint slices, compile and lock'},
+      {nodes:['seam'], say:'the seam owner builds the interface first, alone'},
+      {nodes:['sib1','sib2'], say:'sibling owners build in parallel worktrees'},
+      {nodes:['verify','gate'], say:'refuters judge, the gate is the arbiter'},
+      {nodes:['persist'], say:'triage, then persist and loop'}
+    ];
+    function center(n){ return {x:n.x + n.w/2, y:n.y + n.h/2}; }
+    function edge(a, b){ var ca = center(a), cb = center(b); var ax = ca.x + (cb.x>ca.x? a.w/2 : -a.w/2); var bxx = cb.x + (ca.x>cb.x? b.w/2 : -b.w/2); return 'M'+ax+','+ca.y+' C'+(ax+(bxx-ax)/2)+','+ca.y+' '+(ax+(bxx-ax)/2)+','+cb.y+' '+bxx+','+cb.y; }
+    var linkEls = {};
+    L.forEach(function(pair){ var p = svgEl('path', {d: edge(N[pair[0]], N[pair[1]]), class:'flow', opacity:0}); links.appendChild(p); linkEls[pair.join('-')] = p; });
+    var nodeEls = {};
+    Object.keys(N).forEach(function(key){
+      var n = N[key]; var g = svgEl('g', {opacity:0});
+      var fill = svgEl('rect', {x:n.x, y:n.y, width:n.w, height:n.h, rx:9, class:'node-fill'});
+      var stroke = svgEl('rect', {x:n.x, y:n.y, width:n.w, height:n.h, rx:9, class:'node-stroke'});
+      if(n.gate){ stroke.setAttribute('stroke','var(--heat)'); stroke.setAttribute('stroke-width','2.2'); }
+      var c = center(n);
+      var label = svgEl('text', {x:c.x, y:c.y+4, 'text-anchor':'middle', class:'lbl' + (n.t? ' t' : (n.gate? ' h' : ''))}); label.textContent = n.label;
+      g.appendChild(fill); g.appendChild(stroke); g.appendChild(label); nodes.appendChild(g); nodeEls[key] = g;
+    });
+    /* loop-back arc from persist to decompose */
+    var loopBack = svgEl('path', {d:'M838,149 C838,235 236,235 284,173', class:'flow', opacity:0, 'stroke-dasharray':'5 6'});
+    links.appendChild(loopBack);
+    function reveal(){
+      var seen = {};
+      if(reduce || !hasGSAP){
+        Object.keys(nodeEls).forEach(function(k){ nodeEls[k].setAttribute('opacity',1); });
+        L.forEach(function(p){ linkEls[p.join('-')].setAttribute('opacity', .85); });
+        loopBack.setAttribute('opacity', .5);
+        if(stage) stage.textContent = 'two gold gates, the rest is autonomous';
+        packetLoop(); return;
+      }
+      var tl = gsap.timeline();
+      steps.forEach(function(st){
+        st.nodes.forEach(function(k){ seen[k] = true; tl.fromTo(nodeEls[k], {opacity:0, transformOrigin:'center', scale:.6}, {opacity:1, scale:1, duration:.5, ease:'back.out(1.7)'}, '<+0.08'); });
+        L.forEach(function(p){ if(seen[p[0]] && seen[p[1]]){ var el = linkEls[p.join('-')]; if(el && !el._lit){ el._lit = true; tl.to(el, {opacity:.85, duration:.4}, '<'); } } });
+        if(stage) tl.call(function(msg){ stage.textContent = msg; }, [st.say], '<');
+        tl.to({}, {duration:.5});
+      });
+      tl.to(loopBack, {opacity:.5, duration:.5});
+      tl.call(function(){ if(stage) stage.textContent = 'two gold gates, the rest is autonomous'; });
+      tl.call(packetLoop);
+    }
+    function packetLoop(){
+      if(!packet) return;
+      var d = edge(N.conceive, N.decomp) + ' ' + edge(N.decomp, N.sib1).slice(1) + ' ' + edge(N.sib1, N.verify).slice(1) + ' ' + edge(N.verify, N.persist).slice(1);
+      var tmp = svgEl('path', {d:d}); tmp.style.visibility='hidden'; $('heroMap').appendChild(tmp);
+      var len = tmp.getTotalLength();
+      if(reduce){ var e = tmp.getPointAtLength(len); packet.setAttribute('cx', e.x); packet.setAttribute('cy', e.y); packet.setAttribute('opacity',1); return; }
+      packet.setAttribute('opacity', 1); var start = null, dur = 5200;
+      function step(ts){ if(!start) start = ts; var t = ((ts - start) % dur) / dur; var p = tmp.getPointAtLength(t * len); packet.setAttribute('cx', p.x); packet.setAttribute('cy', p.y); requestAnimationFrame(step); }
+      requestAnimationFrame(step);
+    }
+    if(hasGSAP && typeof ScrollTrigger !== 'undefined' && !reduce){
+      ScrollTrigger.create({ trigger:'#heroMap', start:'top 80%', once:true, onEnter: reveal });
+    } else { reveal(); }
+    if(replay) replay.addEventListener('click', function(){
+      Object.keys(nodeEls).forEach(function(k){ nodeEls[k].setAttribute('opacity', 0); });
+      L.forEach(function(p){ var el = linkEls[p.join('-')]; el.setAttribute('opacity', 0); el._lit = false; });
+      loopBack.setAttribute('opacity', 0);
+      reveal();
+    });
+  })();
+
+  /* ---------- DRIFT CHART (D3, two compounding curves) ---------- */
+  (function(){
+    var host = $('driftChart'), slider = $('driftSlider'), val = $('driftVal'), read = $('driftRead'); if(!host || !hasD3) return;
+    var W = 700, H = 300, m = {l:52, r:24, t:18, b:40}, TICKS = 40;
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%').attr('role','img').attr('aria-label','Architectural integrity over forty ticks, prompt only versus gated');
+    var x = d3.scaleLinear().domain([0, TICKS]).range([m.l, W - m.r]);
+    var y = d3.scaleLinear().domain([0, 100]).range([H - m.b, m.t]);
+    svg.append('g').attr('class','d3-axis').attr('transform','translate(0,'+(H-m.b)+')').call(d3.axisBottom(x).ticks(8)).selectAll('text').attr('class','lbl');
+    svg.append('g').attr('class','d3-axis').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(5).tickFormat(function(d){ return d + '%'; })).selectAll('text').attr('class','lbl');
+    svg.append('text').attr('x', W/2).attr('y', H - 6).attr('text-anchor','middle').attr('class','lbl').text('ticks of autonomous work');
+    var line = d3.line().x(function(d){ return x(d.n); }).y(function(d){ return y(d.v); });
+    var gatePath = svg.append('path').attr('fill','none').attr('stroke','var(--cool)').attr('stroke-width', 2.6);
+    var promptPath = svg.append('path').attr('fill','none').attr('stroke','var(--heat)').attr('stroke-width', 2.6).attr('stroke-dasharray','1 0');
+    var gateLab = svg.append('text').attr('class','lbl t').attr('text-anchor','end').attr('stroke','var(--bg)').attr('stroke-width',3).attr('paint-order','stroke');
+    var promptLab = svg.append('text').attr('class','lbl h').attr('text-anchor','end').attr('stroke','var(--bg)').attr('stroke-width',3).attr('paint-order','stroke');
+    function update(frag){
+      var perTick = Math.pow(0.5, frag / 100);
+      var ppts = [], gpts = [];
+      for(var n=0;n<=TICKS;n++){
+        ppts.push({n:n, v: 100 * Math.pow(perTick, n)});
+        var dip = (n % 7 === 0 && n > 0) ? 4 : 0;
+        gpts.push({n:n, v: 100 - dip});
+      }
+      promptPath.datum(ppts).transition().duration(reduce?0:260).attr('d', line);
+      gatePath.datum(gpts).transition().duration(reduce?0:260).attr('d', line);
+      var pend = ppts[TICKS], gend = gpts[TICKS];
+      promptLab.attr('x', x(TICKS) - 4).attr('y', y(pend.v) + 16).text('prompt only ' + pend.v.toFixed(0) + '%');
+      gateLab.attr('x', x(TICKS) - 4).attr('y', y(gend.v) - 8).text('gated ' + gend.v.toFixed(0) + '%');
+      var p40 = pend.v;
+      read.innerHTML = 'With <b>' + (frag) + '</b> fragile distinctions, each tick the prompt only loop holds about <b>' + (perTick*100).toFixed(1) + '%</b> of its integrity. Compound that over forty ticks and only <span class="o">' + p40.toFixed(0) + '%</span> survives. The gated loop bounces every erosion off a check, so it holds at <b>~100%</b>, dipping only where a guarded move was tried and rejected. Same agent. The line that lives is the one whose meaning sits outside the loop.';
+    }
+    slider.addEventListener('input', function(){ var f = parseInt(slider.value, 10); val.textContent = f + ' fragile distinction' + (f===1?'':'s'); update(f); });
+    val.textContent = parseInt(slider.value,10) + ' fragile distinctions'; update(parseInt(slider.value,10));
+  })();
+
+  /* ---------- COMPILE EXPLORER ---------- */
+  (function(){
+    var list = $('kindList'), cm = $('codeModel'), cg = $('codeGen'), meter = $('kindMeter'), read = $('kindRead');
+    if(!list) return;
+    var DATA = {
+      shape: {
+        model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"temporal_distinct"</span>,\n  <span class="c-key">"distinct"</span>: [\n    <span class="c-heat">"TemporalPoint"</span>,\n    <span class="c-heat">"TemporalInterval"</span>\n  ]\n}',
+        gen: '<span class="c-mut">// generated, .neg.ts</span>\n<span class="c-key">const</span> p: TemporalPoint = mk();\n<span class="c-mut">// @ts-expect-error</span>\n<span class="c-key">const</span> bad:\n  TemporalInterval = p;\n<span class="c-mut">// collapse them and</span>\n<span class="c-mut">// tsc fails on this line</span>',
+        str: 92,
+        read: '<b>Shape, the strong case.</b> Branded nominal types plus an expect-error line. If the agent ever lets a point be used as an interval, a real compile error lands on a real line number. Nothing softer than the type system to slip through. This is where a green gate earns the most trust.'
+      },
+      dependency: {
+        model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"layer_dep"</span>,\n  <span class="c-key">"forbidImport"</span>: {\n    <span class="c-key">"from"</span>: <span class="c-heat">"common/**"</span>,\n    <span class="c-key">"to"</span>: <span class="c-heat">"etl/**"</span>\n  }\n}',
+        gen: '<span class="c-mut">// generated scanner</span>\n<span class="c-key">for</span> (f <span class="c-key">of</span> files(from)) {\n  <span class="c-key">if</span> (imports(f, to))\n    fail(<span class="c-heat">"layer_dep"</span>, f);\n}\n<span class="c-mut">// exits nonzero on the</span>\n<span class="c-mut">// first violation</span>',
+        str: 86,
+        read: '<b>Dependency, also strong.</b> A standalone scan of the source. The direction of an import is a fact in the text, so the check is deterministic and total: it reads every file, not just the ones a test happened to touch. Hard to satisfy hollowly.'
+      },
+      data: {
+        model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"merge_idempotent"</span>,\n  <span class="c-key">"law"</span>: <span class="c-heat">"merge(x,x) === x"</span>,\n  <span class="c-key">"sample"</span>: { <span class="c-mut">/* shape */</span> }\n}',
+        gen: '<span class="c-mut">// generated property test</span>\n<span class="c-key">for</span> (i <span class="c-key">of</span> seeded(500)) {\n  <span class="c-key">const</span> x = gen(sample, i);\n  assert(\n    eq(merge(x, x), x)\n  );\n}',
+        str: 58,
+        read: '<b>Data, medium.</b> A seeded property test over many random inputs. Far better than a single example, but still a sample: it checks the law on the inputs it generated, not on every input that exists. Strong evidence, not a proof.'
+      },
+      behavioral: {
+        model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"retry_outcome"</span>,\n  <span class="c-key">"contractTest"</span>:\n    <span class="c-heat">"retry-outcome"</span>\n}',
+        gen: '<span class="c-mut">// red until the owner</span>\n<span class="c-mut">// supplies the harness</span>\n<span class="c-key">import</span> { run }\n  <span class="c-key">from</span> <span class="c-heat">".vader/contracts"</span>;\nexpect(run()).toHold();\n<span class="c-mut">// checks only the path</span>\n<span class="c-mut">// the harness exercises</span>',
+        str: 34,
+        read: '<b>Behavioral, the weak case.</b> A contract test that stays red until a human writes the harness. The distinction is named now, the proof arrives with the slice, but a test only checks the path you wrote. An untested path can violate the invariant with the gate still green. Trust this one the least.'
+      },
+      rawCheck: {
+        model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"custom"</span>,\n  <span class="c-key">"rawCheck"</span>:\n    <span class="c-heat">"./scripts/audit.sh"</span>\n}',
+        gen: '<span class="c-mut">// run verbatim</span>\n$ ./scripts/audit.sh\n<span class="c-mut">// opaque to the router.</span>\n<span class="c-mut">// earns none of the</span>\n<span class="c-mut">// gold path guarantees.</span>',
+        str: 22,
+        read: '<b>rawCheck, the escape hatch.</b> A literal shell command. Useful when nothing else fits, but the compiler cannot reason about it, so it gets none of the structural guarantees. Powerful and entirely on you. Use it sparingly.'
+      }
+    };
+    function set(k){
+      var d = DATA[k];
+      Array.prototype.forEach.call(list.querySelectorAll('.kind'), function(el){ el.classList.toggle('lit', el.getAttribute('data-k') === k); });
+      cm.innerHTML = d.model; cg.innerHTML = d.gen;
+      meter.style.width = d.str + '%';
+      read.innerHTML = d.read;
+    }
+    Array.prototype.forEach.call(list.querySelectorAll('.kind'), function(el){
+      el.addEventListener('click', function(){ set(el.getAttribute('data-k')); });
+    });
+    set('shape');
+  })();
+
+  /* ---------- THE LOCK (toggle) ---------- */
+  (function(){
+    var honest = $('lockHonest'), cheat = $('lockCheat'), svg = $('lockSvg'), stat = $('lock-static'), read = $('lockRead');
+    if(!svg || !stat) return;
+    /* static diagram: model box, hash chip, gate box */
+    function box(x, y, w, h, label, sub, accent){
+      var g = svgEl('g', {});
+      g.appendChild(svgEl('rect', {x:x, y:y, width:w, height:h, rx:10, class:'node-fill'}));
+      var st = svgEl('rect', {x:x, y:y, width:w, height:h, rx:10, class:'node-stroke'});
+      if(accent){ st.setAttribute('stroke', accent); st.setAttribute('stroke-width','2'); }
+      g.appendChild(st);
+      var t1 = svgEl('text', {x:x+w/2, y:y+h/2-2, 'text-anchor':'middle', class:'lbl t'}); t1.textContent = label; g.appendChild(t1);
+      if(sub){ var t2 = svgEl('text', {x:x+w/2, y:y+h/2+16, 'text-anchor':'middle', class:'lbl'}); t2.textContent = sub; g.appendChild(t2); }
+      return g;
+    }
+    stat.appendChild(box(40, 80, 150, 64, 'MODEL', 'human owned', 'var(--heat)'));
+    stat.appendChild(box(275, 80, 150, 64, 'LOCKED HASH', 'frozen at gen', null));
+    var gateBox = box(510, 80, 150, 64, 'GATE', '', null); gateBox.setAttribute('id','lockGate'); stat.appendChild(gateBox);
+    /* connectors */
+    var l1 = svgEl('path', {d:'M190,112 C230,112 240,112 275,112', class:'flow'}); stat.appendChild(l1);
+    var l2 = svgEl('path', {id:'lockLink', d:'M425,112 C465,112 475,112 510,112', class:'flow'}); stat.appendChild(l2);
+    var verdict = svgEl('text', {id:'lockVerdict', x:585, y:175, 'text-anchor':'middle', class:'lbl t'}); verdict.style.fontSize='13px'; stat.appendChild(verdict);
+    var padlock = svgEl('text', {x:115, y:60, 'text-anchor':'middle', class:'lbl h'}); padlock.textContent='locked'; stat.appendChild(padlock);
+    function set(mode){
+      var isCheat = mode === 'cheat';
+      honest.setAttribute('aria-pressed', !isCheat); cheat.setAttribute('aria-pressed', isCheat);
+      var gateStroke = document.querySelectorAll('#lockGate .node-stroke')[0];
+      var gateLabel = document.querySelectorAll('#lockGate text')[0];
+      if(isCheat){
+        l2.setAttribute('stroke','var(--heat)'); l2.setAttribute('stroke-dasharray','4 5'); l2.setAttribute('stroke-width','2.4');
+        if(gateStroke){ gateStroke.setAttribute('stroke','var(--heat)'); gateStroke.setAttribute('stroke-width','2.4'); }
+        if(gateLabel){ gateLabel.setAttribute('class','lbl h'); }
+        $('lockVerdict').setAttribute('class','lbl h'); $('lockVerdict').textContent = 'FAIL CLOSED: hash mismatch';
+        read.innerHTML = '<span class="o">The cheat.</span> The agent edits the model to delete the failing invariant, then reruns. But <span class="chip">gen</span> locked the hash of the original model, and <span class="chip">gate</span> recomputes it before reading a single line of code. The hashes no longer match, so the gate <b>fails closed</b>. There is no green build on the far side of tampering. The shortcut is the loudest red on the board.';
+      } else {
+        l2.setAttribute('stroke','var(--cool-deep)'); l2.removeAttribute('stroke-dasharray'); l2.setAttribute('stroke-width','2');
+        if(gateStroke){ gateStroke.setAttribute('stroke','var(--cool-deep)'); gateStroke.setAttribute('stroke-width','2'); }
+        if(gateLabel){ gateLabel.setAttribute('class','lbl t'); }
+        $('lockVerdict').setAttribute('class','lbl t'); $('lockVerdict').textContent = 'PASS: hash matches';
+        read.innerHTML = '<span>The honest path.</span> The agent leaves the model alone and changes the code until the invariant holds. The locked hash still matches the frozen model, so the gate runs the checks and <b>passes</b>. This is the only door out of the boundary, and it is the door marked do the work.';
+      }
+    }
+    honest.addEventListener('click', function(){ set('honest'); });
+    cheat.addEventListener('click', function(){ set('cheat'); });
+    set('honest');
+  })();
+
+  /* ---------- FAN-OUT MAP (planTick) ---------- */
+  (function(){
+    var links = $('fan-links'), nodes = $('fan-nodes'), stage = $('fanStage'), replay = $('fanReplay'),
+        calmBtn = $('histCalm'), bruisedBtn = $('histBruised');
+    if(!links || !nodes) return;
+    var recall = {x:60, y:150, w:104, h:46, label:'RECALL'};
+    var plan = {x:232, y:150, w:104, h:46, label:'planTick'};
+    var seams = [
+      {id:'S1', cls:'seam', x:430, y:54, base:3},
+      {id:'S2', cls:'seam', x:430, y:110, base:3}
+    ];
+    var sibs = [
+      {id:'S3', cls:'structurer', x:430, y:166, calm:1, bruised:1},
+      {id:'S4', cls:'etl-fetcher', x:600, y:40,  calm:1, bruised:3},
+      {id:'S5', cls:'etl-fetcher', x:600, y:96,  calm:1, bruised:3},
+      {id:'S6', cls:'etl-fetcher', x:600, y:152, calm:1, bruised:3},
+      {id:'S7', cls:'ui',          x:600, y:208, calm:1, bruised:1},
+      {id:'S8', cls:'etl-fetcher', x:770, y:96,  calm:1, bruised:3},
+      {id:'S9', cls:'ops',         x:770, y:152, calm:1, bruised:1}
+    ];
+    var SW = 96, SH = 40, mode = 'calm';
+    function cx(o){ return o.x + (o.w||SW)/2; }
+    function cy(o){ return o.y + (o.h||SH)/2; }
+    function edge(a, b){ var ax = cx(a) + (a.w||SW)/2, bxx = cx(b) - (b.w||SW)/2; var ay = cy(a), by = cy(b); return 'M'+ax+','+ay+' C'+(ax+(bxx-ax)/2)+','+ay+' '+(ax+(bxx-ax)/2)+','+by+' '+bxx+','+by; }
+    /* links: recall -> plan, plan -> every slice */
+    var allSlices = seams.concat(sibs);
+    var linkEls = [];
+    var lp = svgEl('path', {d: edge(recall, plan), class:'flow', opacity:0}); links.appendChild(lp); linkEls.push({el:lp, to:'plan'});
+    allSlices.forEach(function(s){ var p = svgEl('path', {d: edge(plan, s), class:'flow', opacity:0}); links.appendChild(p); linkEls.push({el:p, to:s.id}); });
+    /* nodes */
+    function mkBox(o, cls){
+      var g = svgEl('g', {opacity:0});
+      var fill = svgEl('rect', {x:o.x, y:o.y, width:(o.w||SW), height:(o.h||SH), rx:9, class:'node-fill'});
+      var stroke = svgEl('rect', {x:o.x, y:o.y, width:(o.w||SW), height:(o.h||SH), rx:9, class:'node-stroke'});
+      g.appendChild(fill); g.appendChild(stroke);
+      var label = svgEl('text', {x:cx(o), y:cy(o)+(o.id?-2:4), 'text-anchor':'middle', class:'lbl' + (o.cls==='seam'?' t':'')}); label.textContent = o.label || o.id; g.appendChild(label);
+      if(o.id){ var sub = svgEl('text', {x:cx(o), y:cy(o)+13, 'text-anchor':'middle', class:'lbl'}); sub.setAttribute('id','vt-'+o.id); sub.style.fontSize='9px'; g.appendChild(sub); g._stroke = stroke; }
+      nodes.appendChild(g); o._g = g; return g;
+    }
+    mkBox(recall); recall._g.firstChild.nextSibling; recall._g.querySelector('text').textContent='RECALL';
+    mkBox(plan); plan._g.querySelector('text').setAttribute('class','lbl t');
+    allSlices.forEach(function(s){ mkBox(s); });
+    function voters(s){ if(s.cls==='seam') return s.base; return mode==='calm'? s.calm : s.bruised; }
+    function paintVoters(){
+      allSlices.forEach(function(s){
+        var v = voters(s);
+        var t = $('vt-'+s.id); if(t){ t.textContent = v + (v===1?' voter':' voters'); t.setAttribute('class','lbl' + (v>1?' h':'')); }
+        if(s._g && s._g._stroke){ if(v>1){ s._g._stroke.setAttribute('stroke', s.cls==='seam'?'var(--cool-deep)':'var(--heat)'); s._g._stroke.setAttribute('stroke-width','2'); } else { s._g._stroke.setAttribute('stroke','var(--line)'); s._g._stroke.setAttribute('stroke-width','1.5'); } }
+      });
+    }
+    function reveal(){
+      var order = [
+        {els:[recall._g], links:[], say:'recall reads the packet'},
+        {els:[plan._g], links:['plan'], say:'planTick computes the shape'},
+        {els:seams.map(function(s){return s._g;}), links:seams.map(function(s){return s.id;}), say:'seams first, alone, three voters each'},
+        {els:sibs.map(function(s){return s._g;}), links:sibs.map(function(s){return s.id;}), say:'siblings in parallel, voters scaled by history'}
+      ];
+      if(reduce || !hasGSAP){
+        [recall._g, plan._g].concat(allSlices.map(function(s){return s._g;})).forEach(function(g){ g.setAttribute('opacity',1); });
+        linkEls.forEach(function(l){ l.el.setAttribute('opacity', .8); });
+        paintVoters(); if(stage) stage.textContent='seams first, then siblings in parallel'; return;
+      }
+      var tl = gsap.timeline();
+      order.forEach(function(st){
+        st.els.forEach(function(g){ tl.fromTo(g, {opacity:0, transformOrigin:'center', scale:.6}, {opacity:1, scale:1, duration:.45, ease:'back.out(1.7)'}, '<+0.06'); });
+        st.links.forEach(function(id){ linkEls.forEach(function(l){ if(l.to===id) tl.to(l.el, {opacity:.8, duration:.35}, '<'); }); });
+        if(stage) tl.call(function(msg){ stage.textContent = msg; }, [st.say], '<');
+        tl.to({}, {duration:.45});
+      });
+      tl.call(paintVoters);
+    }
+    function resetEls(){
+      [recall._g, plan._g].concat(allSlices.map(function(s){return s._g;})).forEach(function(g){ g.setAttribute('opacity',0); });
+      linkEls.forEach(function(l){ l.el.setAttribute('opacity',0); });
+    }
+    if(hasGSAP && typeof ScrollTrigger !== 'undefined' && !reduce){
+      ScrollTrigger.create({ trigger:'#fanMap', start:'top 78%', once:true, onEnter: reveal });
+    } else { reveal(); }
+    if(replay) replay.addEventListener('click', function(){ resetEls(); reveal(); });
+    function setMode(m){ mode = m; calmBtn.setAttribute('aria-pressed', m==='calm'); bruisedBtn.setAttribute('aria-pressed', m==='bruised'); paintVoters();
+      if(stage) stage.textContent = m==='calm' ? 'calm ledger: only seams scaled up' : 'bruised ledger: etl fetchers scaled to three'; }
+    calmBtn.addEventListener('click', function(){ setMode('calm'); });
+    bruisedBtn.addEventListener('click', function(){ setMode('bruised'); });
+  })();
+
+  /* ---------- RATCHET (D3 step line) ---------- */
+  (function(){
+    var host = $('ratChart'), read = $('ratRead'); if(!host || !hasD3) return;
+    var W = 700, H = 250, m = {l:120, r:24, t:18, b:34}, MAXRUN = 16, LEVELS = ['gate every change','sample reviews','spot check','autonomous'];
+    var svg = d3.select(host).append('svg').attr('viewBox','0 0 '+W+' '+H).attr('width','100%').attr('role','img').attr('aria-label','Autonomy level of one class of work over a sequence of runs');
+    var x = d3.scaleLinear().domain([0, MAXRUN]).range([m.l, W - m.r]);
+    var y = d3.scalePoint().domain(LEVELS).range([H - m.b, m.t]).padding(0.5);
+    svg.append('g').attr('class','d3-axis').attr('transform','translate(0,'+(H-m.b)+')').call(d3.axisBottom(x).ticks(8)).selectAll('text').attr('class','lbl');
+    svg.append('g').attr('class','d3-axis').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y)).selectAll('text').attr('class','lbl');
+    svg.append('text').attr('x', (m.l + W - m.r)/2).attr('y', H - 4).attr('text-anchor','middle').attr('class','lbl').text('runs');
+    var line = d3.line().x(function(d){ return x(d.n); }).y(function(d){ return y(LEVELS[d.lvl]); }).curve(d3.curveStepAfter);
+    var path = svg.append('path').attr('fill','none').attr('stroke','var(--cool)').attr('stroke-width',2.6);
+    var dotsG = svg.append('g');
+    var lvl = 0, runs = [{n:0, lvl:0, kind:'start'}];
+    function render(lastKind){
+      path.datum(runs).attr('d', line);
+      var sel = dotsG.selectAll('circle').data(runs);
+      sel.enter().append('circle').attr('r',4).merge(sel)
+        .attr('cx', function(d){ return x(d.n); }).attr('cy', function(d){ return y(LEVELS[d.lvl]); })
+        .attr('fill', function(d){ return d.kind==='dirty' ? 'var(--heat)' : 'var(--cool)'; });
+      sel.exit().remove();
+      var n = runs.length - 1;
+      if(lastKind==='clean') read.innerHTML = 'Run ' + n + ' shipped clean. Autonomy ratchets up one notch to <b>' + LEVELS[lvl] + '</b>. It took a streak to get here, and a streak is all it is: evidence, accumulated slowly.';
+      else if(lastKind==='dirty') read.innerHTML = 'Run ' + n + ' produced a defect. Autonomy <span class="o">demotes straight to the floor</span>, back to gate every change. Every clean run before it is spent at once. That asymmetry is the design, not a bug.';
+      else read.innerHTML = 'A fresh class starts at the floor: every change gated by a human. Ship clean runs to ratchet up. Note that a seam, or anything touching security or a migration, never ratchets at all, no matter how long the streak.';
+    }
+    $('ratClean').addEventListener('click', function(){ if(runs.length-1 >= MAXRUN) return; lvl = Math.min(LEVELS.length-1, lvl+1); runs.push({n:runs.length, lvl:lvl, kind:'clean'}); render('clean'); });
+    $('ratDirty').addEventListener('click', function(){ if(runs.length-1 >= MAXRUN) return; lvl = 0; runs.push({n:runs.length, lvl:lvl, kind:'dirty'}); render('dirty'); });
+    $('ratReset').addEventListener('click', function(){ lvl = 0; runs = [{n:0, lvl:0, kind:'start'}]; render('start'); });
+    render('start');
+  })();
+
+})();
+</script>
+</body>
+</html>
