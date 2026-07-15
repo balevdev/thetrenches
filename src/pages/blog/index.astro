@@ -30,7 +30,7 @@ const posts = (await getCollection('blog', ({ data }) => {
           <ArticleCard
             title={post.data.title}
             description={post.data.description}
-            href={post.data.storyUrl ? post.data.storyUrl : `/blog/${post.slug}`}
+            href={post.data.storyUrl ? post.data.storyUrl : `/blog/${post.id}`}
             pubDate={post.data.pubDate}
             category={post.data.category}
             readTime={post.data.readTime}
