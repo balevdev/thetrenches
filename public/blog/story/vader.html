@@ -373,7 +373,7 @@ footer .brand{margin-bottom:1rem}
   <div class="hero reveal" id="top">
     <div class="eyebrow">Agentic Software Factory &middot; The Long Read</div>
     <h1><em>Vader</em><br>Rule The Galaxy</h1>
-    <p class="dek">An agent loop has no memory of what it meant. Each tick optimizes locally, and across hundreds of ticks the architecture quietly decays, because nothing outside the loop holds the intent fixed. <a class="skill-link" href="https://github.com/balevdev/agentique/tree/main/skills/vader" target="_blank" rel="noopener">Vader</a> is one idea against that decay: move the meaning out of the box. A human freezes the distinctions that must never collapse, a compiler turns each into a check the agent cannot argue with, and a lock stops the agent from silencing it. Gate the model, free the code.</p>
+    <p class="dek">An AI agent working in a loop has no memory of what it was trying to protect. Each turn it makes the smallest change that gets the job done, and over hundreds of turns your architecture quietly rots, because nothing outside the loop is holding the original intent in place. <a class="skill-link" href="https://github.com/balevdev/agentique/tree/main/skills/vader" target="_blank" rel="noopener">Vader</a> is one idea against that rot: move the meaning out of the loop. A human writes down the handful of distinctions that must never break, a compiler turns each one into a check the agent cannot argue with, and a lock stops the agent from deleting the check to make its own life easier. Gate the model, free the code.</p>
     <div class="byline">
       <span class="av"><img src="/images/author/boyan-balev.jpg" alt="Boyan Balev" loading="lazy" width="37" height="37"></span>
       <span><b>Boyan Balev</b></span>
@@ -396,7 +396,7 @@ footer .brand{margin-bottom:1rem}
   <figure class="wide reveal">
     <div class="panel">
       <div class="panel-title">The loop, in one picture <span class="tag">assembles as you read</span></div>
-      <div class="panel-sub">A human freezes the meaning once, on the left. Everything to its right is autonomous, one tick at a time: decompose, build in parallel, verify against the gate, persist what survives, then loop. Two gold rings are the only two places a human must stand. The rest the agent runs alone.</div>
+      <div class="panel-sub">A human freezes the meaning once, on the left. Everything to its right runs on its own, one turn at a time: split the work, build the pieces in parallel, run the cheap automatic gate, and only if that passes pay for the expensive judges, keep what survives, then loop. The two gold rings are the only two places a human has to stand. The agent does the rest alone.</div>
       <svg id="heroMap" viewBox="0 0 940 250" role="img" aria-label="The vader phase pipeline assembling from conceive through persist, with two human gates marked in gold">
         <g id="hm-links"></g>
         <g id="hm-nodes"></g>
@@ -407,17 +407,18 @@ footer .brand{margin-bottom:1rem}
         <span class="clab" id="hmStage">a human freezes the model</span>
       </div>
     </div>
-    <figcaption>Read it left to right. Gold is a human gate. Blue or red, depending on your theme, is the agent working unsupervised. The whole point of the design is how few gold rings there are.</figcaption>
+    <figcaption>Read it left to right. Gold is a human gate. Blue or red, depending on your theme, is the agent working on its own. The point of the whole design is how few gold rings there are, and that the cheap deterministic gate runs before any expensive judge. <b>A red gate spends zero judges.</b></figcaption>
   </figure>
 
   <!-- THESIS -->
   <section class="prose reveal">
-    <p>Hand an agent a goal and a loop, and it will get further than you expect, then quietly ruin the thing you cared about. Not through malice and not through stupidity. Through local optimization. Each tick has one job: make this test pass, satisfy this prompt, close this ticket. None of those jobs is "preserve the distinction the architect cared about three hundred ticks ago." So the first time collapsing that distinction makes a local task easier, the agent collapses it, marks the task done, and moves on. A temporal point becomes a temporal interval. Money becomes a float. The module that was never allowed to import the database imports the database. Each step looked reasonable. The sum is rot.</p>
-    <p>This is the central failure of long horizon agent work, and it is not fixed by a better prompt. A prompt is a request, and a request is exactly the thing an agent under local pressure learns to route around. You can write "never let common import etl" in capital letters at the top of every file and the agent will, on tick two hundred, import etl, because importing etl made the failing test pass and the capital letters were just text. The meaning lived inside the loop, where the loop could erode it.</p>
-    <p>Vader's answer is narrow and, on its own terms, correct. Put the meaning outside the box. Have a human write down the handful of distinctions that must never collapse. Compile each into the strongest deterministic check the toolchain allows. Run those checks on every tick, and fail on a named one. The agent cannot argue with a failed compile. That is the whole idea, and the rest of this piece is the machinery that makes it hold.</p>
+    <p>Give an agent a goal and a loop, and it will get surprisingly far, then quietly wreck the thing you cared about. Not out of malice, and not because it is dumb. Because it optimizes locally. Every turn has exactly one job: make this test pass, answer this prompt, close this ticket. None of those jobs is "protect the distinction the architect cared about three hundred turns ago." So the first time collapsing that distinction makes the current job easier, the agent collapses it, marks the work done, and moves on. A point in time becomes a span of time. Money becomes a floating-point number. The module that was never allowed to touch the database imports the database. Each step looked reasonable. The sum is rot.</p>
+    <p>This is the core problem with long-running agent work, and a better prompt does not fix it. A prompt is a polite request, and a request is exactly what an agent under pressure learns to route around. You can write NEVER LET COMMON IMPORT ETL in capital letters at the top of every file, and on turn two hundred the agent will import etl anyway, because importing etl made the failing test pass and the capital letters were just text. The meaning lived inside the loop, where the loop could wear it away.</p>
+    <p>Vader's answer is small and, on its own terms, correct. Put the meaning outside the loop. Have a human write down the few distinctions that must never collapse. Turn each one into the strongest automatic check the tools allow. Run those checks every turn, and fail loudly with the name of any that breaks. An agent can talk its way around a paragraph. It cannot talk its way around a failed compile. That is the whole idea. The rest of this piece is the machinery that makes it hold.</p>
   </section>
 
   <div class="pull reveal"><p>A prompt asks the agent to respect the architecture. A gate makes respecting it the only way forward. Under pressure, only one of those survives.</p></div>
+  <!-- thesis pull quote kept: it lands the whole argument in one line -->
 
   <hr class="rule reveal">
 
@@ -425,9 +426,9 @@ footer .brand{margin-bottom:1rem}
   <section class="prose reveal" id="drift">
     <h2><span class="num">01 &middot; The force</span></h2>
     <h2>Drift is the default</h2>
-    <p class="lede">Before the fix, feel the pressure. An unconstrained loop does not hold a line. It walks away from it, one small reasonable step at a time, and the walk compounds.</p>
-    <p>Think of architectural integrity as a percentage: how many of the distinctions you originally cared about are still intact. Every tick, the agent touches the code, and every tick there is some chance that the easiest local move erodes one of them. A single tick almost never breaks anything you would notice. The problem is the product. A ninety four percent survival per tick is not ninety four percent after forty ticks, it is the forty fourth power of it, and that number is small. Compounding is merciless in exactly the direction you do not want.</p>
-    <p>A gate changes the arithmetic. It does not make the agent wiser. It removes the option. The move that would erode a guarded distinction now fails a check, bounces, and never lands. Drag the slider to set how fragile your architecture is, how many distinctions sit one convenient shortcut away from collapse, and watch the two futures separate.</p>
+    <p class="lede">Before the fix, feel the pressure. A loop with nothing holding it in place does not keep a line. It drifts away from it, one small reasonable step at a time, and those steps pile up.</p>
+    <p>Picture architectural integrity as a percentage: out of all the distinctions you set out to protect, how many are still intact. Every turn, the agent touches the code, and every turn there is some chance the easiest move erodes one of them. One turn almost never breaks anything you would notice. The trouble is that the chances multiply. Ninety-four percent survival per turn is not ninety-four percent after forty turns. It is 0.94 raised to the fortieth power, which is tiny. Compounding runs hard in exactly the direction you do not want.</p>
+    <p>A gate changes the math. It does not make the agent smarter. It removes the option. The move that would erode a guarded distinction now trips a check, bounces, and never lands. Drag the slider to set how fragile your architecture is, meaning how many distinctions sit one shortcut away from collapse, and watch the two futures split apart.</p>
 
     <figure class="wide">
       <div class="panel">
@@ -451,9 +452,9 @@ footer .brand{margin-bottom:1rem}
   <section class="prose reveal" id="idea">
     <h2><span class="num">02 &middot; The move</span></h2>
     <h2>Move the meaning outside the loop</h2>
-    <p class="lede">If meaning inside the loop erodes, put it where the loop cannot reach. That single relocation is the entire thesis, and everything else is plumbing to make it real.</p>
-    <p>A human writes a <span class="chip">constitution.model</span>: a small file naming the invariants that must hold no matter what. Not style preferences, not a wish list. The few distinctions whose collapse would quietly break the system. Then a compiler, <span class="chip">vader gen</span>, turns each invariant into the strongest deterministic check the language allows, and <span class="chip">vader gate</span> runs them all and fails on the name of any that breaks. The agent never sees a polite instruction it can rationalize past. It sees a red build with an invariant id on it.</p>
-    <p>The slogan for the whole system is four words: <strong>gate the model, free the code</strong>. The model, the set of invariants, is sacred and slow and human owned. The code beneath it is cheap and fast and the agent's to rewrite however it likes, as long as the gate stays green. You stop reviewing diffs line by line and start owning the boundary. The agent gets maximum freedom inside a boundary it cannot move.</p>
+    <p class="lede">If meaning inside the loop erodes, put it somewhere the loop cannot reach. That one move is the entire idea. Everything else is plumbing to make it real.</p>
+    <p>A human writes a <span class="chip">constitution.model</span>: a small file that names the invariants which must hold no matter what. Not style preferences. Not a wish list. Just the few distinctions whose quiet collapse would break the system. Then a compiler, <span class="chip">vader gen</span>, turns each invariant into the strongest automatic check the language allows, and <span class="chip">vader gate</span> runs them all and fails on the name of any that breaks. The agent never meets a polite instruction it can reason its way past. It meets a red build with an invariant's id stamped on it.</p>
+    <p>The whole system fits in four words: <strong>gate the model, free the code</strong>. The model, the set of invariants, is sacred, slow, and human-owned. The code underneath is cheap, fast, and the agent's to rewrite however it likes, as long as the gate stays green. You stop reviewing diffs line by line and start owning the boundary. The agent gets total freedom inside a boundary it cannot move.</p>
 
     <div class="fm reveal">
       <div class="fm-row"><span class="force">agent collapses a distinction</span><span class="arr">is answered by</span><span class="move">compile it into the gate</span></div>
@@ -463,7 +464,7 @@ footer .brand{margin-bottom:1rem}
       <div class="fm-row"><span class="force">verifier is an optimist</span><span class="arr">is answered by</span><span class="move">refute first, cross owner, majority</span></div>
     </div>
 
-    <p>Read that ledger as the map of the rest of this article. Each force is a specific way an agent erodes a system over a long run, and each move is a specific mechanism Vader uses to deny it. We will walk the important ones in order.</p>
+    <p>Read that little ledger as the map for the rest of this piece. On the left, each row is a concrete way an agent quietly erodes a system over a long run. On the right is the specific mechanism Vader uses to shut that door. We will walk the important ones in order.</p>
 
     <div class="pull heat reveal"><p>Gate the model, free the code. The boundary is human and immutable. Everything inside it is the agent's to redo a thousand times.</p></div>
   </section>
@@ -474,8 +475,8 @@ footer .brand{margin-bottom:1rem}
   <section class="prose reveal" id="compile">
     <h2><span class="num">03 &middot; The mechanism</span></h2>
     <h2>Compile a distinction into a check</h2>
-    <p class="lede">The real move is converting a semantic distinction into a mechanical one. A compile error beats a paragraph asking the agent to please respect the architecture, because a compile error is not addressed to anyone. It just is.</p>
-    <p>An invariant is one of four kinds, plus a raw escape hatch. The compiler dispatches on the shape of the check, not on a label, and it emits the strongest enforcement that shape allows. This is also where the honesty lives: the four kinds are not equal. Two compile to hard static checks. Two reduce to tests, and a test only checks the path you wrote. Click each kind to see exactly what it becomes, and how much that enforcement is actually worth.</p>
+    <p class="lede">The real trick is turning a distinction in meaning into a distinction a machine can check. A compile error beats a paragraph asking the agent to please respect the architecture, because a compile error is not addressed to anyone. It simply is or it isn't.</p>
+    <p>An invariant is one of four kinds, plus a raw escape hatch for anything the four cannot express. The compiler looks at the shape of the check, not at any label, and emits the strongest enforcement that shape allows. This is also where the honesty lives, because the four kinds are not equal. Two of them become hard static checks that read all of your code. Two become tests, and a test only checks the path you thought to write. Click each kind to see exactly what it turns into, and how much a green gate on that kind is actually worth.</p>
 
     <figure class="wide">
       <div class="panel">
@@ -516,16 +517,16 @@ footer .brand{margin-bottom:1rem}
       <figcaption>The strongest case, a branded type whose collapse is a real compile error, is genuinely airtight. The weakest, a behavioral contract, is only as good as the path the test exercises. <b>Read the meter before you trust the green.</b></figcaption>
     </figure>
 
-    <div class="takeaway"><div class="tk">The mechanism</div><p>Shape and dependency invariants become static checks with teeth. Data and behavioral invariants become tests, which check what you remembered to test. The confidence a green gate gives you is inversely proportional to how behavioral the invariant is.</p></div>
+    <div class="takeaway"><div class="tk">The mechanism</div><p>Shape and dependency checks read all of your code, so they have real teeth. Data and behavioral checks are tests, and a test only covers what you remembered to test. The more behavioral the invariant, the less a green gate actually proves. Read the meter before you trust the green.</p></div>
   </section>
 
   <!-- 04 THE LOCK -->
   <section class="prose reveal" id="lock">
     <h2><span class="num">04 &middot; The cheat it kills</span></h2>
     <h2>Lock the gate against the agent</h2>
-    <p class="lede">There is an obvious way to defeat a check that has nothing to do with satisfying it. Delete it. An agent under pressure will find that move on its own, and a factory that does not anticipate it is theater.</p>
-    <p>So the constitution is a protected artifact. When <span class="chip">vader gen</span> compiles the model, it writes the hash of that compiled model into locked state. The agent owns every line of application code, but it cannot edit <span class="chip">constitution.model</span> or the generated checks. On every run, <span class="chip">vader gate</span> recomputes the hash and compares. If the model the agent ran against is not the model the human froze, the gate fails closed, before it even looks at the code. There is no version of "make the build green" that runs through tampering with the model, because tampering with the model is itself a red build.</p>
-    <p>The only path to change what is enforced is a human gate. A run may notice a missing distinction and <em>propose</em> a model change, but the proposal is parked, never applied. A person reviews it, and only then does the model recompile and the lock refreeze. Try both moves below: satisfy the invariant the honest way, or try to silence the check the way an unconstrained agent would.</p>
+    <p class="lede">There is an obvious way to beat a check that has nothing to do with satisfying it: delete it. An agent under pressure finds that move on its own. A factory that does not plan for it is theater.</p>
+    <p>So the enforcement is a protected artifact, not just the model. When <span class="chip">vader gen</span> compiles the model, it takes a fingerprint (a hash) of everything that does the enforcing and freezes it: the compiled model, every generated check, the law bodies you wrote by hand, the gate's config, even the specific strict compiler flags the checks lean on. The agent owns every line of application code. It cannot touch any of that enforcement surface. On every run, <span class="chip">vader gate</span> recomputes the fingerprint and compares. If any of it changed, the gate <strong>fails closed</strong>, before it even looks at your code. There is no "make the build green" that runs through weakening a check, because weakening a check is itself a red build.</p>
+    <p>The point is to make the two moves impossible to confuse. Doing the work turns the gate green. Tampering with what does the checking turns it a different, louder red. The only way to actually change what is enforced is a human gate: a run may notice a missing distinction and <em>propose</em> a change to the model, but the proposal is parked, never auto-applied. A person reviews it, and only then does the model recompile and the lock refreeze. Try both moves below: satisfy the invariant the honest way, or try to silence the check the way a cornered agent would.</p>
 
     <figure class="wide">
       <div class="panel">
@@ -551,30 +552,33 @@ footer .brand{margin-bottom:1rem}
   <!-- 05 THE LOOP -->
   <section class="prose reveal" id="loop">
     <h2><span class="num">05 &middot; The pipeline</span></h2>
-    <h2>One tick, end to end</h2>
-    <p class="lede">With the gate and the lock in place, the loop can be aggressive. Between the two human gates, the agent runs the full cycle alone, and runs it again, and again, because the boundary makes autonomy safe rather than reckless.</p>
-    <p>A run is a sequence of phases. Ground establishes a trustworthy baseline and refuses to believe stale memory. Conceive is the first human gate: a person writes the spec and the model and approves them. Decompose cuts the work into disjoint slices that cannot collide, and <span class="chip">vader gen</span> compiles and locks the model. Implement fans out: a critic red teams the plan, the seam owner builds the shared interface alone so the others fork from something settled, and the sibling owners build in parallel, each in an isolated worktree so a failed slice never poisons the tree. Verify cross assigns refuters and runs the gate. Persist closes the tick, but only after every open risk has been triaged.</p>
+    <h2>One turn, end to end</h2>
+    <p class="lede">With the gate and the lock in place, the loop can be aggressive. Between the two human gates, the agent runs the whole cycle on its own, then runs it again, and again, because a solid boundary makes autonomy safe instead of reckless.</p>
+    <p>A run is a sequence of phases. <strong>Ground</strong> builds a trustworthy starting point and refuses to trust stale memory. <strong>Conceive</strong> is the first human gate: a person writes the spec and the model and approves them. <strong>Decompose</strong> cuts the work into disjoint slices that cannot collide, and <span class="chip">vader gen</span> compiles and locks the checks. <strong>Implement</strong> fans out: a critic red-teams the plan, the seam owner builds the shared interface first so the others build against something settled, and the sibling owners build in parallel, each in an isolated worktree so a broken slice never poisons the tree. Then the cheap deterministic <strong>gate</strong> runs on the merged result, and only if it is green does <strong>Verify</strong> pay for LLM judges. <strong>Persist</strong> closes the turn, but only once every open risk has been triaged.</p>
+    <p>That ordering is the point, and it is the one thing the old version of this diagram got backwards. The free automatic gate runs <em>before</em> the expensive judges, never after. A slice sitting behind a red gate spawns zero judges. You never pay a fleet of LLMs to review work the compiler already rejected.</p>
 
     <div class="specrow reveal">
       <div class="cell"><div class="lab">P-1 ground</div><div class="val">verify before trust. Stale memory is re-checked against reality.</div></div>
       <div class="cell"><div class="lab">P0 conceive</div><div class="val">human gate. Spec and model written and frozen.</div></div>
-      <div class="cell"><div class="lab">P1 decompose</div><div class="val">disjoint slices. gen compiles and locks the model.</div></div>
+      <div class="cell"><div class="lab">P1 decompose</div><div class="val">disjoint slices. gen compiles and locks the checks.</div></div>
       <div class="cell"><div class="lab">P2 implement</div><div class="val">critic, seam first, siblings in parallel worktrees.</div></div>
-      <div class="cell"><div class="lab">P3 verify</div><div class="val">refute first verifiers, then the deterministic gate.</div></div>
-      <div class="cell"><div class="lab">P4 persist</div><div class="val">triage gated. No tick closes on an untriaged risk.</div></div>
+      <div class="cell"><div class="lab">P3 verify</div><div class="val">deterministic gate first. A green gate pays for refute-first judges.</div></div>
+      <div class="cell"><div class="lab">P4 persist</div><div class="val">triage gated. No turn closes on an untriaged risk.</div></div>
     </div>
 
-    <p>Notice how little of that needs a human. Two gates, both about the model: freeze it at the start, approve any change to it later. Everything between, the decomposition, the building, the verifying, the bookkeeping, is autonomous, and autonomous on purpose. The design's whole bet is that if the boundary is solid you can let the inside run free, because the worst the inside can do is bounce off the gate.</p>
+    <p>Notice how little of that needs a human. Two gates, and both are about the model: freeze it at the start, and approve any change to it later. Everything in between, the splitting, the building, the checking, the bookkeeping, is autonomous, and autonomous on purpose. The whole bet of the design is that if the boundary is solid you can let the inside run free, because the worst the inside can do is bounce off the gate.</p>
+    <p>One more structural step rides in the gate when your repo opts into it. If the project carries a <span class="chip">fallow</span> config, Vader wires a "new code only" health check into the gate, held to the same rule as everything else: it judges the code that changed this turn, not the whole repo, so it can only get stricter over time. A configured check that fails is a real red gate, never a quiet pass. No config, and the step simply is not there.</p>
 
-    <div class="takeaway"><div class="tk">The pipeline</div><p>Two human gates, both about the model. The rest of the tick is the agent alone. A solid boundary is what makes that delegation safe instead of negligent.</p></div>
+    <div class="takeaway"><div class="tk">The pipeline</div><p>Two human gates, both about the model. The rest of the turn is the agent alone. A solid boundary is what makes handing off the inside safe instead of negligent.</p></div>
   </section>
 
   <!-- 06 FAN-OUT -->
   <section class="prose reveal" id="fanout">
     <h2><span class="num">06 &middot; The fan-out</span></h2>
     <h2>Build in parallel, verify where it hurts</h2>
-    <p class="lede">A tick is not one agent doing one thing. It is a small fleet, and the shape of that fleet is computed, not improvised. One pure function turns the recall packet into the plan, so every host runs the identical decomposition.</p>
-    <p>The seam slice goes first, alone, because everything else forks from the interface it defines. Then the sibling slices run in parallel, each owner in its own worktree. The interesting part is verification. A verifier is an LLM judging an LLM's work, so a single optimistic pass is worth little. Vader scales the panel by evidence: a slice that touches a seam, or a class that has bounced before, or a class flagged never-to-be-trusted-cheaply, gets three refute first verifiers and passes only on a majority. A calm, well behaved class gets one. Spend the scrutiny where history says it is needed, not uniformly.</p>
+    <p class="lede">A turn is not one agent doing one thing. It is a small fleet, and the shape of that fleet is computed, not improvised. A single pure function turns the recall packet into the plan, so every host builds the identical fleet.</p>
+    <p>The seam slice goes first, alone, because everything else builds against the interface it defines. Each owner is also handed its reverse-dependency set, the list of things that import its slice, so it does not quietly break a caller it cannot see. Then the sibling slices run in parallel, each owner in its own worktree. The interesting part is verification. A judge here is an LLM checking another LLM's work, so a single cheerful thumbs-up is worth little. Vader scales the panel by evidence: a slice that touches a seam, or a class that has bounced before, or a class marked never-trust-cheaply (seams, security, migrations), gets three refute-first judges and passes only on a majority. A calm, well-behaved class gets one. Spend the scrutiny where history says it is needed, not everywhere equally.</p>
+    <p>On a large repo there is one more scoping move. Each slice carries a <span class="chip">touched</span> flag: did its files actually change since the last run? A driver may skip untouched slices to keep a turn focused on what moved, but the plan still lists every slice, so a skip is always visible in the record, never a silent drop. Seams are the exception. A seam runs whenever anything runs, because a change elsewhere this turn can invalidate it.</p>
 
     <figure class="wide">
       <div class="panel">
@@ -605,12 +609,12 @@ footer .brand{margin-bottom:1rem}
   <section class="prose reveal" id="memory">
     <h2><span class="num">07 &middot; The memory</span></h2>
     <h2>Earn autonomy, lose it on contact</h2>
-    <p class="lede">An agent with no memory re-derives everything every session, including its own mistakes. Vader keeps a small, append only memory so each tick starts from what is known, and so trust is something a class earns through evidence rather than something asserted.</p>
-    <p>Three pieces. The <strong>recall packet</strong> rehydrates a fresh session in one call: the next item, what has gone stale, the open risks, the bounce trends, the parked model change. The <strong>ledger</strong> records every run and every bounce, append only, the factory's flight recorder. The <strong>ratchet</strong> reads that ledger and computes how much human gating each class of work still needs. A class that has shipped clean, run after run, ratchets up toward autonomy. The moment it produces a defect, it demotes straight back to the bottom. And some classes, the seam, anything touching security or a migration, never ratchet at all, no matter how long their clean streak.</p>
+    <p class="lede">An agent with no memory re-derives everything every session, including its own mistakes. Vader keeps a small, append-only memory so each turn starts from what is already known, and so trust is something a class of work earns through evidence rather than something you simply assert.</p>
+    <p>Three pieces. The <strong>recall packet</strong> catches a fresh session up in one call: the next item, what has gone stale, the open risks, the recent bounce trends, any parked model change. The <strong>ledger</strong> records every run and every bounce, append-only, the factory's flight recorder. The <strong>ratchet</strong> reads that ledger and works out how much human gating each class of work still needs. A class that has shipped clean, run after run, ratchets up toward autonomy. The moment it produces a defect, it drops straight back to the bottom. And some classes, seams, anything touching security or a migration, never ratchet at all, no matter how long the clean streak.</p>
 
     <figure class="wide">
       <div class="panel">
-        <div class="panel-title">The ratchet for one class of work <span class="tag">run some ticks</span></div>
+        <div class="panel-title">The ratchet for one class of work <span class="tag">run some turns</span></div>
         <div class="panel-sub">Trust is asymmetric on purpose. Clean runs raise autonomy one notch at a time, slowly. A single dirty run drops it to the floor, instantly. The system is hard to trust and easy to distrust, which is the correct direction for a machine writing your code.</div>
         <div class="controls">
           <button class="act" id="ratClean">clean run</button>
@@ -624,22 +628,28 @@ footer .brand{margin-bottom:1rem}
     </figure>
 
     <div class="pull reveal"><p>Hard to trust, easy to distrust. A clean streak is built one notch at a time. A single defect spends all of it at once.</p></div>
+
+    <h3>A second ratchet, for structural weight</h3>
+    <p>The autonomy ratchet is about trust. There is a second ratchet about size, and it is the newest piece of the machine. Vader boils structural debt down to a single honest integer, counting only the things that unambiguously make a codebase heavier to carry: runtime dependencies, top-level directories, and escape-hatch checks that dodge the compiler. Nothing subjective, nothing that needs a judgment call.</p>
+    <p>Then persist enforces one rule. A turn cannot close with more debt than the turn before it, unless a human-approved model change deliberately raised the ceiling. A turn that holds the line is free. A turn that drops a dependency or deletes an escape hatch is free and rewarded. So structural weight can only stay flat or fall, turn after turn. And it pointedly does <em>not</em> count ordinary healthy growth, more code, more files, a wider public surface, because that is just what building looks like. It counts only the kinds of weight that are almost always decay.</p>
+
+    <div class="takeaway"><div class="tk">The memory</div><p>Two ratchets pulling in opposite directions. Trust in a class is earned slowly and lost instantly. Structural debt can only stay flat or shrink. Both are computed from the ledger, never asserted, so neither can be talked up by a good-sounding run.</p></div>
   </section>
 
   <!-- 08 DRIVE -->
   <section class="prose reveal" id="drive">
     <h2><span class="num">08 &middot; The control surface</span></h2>
     <h2>How an agent actually drives it</h2>
-    <p class="lede">Vader does not run the agent. The agent runs Vader. The engine is a deterministic command line tool the agent shells out to, the knowledge is a skill it loads, and the parallelism is the agent's own native primitive. Three layers, one spine.</p>
+    <p class="lede">Vader does not run the agent. The agent runs Vader. The engine is a plain command-line tool the agent calls out to, the knowledge is a skill it loads into context, and the parallelism is the agent's own built-in ability to spawn helpers. Four thin layers over one shared spine.</p>
 
     <div class="layers3 reveal">
       <div class="l3"><div class="l3n">the skill</div><div class="l3d"><b>Knowledge.</b> The loop, the phases, the gates, how to author the model, the owner and verifier prompts. The agent loads it into context. It is the manual, not code that executes.</div></div>
-      <div class="l3"><div class="l3n">the command</div><div class="l3d"><b>The driver.</b> A slash command that scopes one tick: run the cycle once, from ground to persist, then pace the next one. It is the start button, and it points at the skill.</div></div>
+      <div class="l3"><div class="l3n">the command</div><div class="l3d"><b>The driver.</b> A slash command that scopes one turn: run the cycle once, from ground to persist, then pace the next one. It is the start button, and it points at the skill.</div></div>
       <div class="l3"><div class="l3n">the cli</div><div class="l3d"><b>The spine.</b> A zero dependency tool: init, gen, gate, recall, triage, persist, ratchet. All the judgment that must be reproducible lives here, once, so the answer is identical on every host.</div></div>
       <div class="l3"><div class="l3n">the fan-out</div><div class="l3d"><b>The hands.</b> The agent's own subagent primitive does the parallel build and verify, fed by the shared plan. A thin adapter binds that plan to each host, or runs it sequentially where there is none.</div></div>
     </div>
 
-    <p>Concretely, a tick on a host with subagents looks like this. The command loads the skill, then the agent shells out to <span class="chip">recall</span> and reads a JSON packet. It runs the pure planner to get the seam first, siblings, and voter counts. It spawns its subagents to build and verify. It shells out to <span class="chip">gate</span>, the deterministic arbiter, and a failed invariant id sends a slice back. It shells out to <span class="chip">triage</span> and then <span class="chip">persist</span>, which appends the ledger and closes the tick. Then it schedules the next one. The agent is the conductor in the middle. The CLI is what it consults whenever the answer must not depend on a mood.</p>
+    <p>Here is one turn, concretely, on a host that can spawn helpers. The command loads the skill, then the agent calls <span class="chip">recall</span> and reads back a JSON packet. It runs the pure planner to get the seam, the siblings, and the voter counts. It spawns helpers to build the slices, merges them, and calls <span class="chip">gate</span>, the deterministic arbiter; a failed invariant id sends a slice straight back. On a green gate it spawns the judges, then calls <span class="chip">triage</span> and <span class="chip">persist</span>, which appends the ledger and closes the turn. Then it schedules the next one. The agent is the conductor in the middle. The command-line tool is what it consults whenever the answer must not depend on the model's mood.</p>
 
     <div class="ribbon reveal">
       <div class="r"><div class="rn">4</div><div class="rl">invariant kinds, plus one escape hatch</div></div>
@@ -656,8 +666,8 @@ footer .brand{margin-bottom:1rem}
     <h2><span class="num">09 &middot; The honest part</span></h2>
     <h2>Where it helps, where it does not</h2>
     <p class="lede">A tool sold as more than it is gets abandoned after the first green gate that shipped a bug. So here is the fair read, with the marketing removed.</p>
-    <p>Vader is strongest exactly where software is most structural, and weakest exactly where software is hardest. It genuinely helps on long horizon autonomous work, where drift across many ticks is the real risk and a few critical distinctions, money precision, a security boundary, a dependency direction, can be named and compiled. It helps most in typed languages, where the compiled checks have real teeth. It rewards teams that will actually invest in writing a rich constitution, and the value is proportional to that investment.</p>
-    <p>It is limited everywhere else. The gate is exactly as good as the constitution, and authoring a good constitution is the hard, expert, judgment heavy work that Vader does not reduce, it front loads. The distinctions that bite in practice are usually the ones nobody anticipated, and Vader does nothing for an unnamed distinction. Verifiers are LLMs judging LLM work, and a majority vote over correlated voters is weaker than the count suggests. The ratchet calibrates on a tiny sample and measures detected defects, not actual ones. And the whole dance has a real cost: a rich partition with several three voter classes is twenty or more agent invocations a tick, expensive exactly when the constitution is rich enough to be worth it.</p>
+    <p>Vader is strongest exactly where software is most structural, and weakest exactly where software is hardest. It genuinely helps on long-running autonomous work, where drift across many turns is the real risk and a few critical distinctions, money precision, a security boundary, a dependency direction, can be named and compiled. It helps most in typed languages, where the compiled checks have real teeth. And it rewards teams that will actually sit down and write a rich constitution. The value you get is directly proportional to that investment.</p>
+    <p>Everywhere else it is limited, and it is worth being blunt about how. The gate is only ever as good as the constitution, and writing a good constitution is the hard, expert, judgment-heavy work that Vader does not remove; it front-loads it. The distinctions that bite in practice are usually the ones nobody thought to name, and Vader does nothing for a distinction you never named. The judges are LLMs grading LLM work, and a majority vote among judges that all think alike is weaker than the number three suggests. The trust ratchet calibrates on a tiny sample and measures the defects it <em>caught</em>, not the ones that exist. Even the config lock has a soft edge: it fingerprints the flags in the repo's own config file, so a strict flag inherited from a shared base config sits outside the fence. And the whole dance costs real money: a rich plan with several three-judge classes is twenty or more agent calls a turn, expensive precisely when the constitution is rich enough to be worth it.</p>
 
     <ul class="heat reveal">
       <li><strong>Hollow satisfaction.</strong> A behavioral invariant passed by a test that never exercises the real path. The gate goes green and the invariant is violated in production. The most dangerous mode, because it looks like success.</li>
@@ -673,9 +683,9 @@ footer .brand{margin-bottom:1rem}
   <section class="prose reveal" id="verdict">
     <h2><span class="num">10 &middot; The verdict</span></h2>
     <h2>A durability harness, not a miracle</h2>
-    <p>The central idea is genuinely good and answers a real, specific failure of long horizon agent loops: compile the distinctions you care about into a gate the agent cannot silence, and lock that gate against the agent. It does not make agents correct. It makes a named set of architectural decisions durable across many ticks, which is a real but bounded win. The surrounding ratchet and voter machinery is reasonable but unproven on small samples, and it measures what was caught rather than what is true.</p>
-    <p>Sold honestly, as a durability harness for the invariants you can express, Vader is a sharp tool with a clear niche and clean engineering. Sold as a factory that ships correct software, it overpromises. The difference between those two pitches is the difference between a tool people trust after a year and one they abandon after the first green gate that shipped a bug. The honest pitch is the smaller one, and it is the one worth standing behind.</p>
-    <p>Start where the win is real. Pick the two or three distinctions whose collapse would actually hurt. Write them as invariants. Compile them. Lock them. Then let the agent run, and spend your attention on the boundary instead of the diff. That is the whole discipline, and it is enough.</p>
+    <p>The central idea is genuinely good, and it answers a real, specific failure of long-running agent loops: compile the distinctions you care about into a gate the agent cannot silence, and lock that gate against the agent. It does not make agents correct. It makes a named set of architectural decisions durable across many turns, which is a real but bounded win. The surrounding trust and voting machinery is reasonable but unproven on small samples, and it measures what got caught rather than what is true.</p>
+    <p>Sold honestly, as a durability harness for the invariants you can actually express, Vader is a sharp tool with a clear niche and clean engineering. Sold as a factory that ships correct software, it overpromises. That is the difference between a tool people still trust after a year and one they drop after the first green gate that shipped a bug. The honest pitch is the smaller one, and it is the one worth standing behind.</p>
+    <p>So start where the win is real. Pick the two or three distinctions whose collapse would genuinely hurt. Write them as invariants. Compile them. Lock them. Then let the agent run, and spend your attention on the boundary instead of the diff. That is the whole discipline, and it is enough.</p>
 
     <div class="pull reveal"><p>It does not make the agent good. It makes a handful of decisions you cannot afford to lose impossible to lose quietly. On a long enough run, that is most of the battle.</p></div>
   </section>
@@ -755,26 +765,27 @@ footer .brand{margin-bottom:1rem}
     var links = $('hm-links'), nodes = $('hm-nodes'), packet = $('hm-packet'), stage = $('hmStage'), replay = $('hmReplay');
     if(!links || !nodes) return;
     var N = {
-      conceive:{x:70,  y:125, w:96, h:48, label:'CONCEIVE', gate:1, kind:'r'},
-      decomp:  {x:236, y:125, w:96, h:48, label:'DECOMPOSE', kind:'r'},
-      seam:    {x:418, y:60,  w:84, h:40, label:'SEAM', t:1, kind:'r'},
-      sib1:    {x:418, y:112, w:84, h:40, label:'OWNER', kind:'r'},
-      sib2:    {x:418, y:164, w:84, h:40, label:'OWNER', kind:'r'},
-      verify:  {x:600, y:125, w:96, h:48, label:'VERIFY', kind:'r'},
-      gate:    {x:600, y:200, w:96, h:30, label:'GATE', t:1, kind:'r'},
-      persist: {x:790, y:125, w:96, h:48, label:'PERSIST', gate:1, kind:'r'}
+      conceive:{x:40,  y:104, w:88, h:46, label:'CONCEIVE', gate:1, kind:'r'},
+      decomp:  {x:180, y:104, w:96, h:46, label:'DECOMPOSE', kind:'r'},
+      seam:    {x:330, y:50,  w:80, h:38, label:'SEAM', t:1, kind:'r'},
+      sib1:    {x:330, y:104, w:80, h:38, label:'OWNER', kind:'r'},
+      sib2:    {x:330, y:158, w:80, h:38, label:'OWNER', kind:'r'},
+      gate:    {x:466, y:104, w:88, h:46, label:'GATE', t:1, kind:'r'},
+      verify:  {x:606, y:104, w:88, h:46, label:'VERIFY', kind:'r'},
+      persist: {x:746, y:104, w:96, h:46, label:'PERSIST', gate:1, kind:'r'}
     };
     var L = [
       ['conceive','decomp'], ['decomp','seam'], ['decomp','sib1'], ['decomp','sib2'],
-      ['seam','verify'], ['sib1','verify'], ['sib2','verify'], ['verify','gate'], ['verify','persist']
+      ['seam','gate'], ['sib1','gate'], ['sib2','gate'], ['gate','verify'], ['verify','persist']
     ];
     var steps = [
       {nodes:['conceive'], say:'a human freezes the spec and the model'},
-      {nodes:['decomp'], say:'cut into disjoint slices, compile and lock'},
-      {nodes:['seam'], say:'the seam owner builds the interface first, alone'},
-      {nodes:['sib1','sib2'], say:'sibling owners build in parallel worktrees'},
-      {nodes:['verify','gate'], say:'refuters judge, the gate is the arbiter'},
-      {nodes:['persist'], say:'triage, then persist and loop'}
+      {nodes:['decomp'], say:'cut into disjoint slices, then compile and lock the checks'},
+      {nodes:['seam'], say:'the seam owner builds the shared interface first, alone'},
+      {nodes:['sib1','sib2'], say:'sibling owners build in parallel, each in its own worktree'},
+      {nodes:['gate'], say:'the cheap deterministic gate runs first, on the merged tree'},
+      {nodes:['verify'], say:'only a green gate pays for the refute-first judges'},
+      {nodes:['persist'], say:'triage every risk, then persist and loop'}
     ];
     function center(n){ return {x:n.x + n.w/2, y:n.y + n.h/2}; }
     function edge(a, b){ var ca = center(a), cb = center(b); var ax = ca.x + (cb.x>ca.x? a.w/2 : -a.w/2); var bxx = cb.x + (ca.x>cb.x? b.w/2 : -b.w/2); return 'M'+ax+','+ca.y+' C'+(ax+(bxx-ax)/2)+','+ca.y+' '+(ax+(bxx-ax)/2)+','+cb.y+' '+bxx+','+cb.y; }
@@ -791,7 +802,7 @@ footer .brand{margin-bottom:1rem}
       g.appendChild(fill); g.appendChild(stroke); g.appendChild(label); nodes.appendChild(g); nodeEls[key] = g;
     });
     /* loop-back arc from persist to decompose */
-    var loopBack = svgEl('path', {d:'M838,149 C838,235 236,235 284,173', class:'flow', opacity:0, 'stroke-dasharray':'5 6'});
+    var loopBack = svgEl('path', {d:'M792,150 C792,232 228,232 228,150', class:'flow', opacity:0, 'stroke-dasharray':'5 6'});
     links.appendChild(loopBack);
     function reveal(){
       var seen = {};
@@ -815,7 +826,7 @@ footer .brand{margin-bottom:1rem}
     }
     function packetLoop(){
       if(!packet) return;
-      var d = edge(N.conceive, N.decomp) + ' ' + edge(N.decomp, N.sib1).slice(1) + ' ' + edge(N.sib1, N.verify).slice(1) + ' ' + edge(N.verify, N.persist).slice(1);
+      var d = edge(N.conceive, N.decomp) + ' ' + edge(N.decomp, N.sib1).slice(1) + ' ' + edge(N.sib1, N.gate).slice(1) + ' ' + edge(N.gate, N.verify).slice(1) + ' ' + edge(N.verify, N.persist).slice(1);
       var tmp = svgEl('path', {d:d}); tmp.style.visibility='hidden'; $('heroMap').appendChild(tmp);
       var len = tmp.getTotalLength();
       if(reduce){ var e = tmp.getPointAtLength(len); packet.setAttribute('cx', e.x); packet.setAttribute('cy', e.y); packet.setAttribute('opacity',1); return; }
@@ -843,7 +854,7 @@ footer .brand{margin-bottom:1rem}
     var y = d3.scaleLinear().domain([0, 100]).range([H - m.b, m.t]);
     svg.append('g').attr('class','d3-axis').attr('transform','translate(0,'+(H-m.b)+')').call(d3.axisBottom(x).ticks(8)).selectAll('text').attr('class','lbl');
     svg.append('g').attr('class','d3-axis').attr('transform','translate('+m.l+',0)').call(d3.axisLeft(y).ticks(5).tickFormat(function(d){ return d + '%'; })).selectAll('text').attr('class','lbl');
-    svg.append('text').attr('x', W/2).attr('y', H - 6).attr('text-anchor','middle').attr('class','lbl').text('ticks of autonomous work');
+    svg.append('text').attr('x', W/2).attr('y', H - 6).attr('text-anchor','middle').attr('class','lbl').text('turns of autonomous work');
     var line = d3.line().x(function(d){ return x(d.n); }).y(function(d){ return y(d.v); });
     var gatePath = svg.append('path').attr('fill','none').attr('stroke','var(--cool)').attr('stroke-width', 2.6);
     var promptPath = svg.append('path').attr('fill','none').attr('stroke','var(--heat)').attr('stroke-width', 2.6).attr('stroke-dasharray','1 0');
@@ -863,7 +874,7 @@ footer .brand{margin-bottom:1rem}
       promptLab.attr('x', x(TICKS) - 4).attr('y', y(pend.v) + 16).text('prompt only ' + pend.v.toFixed(0) + '%');
       gateLab.attr('x', x(TICKS) - 4).attr('y', y(gend.v) - 8).text('gated ' + gend.v.toFixed(0) + '%');
       var p40 = pend.v;
-      read.innerHTML = 'With <b>' + (frag) + '</b> fragile distinctions, each tick the prompt only loop holds about <b>' + (perTick*100).toFixed(1) + '%</b> of its integrity. Compound that over forty ticks and only <span class="o">' + p40.toFixed(0) + '%</span> survives. The gated loop bounces every erosion off a check, so it holds at <b>~100%</b>, dipping only where a guarded move was tried and rejected. Same agent. The line that lives is the one whose meaning sits outside the loop.';
+      read.innerHTML = 'With <b>' + (frag) + '</b> fragile distinctions, each turn the prompt-only loop holds about <b>' + (perTick*100).toFixed(1) + '%</b> of its integrity. Compound that over forty turns and only <span class="o">' + p40.toFixed(0) + '%</span> survives. The gated loop bounces every erosion off a check, so it holds at <b>~100%</b>, dipping only where a guarded move was tried and rejected. Same agent. The line that lives is the one whose meaning sits outside the loop.';
     }
     slider.addEventListener('input', function(){ var f = parseInt(slider.value, 10); val.textContent = f + ' fragile distinction' + (f===1?'':'s'); update(f); });
     val.textContent = parseInt(slider.value,10) + ' fragile distinctions'; update(parseInt(slider.value,10));
@@ -878,25 +889,25 @@ footer .brand{margin-bottom:1rem}
         model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"temporal_distinct"</span>,\n  <span class="c-key">"distinct"</span>: [\n    <span class="c-heat">"TemporalPoint"</span>,\n    <span class="c-heat">"TemporalInterval"</span>\n  ]\n}',
         gen: '<span class="c-mut">// generated, .neg.ts</span>\n<span class="c-key">const</span> p: TemporalPoint = mk();\n<span class="c-mut">// @ts-expect-error</span>\n<span class="c-key">const</span> bad:\n  TemporalInterval = p;\n<span class="c-mut">// collapse them and</span>\n<span class="c-mut">// tsc fails on this line</span>',
         str: 92,
-        read: '<b>Shape, the strong case.</b> Branded nominal types plus an expect-error line. If the agent ever lets a point be used as an interval, a real compile error lands on a real line number. Nothing softer than the type system to slip through. This is where a green gate earns the most trust.'
+        read: '<b>Shape: the strong case.</b> Two "branded" types the compiler treats as genuinely different, plus a line that is meant to fail to compile. If the agent ever lets a point be used as an interval, that line starts compiling and the build breaks on a real line number. Nothing softer than the type system slips past. The honest catch: this only bites once your real code actually uses those branded types at the boundary. Generate them and leave them unused, and you have proved a distinction nobody relies on.'
       },
       dependency: {
         model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"layer_dep"</span>,\n  <span class="c-key">"forbidImport"</span>: {\n    <span class="c-key">"from"</span>: <span class="c-heat">"common/**"</span>,\n    <span class="c-key">"to"</span>: <span class="c-heat">"etl/**"</span>\n  }\n}',
         gen: '<span class="c-mut">// generated scanner</span>\n<span class="c-key">for</span> (f <span class="c-key">of</span> files(from)) {\n  <span class="c-key">if</span> (imports(f, to))\n    fail(<span class="c-heat">"layer_dep"</span>, f);\n}\n<span class="c-mut">// exits nonzero on the</span>\n<span class="c-mut">// first violation</span>',
         str: 86,
-        read: '<b>Dependency, also strong.</b> A standalone scan of the source. The direction of an import is a fact in the text, so the check is deterministic and total: it reads every file, not just the ones a test happened to touch. Hard to satisfy hollowly.'
+        read: '<b>Dependency: also strong.</b> A standalone scan of the source code. Which module imports which is a plain fact in the text, so the check is total: it reads every file, not just the ones a test happened to touch. Very hard to fake your way past.'
       },
       data: {
         model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"merge_idempotent"</span>,\n  <span class="c-key">"law"</span>: <span class="c-heat">"merge(x,x) === x"</span>,\n  <span class="c-key">"sample"</span>: { <span class="c-mut">/* shape */</span> }\n}',
         gen: '<span class="c-mut">// generated property test</span>\n<span class="c-key">for</span> (i <span class="c-key">of</span> seeded(500)) {\n  <span class="c-key">const</span> x = gen(sample, i);\n  assert(\n    eq(merge(x, x), x)\n  );\n}',
         str: 58,
-        read: '<b>Data, medium.</b> A seeded property test over many random inputs. Far better than a single example, but still a sample: it checks the law on the inputs it generated, not on every input that exists. Strong evidence, not a proof.'
+        read: '<b>Data: medium.</b> A seeded property test that throws hundreds of random inputs at the law, plus one known-bad input the law must reject. That bad input is what stops a lazy "always true" law from passing. Far better than a single example, but still a sample: it checks the inputs it generated, not every input that exists. Strong evidence, not a proof.'
       },
       behavioral: {
         model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"retry_outcome"</span>,\n  <span class="c-key">"contractTest"</span>:\n    <span class="c-heat">"retry-outcome"</span>\n}',
         gen: '<span class="c-mut">// red until the owner</span>\n<span class="c-mut">// supplies the harness</span>\n<span class="c-key">import</span> { run }\n  <span class="c-key">from</span> <span class="c-heat">".vader/contracts"</span>;\nexpect(run()).toHold();\n<span class="c-mut">// checks only the path</span>\n<span class="c-mut">// the harness exercises</span>',
         str: 34,
-        read: '<b>Behavioral, the weak case.</b> A contract test that stays red until a human writes the harness. The distinction is named now, the proof arrives with the slice, but a test only checks the path you wrote. An untested path can violate the invariant with the gate still green. Trust this one the least.'
+        read: '<b>Behavioral: the weak case.</b> A contract test that stays red until a human writes the harness that exercises it. The distinction is named now; the proof arrives later, with the code that implements it. But a test only checks the path you wrote, and because the harness is written after the lock is set, it is not frozen the way the others are. An untested path can break the invariant with the gate still green. Trust this one the least.'
       },
       rawCheck: {
         model: '<span class="c-mut">// constitution.model</span>\n{\n  <span class="c-key">"id"</span>: <span class="c-heat">"custom"</span>,\n  <span class="c-key">"rawCheck"</span>:\n    <span class="c-heat">"./scripts/audit.sh"</span>\n}',
@@ -934,7 +945,7 @@ footer .brand{margin-bottom:1rem}
       return g;
     }
     stat.appendChild(box(40, 80, 150, 64, 'MODEL', 'human owned', 'var(--heat)'));
-    stat.appendChild(box(275, 80, 150, 64, 'LOCKED HASH', 'frozen at gen', null));
+    stat.appendChild(box(275, 80, 150, 64, 'LOCKED SURFACE', 'model, checks, config', null));
     var gateBox = box(510, 80, 150, 64, 'GATE', '', null); gateBox.setAttribute('id','lockGate'); stat.appendChild(gateBox);
     /* connectors */
     var l1 = svgEl('path', {d:'M190,112 C230,112 240,112 275,112', class:'flow'}); stat.appendChild(l1);
@@ -950,14 +961,14 @@ footer .brand{margin-bottom:1rem}
         l2.setAttribute('stroke','var(--heat)'); l2.setAttribute('stroke-dasharray','4 5'); l2.setAttribute('stroke-width','2.4');
         if(gateStroke){ gateStroke.setAttribute('stroke','var(--heat)'); gateStroke.setAttribute('stroke-width','2.4'); }
         if(gateLabel){ gateLabel.setAttribute('class','lbl h'); }
-        $('lockVerdict').setAttribute('class','lbl h'); $('lockVerdict').textContent = 'FAIL CLOSED: hash mismatch';
-        read.innerHTML = '<span class="o">The cheat.</span> The agent edits the model to delete the failing invariant, then reruns. But <span class="chip">gen</span> locked the hash of the original model, and <span class="chip">gate</span> recomputes it before reading a single line of code. The hashes no longer match, so the gate <b>fails closed</b>. There is no green build on the far side of tampering. The shortcut is the loudest red on the board.';
+        $('lockVerdict').setAttribute('class','lbl h'); $('lockVerdict').textContent = 'FAIL CLOSED: surface changed';
+        read.innerHTML = '<span class="o">The cheat.</span> The agent tries to make the red go away by editing the thing that produces it: deleting the failing invariant, hollowing out a generated check, or loosening a strict flag. But <span class="chip">gen</span> fingerprinted that whole enforcement surface, and <span class="chip">gate</span> recomputes it before reading a single line of code. The fingerprints no longer match, so the gate <b>fails closed</b>. There is no green build on the far side of tampering. The shortcut is the loudest red on the board.';
       } else {
         l2.setAttribute('stroke','var(--cool-deep)'); l2.removeAttribute('stroke-dasharray'); l2.setAttribute('stroke-width','2');
         if(gateStroke){ gateStroke.setAttribute('stroke','var(--cool-deep)'); gateStroke.setAttribute('stroke-width','2'); }
         if(gateLabel){ gateLabel.setAttribute('class','lbl t'); }
-        $('lockVerdict').setAttribute('class','lbl t'); $('lockVerdict').textContent = 'PASS: hash matches';
-        read.innerHTML = '<span>The honest path.</span> The agent leaves the model alone and changes the code until the invariant holds. The locked hash still matches the frozen model, so the gate runs the checks and <b>passes</b>. This is the only door out of the boundary, and it is the door marked do the work.';
+        $('lockVerdict').setAttribute('class','lbl t'); $('lockVerdict').textContent = 'PASS: surface intact';
+        read.innerHTML = '<span>The honest path.</span> The agent leaves the enforcement alone and changes the code until the invariant holds. The fingerprint still matches the frozen surface, so the gate runs the checks and <b>passes</b>. This is the only door out of the boundary, and it is the door marked do the work.';
       }
     }
     honest.addEventListener('click', function(){ set('honest'); });

@@ -1,0 +1,1631 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Flow, Not the Tools: Data Pipelines at Scale | The Trenches</title>
+<meta name="description" content="A field manual on data pipelines at scale. Start with one cron job, push until it breaks, and earn every component: CDC, the log, delivery semantics, event time, the lakehouse, quality, backfills, orchestration. Ends by designing a planetary clickstream platform.">
+<link rel="canonical" href="https://hundredsunited.com/blog/story/the-flow-not-the-tools.html">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://hundredsunited.com/blog/story/the-flow-not-the-tools.html">
+<meta property="og:title" content="The Flow, Not the Tools &middot; Data Pipelines at Scale">
+<meta property="og:description" content="A small set of forces, and the moves engineers make to relieve them. Start with one cron job, push until it breaks, and earn every component: CDC, the log, delivery semantics, event time, the lakehouse, backfills, orchestration.">
+<meta property="og:image" content="https://hundredsunited.com/images/story/data_flow.png">
+<meta property="og:image:secure_url" content="https://hundredsunited.com/images/story/data_flow.png">
+<meta property="og:image:width" content="1629">
+<meta property="og:image:height" content="965">
+<meta property="og:image:alt" content="A field plate for a data pipeline built one force at a time.">
+<meta property="og:site_name" content="The Trenches">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://hundredsunited.com/blog/story/the-flow-not-the-tools.html">
+<meta property="twitter:title" content="The Flow, Not the Tools &middot; Data Pipelines at Scale">
+<meta property="twitter:description" content="A small set of forces, and the moves engineers make to relieve them. Start with one cron job, push until it breaks, and earn every component on the way to a planetary clickstream platform.">
+<meta property="twitter:image" content="https://hundredsunited.com/images/story/data_flow.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght,SOFT,WONK@0,9..144,300..900,0..100,0..1;1,9..144,300..900,0..100,0..1&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;1,400&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE TRENCHES :: FIELD MANUAL SERIES :: DUNE THEME v2
+   ------------------------------------------------------------
+   Color system, two temperatures with meaning:
+     SPICE (warm)  :: data, forces, pressure, the thing flowing
+     IBAD  (blue)  :: instruments, controls, what the reader
+                      touches. Named for the eyes of Ibad:
+                      knowledge earned by exposure.
+   Everything warm is the desert. Everything blue is you.
+   ============================================================ */
+:root {
+  --night:      #16100a;
+  --sietch:     #211910;
+  --sietch-2:   #2b2113;
+  --sand:       #ecdfc4;
+  --sand-dim:   #b5a37f;
+  --spice:      #e0813a;
+  --spice-deep: #a44b1a;
+  --ibad:       #7fb0c4;
+  --ibad-deep:  #4e7c90;
+
+  --bg:          var(--night);
+  --surface:     var(--sietch);
+  --surface-2:   var(--sietch-2);
+  --ink:         var(--sand);
+  --ink-dim:     var(--sand-dim);
+  --accent:      var(--spice);
+  --accent-2:    var(--spice-deep);
+  --accent-soft: rgba(224, 129, 58, 0.13);
+  --cool:        var(--ibad);
+  --cool-2:      var(--ibad-deep);
+  --hairline:    rgba(236, 223, 196, 0.14);
+  --code-bg:     #1c150c;
+  --shadow:      rgba(0, 0, 0, 0.5);
+
+  --dune-back:   #261c0f;
+  --dune-mid:    #201811;
+  --dune-front:  #191209;
+
+  --font-display: "Fraunces", Georgia, serif;
+  --font-body:    "Plus Jakarta Sans", -apple-system, sans-serif;
+  --font-mono:    "JetBrains Mono", ui-monospace, monospace;
+
+  --measure: 47rem;
+  --wide: 62rem;
+  --radius: 8px;
+}
+html[data-theme="light"] {
+  --bg:          #f3ead6;
+  --surface:     #eadec2;
+  --surface-2:   #e0d2af;
+  --ink:         #271e10;
+  --ink-dim:     #6b5c40;
+  --accent:      #a4500f;
+  --accent-2:    #7e3a0a;
+  --accent-soft: rgba(164, 80, 15, 0.11);
+  --cool:        #38677c;
+  --cool-2:      #2c586b;
+  --hairline:    rgba(39, 30, 16, 0.17);
+  --code-bg:     #221a0e;
+  --shadow:      rgba(39, 30, 16, 0.12);
+
+  --dune-back:   #e4d6b4;
+  --dune-mid:    #ecdfc2;
+  --dune-front:  #f0e6cf;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 1.0625rem;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+  transition: background 0.35s ease, color 0.35s ease;
+}
+::selection { background: var(--accent); color: var(--bg); }
+/* grain: the whole page reads through a film of sand */
+body::before {
+  content: "";
+  position: fixed; inset: 0;
+  pointer-events: none; z-index: 1; opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+#progress {
+  position: fixed; top: 0; left: 0; height: 3px; width: 0%;
+  background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  box-shadow: 0 0 12px 0 var(--accent-soft);
+  z-index: 100;
+}
+button:focus-visible, a:focus-visible, input:focus-visible {
+  outline: 2px solid var(--cool); outline-offset: 3px; border-radius: 2px;
+}
+
+/* ---------- Masthead ---------- */
+header.masthead {
+  display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.8rem;
+  padding: 1.1rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--hairline);
+  position: relative; z-index: 5;
+}
+.brand {
+  font-family: var(--font-mono); font-size: 0.8rem; letter-spacing: 0.22em;
+  text-transform: uppercase; color: var(--ink); text-decoration: none;
+}
+.brand span { color: var(--accent); }
+.controls { display: flex; align-items: center; gap: 1rem; }
+.read-time { font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.12em; color: var(--ink-dim); }
+#theme-toggle {
+  background: none; border: 1px solid var(--hairline); color: var(--ink);
+  border-radius: 999px; padding: 0.35rem 0.9rem;
+  font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.1em; cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+#theme-toggle:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ---------- Route strip: sticky scroll-spy nav ---------- */
+nav.pills {
+  position: sticky; top: 0; z-index: 50;
+  display: flex; gap: 0.45rem;
+  padding: 0.75rem clamp(1.25rem, 4vw, 3rem);
+  border-bottom: 1px solid var(--hairline);
+  background: color-mix(in srgb, var(--bg) 82%, transparent);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  overflow-x: auto; scrollbar-width: none; white-space: nowrap;
+}
+nav.pills::-webkit-scrollbar { display: none; }
+.pills a {
+  font-family: var(--font-mono); font-size: 0.66rem; letter-spacing: 0.13em; text-transform: uppercase;
+  color: var(--ink-dim); text-decoration: none; flex-shrink: 0;
+  border: 1px solid var(--hairline); border-radius: 999px; padding: 0.28rem 0.8rem;
+  transition: color 0.2s, border-color 0.2s, background 0.2s;
+}
+.pills a:hover { color: var(--accent); border-color: var(--accent-2); }
+.pills a[aria-current="true"] { color: var(--bg); background: var(--accent); border-color: var(--accent); }
+.pills a i { font-style: normal; opacity: 0.55; margin-right: 0.35em; }
+.pills a[aria-current="true"] i { opacity: 0.8; }
+
+/* ---------- Hero: the desert itself ---------- */
+.hero {
+  position: relative; overflow: hidden;
+  padding: clamp(4rem, 10vw, 8rem) clamp(1.25rem, 4vw, 3rem) clamp(9rem, 20vw, 15rem);
+  border-bottom: 1px solid var(--hairline);
+}
+.hero::before {
+  /* spice haze rising off the horizon */
+  content: ""; position: absolute; inset: auto 0 0 0; height: 62%;
+  background:
+    radial-gradient(120% 90% at 22% 118%, var(--accent-2) 0%, transparent 55%),
+    radial-gradient(130% 100% at 82% 132%, var(--accent) 0%, transparent 52%);
+  opacity: 0.17; pointer-events: none;
+}
+.hero-inner { max-width: var(--wide); margin: 0 auto; position: relative; z-index: 3; }
+.eyebrow {
+  font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.28em;
+  text-transform: uppercase; color: var(--accent); margin-bottom: 1.5rem;
+}
+.hero h1 {
+  font-family: var(--font-display); font-weight: 570;
+  font-variation-settings: "SOFT" 30, "WONK" 1, "opsz" 144;
+  font-size: clamp(2.6rem, 7vw, 5.1rem); line-height: 1.0; letter-spacing: -0.015em;
+  max-width: 16ch; text-wrap: balance;
+}
+.hero h1 em { font-style: italic; font-weight: 430; color: var(--accent); }
+.standfirst {
+  margin-top: 1.9rem; max-width: 56ch;
+  font-size: clamp(1.05rem, 1.6vw, 1.2rem); color: var(--ink-dim); line-height: 1.7;
+}
+.byline {
+  margin-top: 2.2rem; display: flex; align-items: center; flex-wrap: wrap; gap: 0.85rem;
+  font-family: var(--font-mono); font-size: 0.75rem;
+  letter-spacing: 0.14em; color: var(--ink-dim); text-transform: uppercase;
+}
+.byline b { color: var(--ink); font-weight: 500; }
+.byline .av {
+  width: 2.4rem; height: 2.4rem; border-radius: 50%; overflow: hidden; flex-shrink: 0;
+  background: var(--surface-2); border: 1px solid var(--accent-2);
+  box-shadow: 0 0 0 3px var(--accent-soft);
+}
+.byline .av img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; display: block; }
+.byline .dotsep { width: 3px; height: 3px; border-radius: 50%; background: var(--ink-dim); display: inline-block; }
+.hero-meta {
+  margin-top: 0.8rem; font-family: var(--font-mono); font-size: 0.7rem;
+  letter-spacing: 0.14em; color: var(--ink-dim);
+}
+.hero-meta b { color: var(--accent); font-weight: 500; }
+
+/* the dunes: three ridges, the back one breathes with the wind */
+.dunes {
+  position: absolute; left: 0; right: 0; bottom: -2px; z-index: 2;
+  height: clamp(120px, 22vw, 250px); pointer-events: none;
+}
+.dunes svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.dune-back  { fill: var(--dune-back); }
+.dune-mid   { fill: var(--dune-mid); }
+.dune-front { fill: var(--dune-front); }
+.dune-crest { fill: none; stroke: var(--accent); stroke-width: 1.4; opacity: 0.5;
+  stroke-dasharray: 6 10; animation: crestdrift 38s linear infinite; }
+@keyframes crestdrift { to { stroke-dashoffset: -640; } }
+.g-back { animation: duneshift 52s ease-in-out infinite alternate; }
+.g-mid  { animation: duneshift 74s ease-in-out infinite alternate-reverse; }
+@keyframes duneshift { from { transform: translateX(0); } to { transform: translateX(-48px); } }
+
+/* spice motes: what the wind carries */
+.mote {
+  position: absolute; bottom: 12%; width: 4px; height: 4px; border-radius: 50%;
+  background: var(--accent); opacity: 0; z-index: 2; pointer-events: none;
+  animation: rise 11s linear infinite;
+}
+.mote:nth-child(1) { left: 12%; animation-delay: 0s;  animation-duration: 12s; }
+.mote:nth-child(2) { left: 27%; animation-delay: 3s;  width: 3px; height: 3px; }
+.mote:nth-child(3) { left: 44%; animation-delay: 6.5s; animation-duration: 14s; }
+.mote:nth-child(4) { left: 61%; animation-delay: 1.5s; width: 3px; height: 3px; }
+.mote:nth-child(5) { left: 74%; animation-delay: 8s;  animation-duration: 10s; }
+.mote:nth-child(6) { left: 88%; animation-delay: 4.5s; width: 5px; height: 5px; animation-duration: 15s; }
+@keyframes rise {
+  0%   { transform: translateY(0) translateX(0);        opacity: 0; }
+  12%  { opacity: 0.55; }
+  70%  { opacity: 0.3; }
+  100% { transform: translateY(-46vh) translateX(34px); opacity: 0; }
+}
+
+/* ---------- Field plate: the opening image ---------- */
+.plate {
+  max-width: var(--wide);
+  margin: clamp(2.4rem, 5vw, 3.5rem) auto 0;
+  padding: 0 clamp(1.25rem, 4vw, 2rem);
+}
+.plate-frame {
+  position: relative; border-radius: var(--radius); overflow: hidden;
+  border: 1px solid var(--hairline); box-shadow: 0 18px 50px var(--shadow);
+}
+.plate img { display: block; width: 100%; height: auto; }
+.plate .cap {
+  position: absolute; left: 0; right: 0; bottom: 0;
+  padding: 1.6rem 1.5rem 1rem;
+  background: linear-gradient(to top, rgba(22, 16, 10, 0.88), transparent);
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: #ecdfc4;
+}
+
+/* ---------- Article ---------- */
+main { position: relative; z-index: 2; }
+article {
+  max-width: var(--measure); margin: 0 auto;
+  padding: clamp(2.5rem, 5vw, 4rem) clamp(1.25rem, 4vw, 2rem) 5rem;
+}
+article > * + * { margin-top: 1.5rem; }
+article p { text-wrap: pretty; }
+
+/* the sand ripple: the section glyph of this manual */
+article h2 {
+  font-family: var(--font-display); font-weight: 545;
+  font-size: clamp(1.75rem, 3.6vw, 2.4rem); line-height: 1.13; letter-spacing: -0.01em;
+  margin-top: 5rem; text-wrap: balance;
+}
+article h2::before {
+  content: ""; display: block; width: 92px; height: 11px; margin-bottom: 2rem;
+  background: var(--accent-2);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 11'%3E%3Cpath d='M1 8 Q 8 2 15 8 T 29 8 T 43 8 T 57 8 T 71 8 T 85 8' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 92 11'%3E%3Cpath d='M1 8 Q 8 2 15 8 T 29 8 T 43 8 T 57 8 T 71 8 T 85 8' fill='none' stroke='%23000' stroke-width='2.2' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat center / contain;
+}
+article h2 .kicker {
+  display: block; font-family: var(--font-mono); font-size: 0.72rem; font-weight: 500;
+  letter-spacing: 0.26em; text-transform: uppercase; color: var(--accent); margin-bottom: 0.9rem;
+}
+article h3 { font-family: var(--font-display); font-weight: 565; font-size: 1.35rem; margin-top: 3rem; text-wrap: balance; }
+article p strong { font-weight: 650; }
+article a { color: var(--accent); text-decoration-color: var(--accent-2); text-underline-offset: 3px; }
+article ul, article ol { padding-left: 1.4rem; }
+article li + li { margin-top: 0.55rem; }
+
+/* drop cap on the opening line: this is a long read and says so */
+p.lede::first-letter {
+  font-family: var(--font-display); font-weight: 500; font-style: italic;
+  font-size: 3.4em; line-height: 0.82; color: var(--accent);
+  float: left; padding: 0.06em 0.12em 0 0;
+}
+
+.pull {
+  border-left: 3px solid var(--accent); padding: 0.4rem 0 0.4rem 1.5rem; margin: 2.6rem 0;
+  font-family: var(--font-display); font-size: clamp(1.22rem, 2.3vw, 1.5rem);
+  font-style: italic; font-weight: 440; line-height: 1.42; text-wrap: pretty;
+}
+.field-note {
+  background: var(--surface); border: 1px solid var(--hairline);
+  border-left: 3px solid var(--cool-2); border-radius: var(--radius);
+  padding: 1.4rem 1.6rem; margin: 2.4rem 0; box-shadow: 0 10px 30px var(--shadow);
+}
+.field-note .fn-label {
+  font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.24em;
+  text-transform: uppercase; color: var(--cool); margin-bottom: 0.7rem;
+}
+.field-note p { font-size: 0.98rem; }
+.field-note p + p { margin-top: 0.8rem; }
+
+pre {
+  background: var(--code-bg); color: #ecdfc4;
+  border: 1px solid rgba(224, 129, 58, 0.22); border-radius: var(--radius);
+  padding: 1.3rem 1.5rem; margin: 2.2rem 0; overflow-x: auto;
+  font-size: 0.84rem; line-height: 1.65;
+}
+code { font-family: var(--font-mono); }
+p code, li code { background: var(--surface-2); padding: 0.12rem 0.4rem; border-radius: 4px; font-size: 0.85em; color: var(--accent); }
+pre code { background: none; padding: 0; color: inherit; }
+pre .c { color: #8a7a5c; } pre .k { color: #e0813a; } pre .s { color: #a9c9d6; } pre .n { color: #e3b184; }
+
+.table-wrap { overflow-x: auto; margin: 2.2rem 0; }
+table.ledger { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.92rem; }
+.ledger th, .ledger td { text-align: left; padding: 0.75rem 0.9rem; border-bottom: 1px solid var(--hairline); vertical-align: top; }
+.ledger th { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.18em; text-transform: uppercase; color: var(--ink-dim); font-weight: 500; }
+.ledger td:first-child { font-weight: 600; }
+
+.stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 1px; background: var(--hairline); border: 1px solid var(--hairline); border-radius: var(--radius); overflow: hidden; margin: 2.2rem 0; }
+.stat { background: var(--surface); padding: 1.1rem 1.2rem; }
+.stat b { display: block; font-family: var(--font-display); font-size: 1.5rem; font-weight: 580; color: var(--accent); }
+.stat span { font-family: var(--font-mono); font-size: 0.68rem; letter-spacing: 0.12em; text-transform: uppercase; color: var(--ink-dim); }
+
+/* ---------- Widgets: the instruments. Blue is the reader's color. ---------- */
+.widget {
+  background: var(--surface); border: 1px solid var(--hairline); border-radius: var(--radius);
+  margin: 2.6rem 0; box-shadow: 0 14px 40px var(--shadow); overflow: hidden;
+}
+.widget-head { padding: 1.2rem 1.5rem 0; }
+.widget-head .w-title {
+  font-family: var(--font-display); font-size: 1.15rem; font-weight: 580;
+  display: flex; align-items: baseline; gap: 0.7rem; flex-wrap: wrap;
+}
+.widget-head .w-tag {
+  font-family: var(--font-mono); font-size: 0.64rem; letter-spacing: 0.2em;
+  text-transform: uppercase; color: var(--cool);
+  border: 1px solid var(--cool-2); border-radius: 999px; padding: 0.12rem 0.55rem;
+}
+.widget-head .w-sub { font-size: 0.9rem; color: var(--ink-dim); margin-top: 0.5rem; line-height: 1.6; }
+.widget-body { padding: 1.3rem 1.5rem; }
+.widget-cap {
+  border-top: 1px solid var(--hairline); padding: 1rem 1.5rem 1.2rem;
+  font-size: 0.9rem; color: var(--ink-dim); line-height: 1.65; min-height: 3.4rem;
+}
+.widget-cap b, .widget-cap strong { color: var(--ink); }
+.w-controls { display: flex; flex-wrap: wrap; gap: 0.6rem; align-items: center; margin-bottom: 1.1rem; }
+.w-btn {
+  background: var(--surface-2); border: 1px solid var(--hairline); color: var(--ink);
+  border-radius: 6px; padding: 0.45rem 0.95rem; cursor: pointer;
+  font-family: var(--font-mono); font-size: 0.74rem; letter-spacing: 0.08em;
+  transition: border-color 0.2s, color 0.2s, background 0.2s;
+}
+.w-btn:hover { border-color: var(--cool); color: var(--cool); }
+.w-btn[aria-pressed="true"], .w-btn.active { background: var(--cool-2); border-color: var(--cool); color: #f4efe2; }
+.w-btn:disabled { opacity: 0.45; cursor: default; }
+.w-check { display: inline-flex; align-items: center; gap: 0.45rem; font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-dim); cursor: pointer; }
+.w-check input { accent-color: var(--cool); width: 1rem; height: 1rem; cursor: pointer; }
+.w-slider { display: flex; align-items: center; gap: 0.8rem; flex: 1 1 220px; font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-dim); }
+.w-slider input[type=range] { flex: 1; accent-color: var(--cool); min-width: 80px; }
+.w-val { font-family: var(--font-mono); font-size: 0.8rem; color: var(--accent); min-width: 5.5ch; text-align: right; }
+
+.widget svg { display: block; width: 100%; height: auto; }
+.svg-node { fill: var(--surface-2); stroke: var(--cool-2); stroke-width: 1.2; rx: 6; }
+.svg-node.hot { stroke: var(--accent); }
+.svg-label { font-family: var(--font-mono); font-size: 11px; fill: var(--ink); letter-spacing: 0.06em; }
+.svg-small { font-family: var(--font-mono); font-size: 9.5px; fill: var(--ink-dim); letter-spacing: 0.05em; }
+.svg-force { font-family: var(--font-mono); font-size: 9.5px; fill: var(--accent); letter-spacing: 0.1em; }
+.svg-wire { stroke: var(--cool-2); stroke-width: 1.2; fill: none; opacity: 0.7; }
+.svg-wire.hot { stroke: var(--accent); }
+.dotpulse { fill: var(--accent); }
+
+.bar-row { display: flex; align-items: center; gap: 0.9rem; margin-top: 0.7rem; }
+.bar-row label { font-family: var(--font-mono); font-size: 0.7rem; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-dim); width: 8.5rem; flex-shrink: 0; }
+.bar-track { flex: 1; height: 10px; background: var(--surface-2); border-radius: 999px; overflow: hidden; }
+.bar-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: 999px; transition: width 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.bar-fill.cool { background: linear-gradient(90deg, var(--cool-2), var(--cool)); }
+
+.lookup { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.55rem 0.8rem; margin: 2.2rem 0; align-items: center; }
+.lookup .force { text-align: right; font-size: 0.92rem; color: var(--ink-dim); }
+.lookup .arrow { color: var(--accent); font-family: var(--font-mono); }
+.lookup .move { font-family: var(--font-mono); font-size: 0.8rem; color: var(--ink); letter-spacing: 0.03em; }
+
+footer.colophon {
+  border-top: 1px solid var(--hairline); padding: 2.5rem clamp(1.25rem, 4vw, 3rem) 3.5rem;
+  text-align: center; font-family: var(--font-mono); font-size: 0.72rem;
+  letter-spacing: 0.16em; text-transform: uppercase; color: var(--ink-dim);
+  position: relative; z-index: 2;
+}
+footer.colophon span { color: var(--accent); }
+footer.colophon p + p { margin-top: 1rem; text-transform: none; letter-spacing: 0.02em; font-family: var(--font-body); font-size: 0.9rem; max-width: 60ch; margin-left: auto; margin-right: auto; }
+
+/* ---------- Scroll reveal (classes applied by JS only) ---------- */
+.will-rev { opacity: 0; transform: translateY(14px); transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.rev-in { opacity: 1; transform: translateY(0); }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 640px) {
+  body { font-size: 1rem; }
+  .lookup { grid-template-columns: 1fr; gap: 0.15rem; }
+  .lookup .force { text-align: left; margin-top: 0.9rem; }
+  .lookup .arrow { display: none; }
+  .bar-row label { width: 6.2rem; }
+  .widget-body, .widget-head { padding-left: 1rem; padding-right: 1rem; }
+  .widget-cap { padding-left: 1rem; padding-right: 1rem; }
+  .hero h1 { font-size: clamp(2.3rem, 11vw, 3.2rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .mote { display: none; }
+  .will-rev { opacity: 1; transform: none; }
+}
+</style>
+</head>
+<body>
+<div id="progress" aria-hidden="true"></div>
+
+<header class="masthead">
+  <a class="brand" href="https://hundredsunited.com">THE <span>TRENCHES</span></a>
+  <div class="controls">
+    <span class="read-time">30 MIN READ</span>
+    <button id="theme-toggle" aria-label="Toggle color theme">NIGHT / DAY</button>
+  </div>
+</header>
+
+<nav class="pills" aria-label="Sections">
+  <a href="#frame"><i>00</i>Frame</a>
+  <a href="#fork"><i>01</i>Fork</a>
+  <a href="#cron"><i>02</i>Cron</a>
+  <a href="#diff"><i>03</i>Diff</a>
+  <a href="#log"><i>04</i>Log</a>
+  <a href="#promise"><i>05</i>Promise</a>
+  <a href="#time"><i>06</i>Time</a>
+  <a href="#shape"><i>07</i>Shape</a>
+  <a href="#lake"><i>08</i>Lake</a>
+  <a href="#trust"><i>09</i>Trust</a>
+  <a href="#replay"><i>10</i>Replay</a>
+  <a href="#conduct"><i>11</i>Conductor</a>
+  <a href="#capstone"><i>12</i>Capstone</a>
+  <a href="#meta"><i>13</i>Meta</a>
+</nav>
+
+<section class="hero">
+  <div class="hero-inner">
+    <p class="eyebrow">Data Engineering :: The Long Read</p>
+    <h1>The Flow, <em>Not the Tools</em></h1>
+    <p class="standfirst">Most people learn data engineering as a vendor list. Kafka, Airflow, Spark, dbt, Iceberg, a hundred logos with no connective tissue. Here is the other way: a small set of forces, and the moves engineers make to relieve them. We start with one cron job copying one database, push until it breaks, and by the end we have designed a planetary clickstream platform together, and you will know why every box is there.</p>
+    <div class="byline">
+      <span class="av"><img src="/images/author/boyan-balev.jpg" alt="Boyan Balev" loading="lazy" width="38" height="38"></span>
+      <span><b>Boyan Balev</b></span>
+      <span class="dotsep" aria-hidden="true"></span>
+      <span>The Trenches</span>
+      <span class="dotsep" aria-hidden="true"></span>
+      <span>Field Manual Series</span>
+    </div>
+    <p class="hero-meta"><b>14</b> sections :: <b>9</b> instruments :: <b>1</b> cron job, pushed until it becomes a platform</p>
+  </div>
+  <span class="mote" aria-hidden="true"></span>
+  <span class="mote" aria-hidden="true"></span>
+  <span class="mote" aria-hidden="true"></span>
+  <span class="mote" aria-hidden="true"></span>
+  <span class="mote" aria-hidden="true"></span>
+  <span class="mote" aria-hidden="true"></span>
+  <div class="dunes" aria-hidden="true">
+    <svg viewBox="0 0 1440 250" preserveAspectRatio="none">
+      <g class="g-back">
+        <path class="dune-back" d="M-60 250 L-60 150 Q 180 60 420 128 Q 660 196 900 110 Q 1140 30 1520 130 L1520 250 Z"/>
+      </g>
+      <g class="g-mid">
+        <path class="dune-mid" d="M-60 250 L-60 190 Q 240 110 520 172 Q 800 232 1060 150 Q 1300 78 1520 168 L1520 250 Z"/>
+        <path class="dune-crest" d="M-60 190 Q 240 110 520 172 Q 800 232 1060 150 Q 1300 78 1520 168"/>
+      </g>
+      <path class="dune-front" d="M-60 250 L-60 226 Q 300 176 700 216 Q 1080 252 1520 204 L1520 250 Z"/>
+    </svg>
+  </div>
+</section>
+
+<main>
+<div class="plate">
+  <div class="plate-frame">
+    <img src="/images/story/data_flow.png" alt="The Trenches field plate: a master builder stands over a blueprint on a high wooden platform, directing a crew as water flows through a vast city under construction in the mountains" loading="eager" width="1629" height="965">
+    <div class="cap">Field manual :: The Flow, Not the Tools :: Data Pipelines at Scale</div>
+  </div>
+</div>
+<article>
+<!-- ======================= HERO ARC WIDGET ======================= -->
+<div class="widget" id="arc-widget">
+  <div class="widget-head">
+    <p class="w-title">The whole arc, in one picture <span class="w-tag">assembles as you read</span></p>
+    <p class="w-sub">One cron job on the left. Every component to its right earns its place by relieving a pressure the cron job could not survive. Cool nodes are moves we make. Warm labels are the forces that pushed us.</p>
+  </div>
+  <div class="widget-body">
+    <svg id="arc-svg" viewBox="0 0 720 250" role="img" aria-label="Pipeline architecture assembling step by step">
+      <!-- wires -->
+      <path class="svg-wire arcw" data-step="1" d="M96 125 L136 125"/>
+      <path class="svg-wire arcw" data-step="2" d="M216 125 L256 125"/>
+      <path class="svg-wire arcw" data-step="3" d="M336 125 L376 125"/>
+      <path class="svg-wire arcw" data-step="4" d="M456 105 L496 70"/>
+      <path class="svg-wire arcw" data-step="5" d="M456 145 L496 185"/>
+      <path class="svg-wire arcw" data-step="6" d="M576 70 L616 105"/>
+      <path class="svg-wire arcw" data-step="6" d="M576 185 L616 145"/>
+      <!-- nodes -->
+      <g class="arcn" data-step="0">
+        <rect class="svg-node hot" x="16" y="100" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="56" y="122" text-anchor="middle">SOURCE</text>
+        <text class="svg-small" x="56" y="138" text-anchor="middle">OLTP DB</text>
+      </g>
+      <g class="arcn" data-step="1">
+        <rect class="svg-node" x="136" y="100" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="176" y="122" text-anchor="middle">CDC</text>
+        <text class="svg-small" x="176" y="138" text-anchor="middle">the log tap</text>
+        <text class="svg-force" x="176" y="86" text-anchor="middle">missed deletes</text>
+      </g>
+      <g class="arcn" data-step="2">
+        <rect class="svg-node" x="256" y="100" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="296" y="122" text-anchor="middle">LOG</text>
+        <text class="svg-small" x="296" y="138" text-anchor="middle">Kafka</text>
+        <text class="svg-force" x="296" y="86" text-anchor="middle">many readers</text>
+      </g>
+      <g class="arcn" data-step="3">
+        <rect class="svg-node" x="376" y="100" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="416" y="122" text-anchor="middle">STREAM</text>
+        <text class="svg-small" x="416" y="138" text-anchor="middle">validate, window</text>
+        <text class="svg-force" x="416" y="86" text-anchor="middle">seconds, not days</text>
+      </g>
+      <g class="arcn" data-step="4">
+        <rect class="svg-node" x="496" y="45" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="536" y="67" text-anchor="middle">LAKE</text>
+        <text class="svg-small" x="536" y="83" text-anchor="middle">replayable history</text>
+        <text class="svg-force" x="536" y="31" text-anchor="middle">reprocess the past</text>
+      </g>
+      <g class="arcn" data-step="5">
+        <rect class="svg-node" x="496" y="160" width="80" height="50" rx="6"/>
+        <text class="svg-label" x="536" y="182" text-anchor="middle">RT SERVE</text>
+        <text class="svg-small" x="536" y="198" text-anchor="middle">online views</text>
+        <text class="svg-force" x="536" y="232" text-anchor="middle">fresh answers</text>
+      </g>
+      <g class="arcn" data-step="6">
+        <rect class="svg-node" x="616" y="100" width="88" height="50" rx="6"/>
+        <text class="svg-label" x="660" y="122" text-anchor="middle">WAREHOUSE</text>
+        <text class="svg-small" x="660" y="138" text-anchor="middle">modeled truth</text>
+        <text class="svg-force" x="660" y="86" text-anchor="middle">one definition</text>
+      </g>
+    </svg>
+    <div class="w-controls" style="margin: 1rem 0 0;">
+      <button class="w-btn" id="arc-replay">Replay the build</button>
+      <span class="w-val" id="arc-stage" style="min-width:16ch; text-align:left;">one cron job, copying rows</span>
+    </div>
+  </div>
+  <div class="widget-cap">Read it left to right. We will earn every node, in order, and you will know exactly why each one is there. Nothing here is a logo, and nothing here is memorized.</div>
+</div>
+
+<p class="lede">The gap between an engineer who "knows Kafka" and one who can build a data platform is not tool count. It is how they reason about movement. A junior reaches for the right product. A senior reaches for the right guarantee. When you can name what a dataset actually needs, how fresh, how complete, how replayable, and then choose deliberately, the pipeline stops being a pile of connectors and becomes a sequence of decisions you can defend at 3 a.m. with the pager in your hand.</p>
+
+<p>Every concept in this manual is an answer to a specific pressure. CDC answers "the nightly copy misses deletes and melts the source." A log answers "five consumers need the same events at five different speeds." Watermarks answer "events arrive out of order and I still have to close the window." Learn the pressure first and the technique is obvious. Learn the technique first and you are carrying a logo collection you will freeze on, because you will not know which one the incident in front of you is asking for.</p>
+
+<p>So we build the way you actually build. Start with the smallest pipeline that works. Push on it until it breaks. Name the force that broke it. Apply the smallest move that fixes it. Repeat. By the end, the picture above is assembled, and you have watched every piece arrive for a reason you can state in one sentence.</p>
+
+<div class="pull">You do not study data engineering by collecting tools. You study the forces, and the tools arrive exactly when a named pressure demands them.</div>
+
+<h2 id="frame"><span class="kicker">00 / The Frame</span>How to think before you move a single byte</h2>
+
+<p>Before any component goes on the whiteboard, there is an order of operations, and it works because a pipeline is a product with consumers, not a chore with a schedule. The mistake under pressure is to start naming tools. Resist it. Tools first means you commit to machinery before you understand the workload, and then you spend a year operating machinery the workload never asked for.</p>
+
+<p>Five questions, asked in order, decide everything downstream:</p>
+
+<ul>
+  <li><strong>Who consumes this, and what do they do with it?</strong> A dashboard refreshed each morning, a fraud model scoring in 50 milliseconds, and a finance report closed monthly are three different physics problems wearing the same word, "pipeline."</li>
+  <li><strong>How fresh must it be?</strong> Not "how fresh would be nice." How stale before someone is actually harmed. This single number, minutes versus seconds versus days, is the biggest cost driver in the whole design, and people set it by vibes.</li>
+  <li><strong>How correct must it be?</strong> Can a duplicated event or a missing hour be tolerated, detected later, or never? Billing and analytics give opposite answers, and mixing them in one pipeline gives you billing-grade cost for analytics-grade value.</li>
+  <li><strong>Will you ever need to recompute the past?</strong> New metric definition, bug in a transform, a model retrained over two years of history. If yes, and it is always yes, replayability must be designed in on day one, because it cannot be bolted on after the raw data is gone.</li>
+  <li><strong>Who gets paged?</strong> A pipeline without a named owner is not infrastructure. It is a future incident with a start date you have not learned yet.</li>
+</ul>
+
+<h3>Learn to count before you stream</h3>
+
+<p>You cannot reason about scale without estimating it, and estimation is a handful of numbers plus the courage to round hard. A day is about 100,000 seconds. So <strong>100 million events per day is roughly 1,000 events per second on average</strong>, and with a peak factor of five, you are designing for about 5,000 per second. At one kilobyte per event that is 5 MB/s at peak and roughly 100 GB per day, call it 36 TB a year raw. Every one of those numbers is small for modern hardware, and knowing they are small is what stops you from deploying a twelve-node cluster to carry what a single well-fed Postgres and a cron job would honestly carry for years.</p>
+
+<div class="stat-grid">
+  <div class="stat"><b>10^5</b><span>seconds per day, rounded</span></div>
+  <div class="stat"><b>~1,000/s</b><span>avg rate at 100M events/day</span></div>
+  <div class="stat"><b>~5,000/s</b><span>design rate at 5x peak</span></div>
+  <div class="stat"><b>~36 TB/yr</b><span>raw, at 1 KB per event</span></div>
+</div>
+
+<p>The second arithmetic habit: cost scales with how often you touch data, not just how much you have. Scanning a 10 TB table nightly is 3.6 PB of reads a year. Scanning yesterday's 30 GB partition nightly is 11 TB a year, three hundred times cheaper, for the same business answer. Most pipeline cost disasters are not volume problems. They are "we re-read everything, every run" problems, which is exactly where our story begins.</p>
+
+<h2 id="fork"><span class="kicker">01 / The First Fork</span>Freshness or cost: batch and streaming are one dial, not two religions</h2>
+
+<p>The first deep dive, almost every time, is a single question that decides the personality of the whole pipeline: how quickly must a change in the source become visible to the consumer? The industry stages this as a war, batch versus streaming, ancient versus modern. That framing is noise. It is one dial, and every notch buys freshness by spending money and operational complexity.</p>
+
+<p>At one end, a nightly batch: simple, cheap, debuggable by rerunning it, and 24 hours stale. At the other end, event-at-a-time streaming: seconds fresh, and you have signed up for brokers, consumer lag, out-of-order time, and stateful processing that must survive restarts. In between sit hourly batches and micro-batches, which are respectable engineering, not cowardice. Drag the dial and watch what each notch costs.</p>
+
+<div class="widget" id="fresh-widget">
+  <div class="widget-head">
+    <p class="w-title">The freshness dial <span class="w-tag">drag the slider</span></p>
+    <p class="w-sub">One dial from nightly batch to real-time streaming. Freshness is bought, never free, and the price is paid in infrastructure and in the operational burden your on-call carries.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <div class="w-slider">
+        <span>daily</span>
+        <input type="range" id="fresh-slider" min="0" max="4" step="1" value="0" aria-label="Freshness level">
+        <span>real-time</span>
+      </div>
+      <span class="w-val" id="fresh-name">nightly batch</span>
+    </div>
+    <div class="bar-row"><label>data staleness</label><div class="bar-track"><div class="bar-fill cool" id="fb-lat"></div></div></div>
+    <div class="bar-row"><label>infra cost</label><div class="bar-track"><div class="bar-fill" id="fb-cost"></div></div></div>
+    <div class="bar-row"><label>ops complexity</label><div class="bar-track"><div class="bar-fill" id="fb-ops"></div></div></div>
+  </div>
+  <div class="widget-cap" id="fresh-cap"></div>
+</div>
+
+<p>Here is the part that separates the strong answer from the weak one: <strong>almost no real platform sets this dial once, globally</strong>. Different datasets sit at different notches. Fraud features and inventory counts earn streaming, because a stale answer costs money per second. The finance mart and the executive dashboard are perfectly happy at nightly, and moving them to streaming is a subsidy paid to nobody. The senior answer is never "we are a streaming shop." It is "these three datasets need seconds and here is the harm that justifies it; everything else runs on schedule and we sleep at night."</p>
+
+<h2 id="cron"><span class="kicker">02 / One Cron Job</span>The smallest pipeline that works</h2>
+
+<p>Every planetary data platform started as this: a script, a schedule, a copy. At 02:00, <code>SELECT *</code> from the production database, write it into the warehouse, replace yesterday's copy. For a real company with a modest database, this is genuinely enough, and do not let anyone shame you out of shipping it. It is correct, cheap, and any engineer can debug it by reading forty lines.</p>
+
+<pre><code><span class="c"># the ancestral pipeline, 02:00 every night</span>
+<span class="k">pg_dump</span> --table=orders prod_db \
+  | <span class="k">load</span> --replace warehouse.orders
+</code></pre>
+
+<p>It also has exactly three weaknesses, and almost everything in the rest of this manual is a cure for one of them.</p>
+
+<ul>
+  <li><strong>It reads everything, every time.</strong> The cost of each run grows with the size of history, not with the size of change. At 10 GB this is invisible. At 2 TB the "nightly" job takes eleven hours, saturates the production database's I/O while real customers are using it, and finishes after the analysts arrive.</li>
+  <li><strong>It sees snapshots, not history.</strong> A row updated three times between runs shows up once, in its final state. A row deleted between runs simply vanishes, silently, and your warehouse now disagrees with reality in a way no error message will ever report. State tells you where things are. It cannot tell you what happened.</li>
+  <li><strong>It is one hop with no memory.</strong> If the job dies at 03:40, there is no queue holding the work, no record of partial progress, no second consumer with its own copy. There is only a missing table and a morning of questions.</li>
+</ul>
+
+<p>Three weaknesses, three forces: <strong>cost proportional to history</strong>, <strong>loss of change information</strong>, and <strong>fragility of the single hop</strong>. We relieve them in that order, because that is the order in which they hurt.</p>
+
+<h2 id="diff"><span class="kicker">03 / The Diff</span>Full loads, incremental loads, and the tap on the log</h2>
+
+<p>The first fix is obvious once the force is named: stop moving data that did not change. Add an <code>updated_at</code> column, remember the high-water mark from the last run, and each night pull only the rows above it. This is <strong>incremental extraction</strong>, and it converts cost-per-history into cost-per-change, which is the single largest efficiency win available in all of data engineering. Take it early and take it everywhere.</p>
+
+<p>But watch what incremental extraction still cannot see. A deleted row has no <code>updated_at</code>, because it has no anything; it is simply absent, and absence does not show up in a query for recent changes. A row updated twice between runs still collapses to its final state. And the whole scheme trusts every application to maintain the timestamp column honestly, which some ORM, someday, will not. The diff query is an inference about what changed. What you actually want is the <em>record</em> of what changed, and your database has been keeping one all along.</p>
+
+<div class="field-note">
+  <p class="fn-label">Field note :: the ghost rows</p>
+  <p>The way this bites in practice is never an error. It is a reconciliation, months later, where the warehouse reports more customers than production has, and the difference turns out to be every account deleted since the incremental sync shipped. The nightly diff never saw them leave, so downstream they never left: still counted, still emailed, still inflating a number someone presented to a board. Nobody wrote a bug. Everybody trusted a query that is structurally blind to absence. That is the shape of the failure worth remembering: the diff cannot report what no longer exists, and no amount of monitoring on the diff will ever tell you so.</p>
+</div>
+
+<p>Every serious database persists a write-ahead log, the ordered record of every insert, update, and delete, written before the change is applied, because that is how the database itself survives a crash. <strong>Change data capture (CDC)</strong> taps that log and turns it into a stream of change events: before-image, after-image, operation, position. Debezium is the standard tap. The deletes appear, because the log records them. The intermediate states appear, because the log records everything. The source barely notices, because reading a log file is nothing like scanning a hot table.</p>
+
+<div class="widget" id="sync-widget">
+  <div class="widget-head">
+    <p class="w-title">Three ways to move the same change <span class="w-tag">interactive</span></p>
+    <p class="w-sub">Twelve row slots on the left. Since the last run: 2 rows updated, 1 inserted, and 1 deleted, the dashed ghost, leaving 11 live rows. Pick a strategy and watch what actually crosses the wire, and what gets silently missed.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <button class="w-btn sync-btn active" data-mode="full">Full reload</button>
+      <button class="w-btn sync-btn" data-mode="incr">Incremental</button>
+      <button class="w-btn sync-btn" data-mode="cdc">CDC</button>
+    </div>
+    <svg id="sync-svg" viewBox="0 0 700 190" role="img" aria-label="Rows moving from source to target under different sync strategies">
+      <text class="svg-label" x="90" y="18" text-anchor="middle">SOURCE (11 live rows)</text>
+      <text class="svg-label" x="610" y="18" text-anchor="middle">TARGET</text>
+      <g id="sync-rows"></g>
+      <g id="sync-target"></g>
+      <text class="svg-small" x="350" y="182" text-anchor="middle" id="sync-wirelabel"></text>
+    </svg>
+    <div class="w-controls" style="margin: 0.8rem 0 0;">
+      <span class="w-val" style="min-width:auto;" id="sync-read">read: 11</span>
+      <span class="w-val" style="min-width:auto;" id="sync-moved">moved: 11</span>
+      <span class="w-val" style="min-width:auto; color: var(--cool);" id="sync-missed">missed: nothing</span>
+    </div>
+  </div>
+  <div class="widget-cap" id="sync-cap"></div>
+</div>
+
+<h3>The trap that makes CDC the principled choice, not the lazy one</h3>
+
+<p>There is a deeper reason the log is the right tap, and it is the most instructive bug in distributed systems. Suppose your service, wanting to be modern, updates its database and then publishes an event about the change:</p>
+
+<pre><code><span class="c">// the dual-write trap</span>
+<span class="k">await</span> db.orders.update(order);      <span class="c">// succeeds</span>
+<span class="k">await</span> broker.publish(orderUpdated); <span class="c">// process dies here</span>
+</code></pre>
+
+<p>Two systems, no shared transaction. Eventually the write lands and the publish does not, or the reverse, and now your stream and your database disagree about reality, permanently, with no error anywhere. At production volume this is not a rare edge case; it is a weekly certainty. The two honest cures both collapse the two writes into one: the <strong>transactional outbox</strong>, where the event is written into an outbox table inside the same database transaction and relayed out from there, or <strong>CDC itself</strong>, where the write-ahead log is treated as the one true record and events are derived from it. Either way the principle is identical, and it is worth engraving: <strong>the log is the only place where "what actually happened" is recorded atomically. Everything else is somebody's opinion about what happened.</strong></p>
+
+<p>So now change events flow out of the source cheaply and completely. They need somewhere to land, and "somewhere" turns out to be the most important data structure in this entire field.</p>
+
+<h2 id="log"><span class="kicker">04 / The Log</span>Why Kafka is a data structure, not a message queue</h2>
+
+<p>The cron job's third weakness was the single hop with no memory. The change events from CDC deserve better than being piped straight into one destination, because the moment they are useful, everyone wants them: the warehouse loader, the search indexer, the fraud detector, the cache invalidator. Five consumers, five speeds, five failure schedules. Point-to-point delivery to five destinations from one producer is five integrations that each break independently, which is the reliability arithmetic from every distributed systems lesson ever taught: chained things multiply their failures.</p>
+
+<p>The move is to put a <strong>durable, ordered, append-only log</strong> in the middle, and this is what Kafka actually is. Not a queue that deletes messages once someone reads them; a log that keeps them. Producers append at the head. Each consumer keeps its own bookmark, an offset, and reads at its own pace. A slow consumer inconveniences nobody. A crashed consumer resumes from its bookmark. A brand new consumer, deployed a year later, can start from the beginning and read history it was never alive for. The log decouples producers from consumers in <em>time</em>, which is the decoupling that matters, and it is why the log sits at the center of the architecture diagram rather than off to one side.</p>
+
+<p>One machine cannot hold a planetary firehose, so the log is split into <strong>partitions</strong>, each an independent ordered log on its own broker. And here is the sentence that explains half of all Kafka behavior, interviews, and incidents: <strong>ordering is guaranteed within a partition and nowhere else</strong>. The producer chooses a partition by hashing a key, so all events for <code>user-42</code> land in the same partition and stay in order relative to each other, while events for different users interleave freely. Choose the key badly, say by country when one country is 60 percent of traffic, and one partition carries 60 percent of the load while its siblings idle. That is a hot partition, and no amount of adding brokers fixes it, because the skew is in your key, not in the cluster.</p>
+
+<div class="widget" id="part-widget">
+  <div class="widget-head">
+    <p class="w-title">Partitions, keys, and consumer groups <span class="w-tag">live simulator</span></p>
+    <p class="w-sub">Send events. Each has a user key, the key hashes to a partition, and order is preserved per key because same key means same partition. Then change the consumer count and watch partitions get reassigned across the group.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <button class="w-btn" id="part-send">Send event</button>
+      <button class="w-btn" id="part-send10">Send 10</button>
+      <button class="w-btn" id="part-reset">Reset</button>
+      <div class="w-slider" style="flex: 0 1 200px;">
+        <span>consumers</span>
+        <input type="range" id="part-consumers" min="1" max="4" step="1" value="1" aria-label="Consumer count">
+        <span class="w-val" id="part-cval">1</span>
+      </div>
+    </div>
+    <svg id="part-svg" viewBox="0 0 700 220" role="img" aria-label="Events hashing to partitions consumed by a consumer group"></svg>
+  </div>
+  <div class="widget-cap" id="part-cap">Each colored dot is an event; its color is its user key. Same color always lands in the same lane. That is the entire ordering guarantee, and it is enough, because most ordering that matters is per-entity: this user's clicks, this order's status changes.</div>
+</div>
+
+<p>Consumers scale the mirror-image way: a <strong>consumer group</strong> divides the partitions among its members, each partition owned by exactly one member at a time. Three partitions can feed at most three active consumers in a group; a fourth stands idle, which is the simulator's quiet lesson that <strong>partition count is the ceiling on consumer parallelism</strong>, chosen at topic creation and expensive to regret. When a consumer dies, the group rebalances and survivors adopt its partitions, resuming from the committed offsets. Death, in this design, is an ordinary event with a rehearsed response, which is precisely what the cron job never had.</p>
+
+<p>Two more sentences about the log that pay rent for years. Its memory is bounded by <strong>retention</strong>, and retention has three modes worth knowing by name: time-based, size-based, and <strong>compacted</strong>, where the log keeps only the newest event per key and a topic becomes a changelog you can rebuild an entire state store from. And <strong>tiered storage</strong> now lets brokers spill old segments to object storage, which quietly blurs the line between the log and the lake we build in section 08, and turns "replay from months ago" from an impossibility into a line item.</p>
+
+<h2 id="promise"><span class="kicker">05 / The Promise</span>Delivery semantics, and the myth of exactly-once</h2>
+
+<p>The log made delivery durable. It did not make delivery clean, and here lives the most misunderstood promise in data engineering. Systems fail between doing work and recording that the work is done. A consumer reads an event, writes the result to the database, and crashes one millisecond before committing its offset. On restart, the log does exactly what it should: it re-delivers from the last committed bookmark. The work happens twice.</p>
+
+<p>You get to choose which side of this cliff to fall off. Commit the offset <em>before</em> processing and a crash loses the event: <strong>at-most-once</strong>, acceptable for metrics nobody bills on. Commit <em>after</em> processing and a crash duplicates the event: <strong>at-least-once</strong>, the default everywhere that data matters. The thing everyone wants, <strong>exactly-once</strong>, is not purchasable as a global property, because it would require the delivery and the side effect to share one atomic transaction across systems that do not share anything. What is achievable is <strong>effectively-once</strong>: at-least-once delivery plus consumers that make duplicates harmless. That property has a name you already know.</p>
+
+<div class="widget" id="del-widget">
+  <div class="widget-head">
+    <p class="w-title">The crash between the work and the bookmark <span class="w-tag">break it yourself</span></p>
+    <p class="w-sub">Process a payment event. With the crash toggled on, the consumer dies after writing but before committing its offset, so the broker re-delivers. Watch the account balance, then arm idempotency and try again.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <button class="w-btn" id="del-send">Deliver "charge order #4711, 50 EUR"</button>
+      <label class="w-check"><input type="checkbox" id="del-crash" checked> crash before offset commit</label>
+      <label class="w-check"><input type="checkbox" id="del-idem"> idempotent handler</label>
+      <button class="w-btn" id="del-reset">Reset</button>
+    </div>
+    <svg viewBox="0 0 700 120" role="img" aria-label="Broker, consumer, database flow">
+      <rect class="svg-node" x="30" y="35" width="120" height="50" rx="6"/>
+      <text class="svg-label" x="90" y="57" text-anchor="middle">BROKER</text>
+      <text class="svg-small" x="90" y="73" text-anchor="middle" id="del-offset">offset: 0</text>
+      <path class="svg-wire" d="M150 60 L290 60"/>
+      <rect class="svg-node" x="290" y="35" width="120" height="50" rx="6" id="del-consnode"/>
+      <text class="svg-label" x="350" y="57" text-anchor="middle">CONSUMER</text>
+      <text class="svg-small" x="350" y="73" text-anchor="middle" id="del-consstate">idle</text>
+      <path class="svg-wire" d="M410 60 L550 60"/>
+      <rect class="svg-node" x="550" y="35" width="120" height="50" rx="6"/>
+      <text class="svg-label" x="610" y="57" text-anchor="middle">ACCOUNT</text>
+      <text class="svg-small" x="610" y="73" text-anchor="middle" id="del-balance">charged: 0 EUR</text>
+      <circle id="del-dot" class="dotpulse" r="6" cx="150" cy="60" opacity="0"/>
+    </svg>
+    <p style="font-family: var(--font-mono); font-size: 0.74rem; color: var(--ink-dim); margin-top: 0.8rem;" id="del-log">Ready. The event sits in the broker at offset 0.</p>
+  </div>
+  <div class="widget-cap" id="del-cap">"Charge 50" is not idempotent: run twice, charge 100. "Charge 50 for order #4711 unless #4711 is already settled" is idempotent: the retry sees the settled order and does nothing. The mechanism is an idempotency key plus an upsert, and it converts at-least-once delivery into effectively-once outcomes.</div>
+</div>
+
+<p>This is why idempotency is not an optimization but the entry fee. Every consumer downstream of a log must be written as if every message will arrive twice, because eventually it will: keyed upserts instead of blind inserts, event IDs recorded and checked, <code>MERGE</code> instead of <code>INSERT</code> in the warehouse loader. Kafka's transactions can give true exactly-once within a Kafka-to-Kafka topology, which is genuinely useful and genuinely narrow; the moment your consumer touches Postgres or S3 or an external API, you are back to idempotency as the load-bearing wall. Design for duplicates and duplicates become boring. That is the entire promise on offer, and it is enough.</p>
+
+<p>One more trick worth carrying, because it comes up constantly and almost nobody names it: when the sink is a transactional database, <strong>store the consumer's offset in that database, updated in the same transaction as the side effect</strong>. The work and the bookmark now share one commit, and the crash window between them simply does not exist for that path. Notice this is not a framework feature; it is the dual-write cure from section 03 wearing consumer clothes. The pattern is always the same, and once you see it you see it everywhere: find the two writes that can disagree, and make them one.</p>
+
+<h2 id="time"><span class="kicker">06 / Time</span>The two clocks, and the hardest idea in streaming</h2>
+
+<p>Everything so far had one merciful property: it did not care <em>when</em> events happened, only that they arrived. The moment you compute anything over a time window, "orders per minute," "clicks per session," "spend in the last hour," you collide with the fact that every event carries two timestamps, and they disagree.</p>
+
+<p><strong>Event time</strong> is when the thing happened, stamped at the source. <strong>Processing time</strong> is when your pipeline got around to seeing it. In a healthy system they differ by milliseconds. Then a phone rides the metro under Sofia for six minutes and syncs its buffered clicks on emerging. A producer retries after a deploy. A partition recovers and floods an hour of backlog in forty seconds. Events arrive minutes or hours after they occurred, interleaved with fresh ones, and any window computed on processing time quietly assigns them to the wrong bucket. The graph looks plausible. It is wrong, and nobody will ever file a bug, because plausible-but-wrong is invisible.</p>
+
+<p>So real windows are computed on event time, which creates the genuinely hard question: <strong>when is a window finished?</strong> The events for 14:00 to 14:05 can keep dribbling in until 14:11 or 14:40. Wait forever and you never emit a result. Close instantly and you drop the stragglers. Streaming engines resolve this with a <strong>watermark</strong>: a moving assertion that says "I believe I have now seen everything up to time T," typically trailing the newest observed event time by a chosen lateness budget. When the watermark passes a window's end, the window closes and emits. It is not knowledge. It is a bet, made explicit and tunable, and making the bet explicit is the entire contribution.</p>
+
+<div class="widget" id="wm-widget">
+  <div class="widget-head">
+    <p class="w-title">Watermarks and the late click <span class="w-tag">play the stream</span></p>
+    <p class="w-sub">Counting clicks in the window 0s to 10s of event time. Events arrive out of order: the horizontal position is when each event happened, the vertical position is arrival order. The amber line is the watermark, trailing the newest event time by 2 seconds. Watch what happens to the click that happened at second 6 but arrives dead last.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <button class="w-btn" id="wm-play">Play the stream</button>
+      <button class="w-btn" id="wm-step">Step one arrival</button>
+      <button class="w-btn" id="wm-reset">Reset</button>
+      <label class="w-check"><input type="checkbox" id="wm-late"> accept late data (emit corrections)</label>
+    </div>
+    <svg id="wm-svg" viewBox="0 0 700 250" role="img" aria-label="Events on an event-time axis with a moving watermark"></svg>
+  </div>
+  <div class="widget-cap" id="wm-cap">Press play. The window wants to close, the watermark decides when it may, and the last event tests what your pipeline does with the truth that arrives after the answer.</div>
+</div>
+
+<p>The lateness budget is a business decision wearing an engineering costume. A short budget gives fast, slightly-lossy answers; a long budget gives complete, slow answers; and "accept late data" gives fast answers followed by corrections, which pushes the burden onto every consumer that must now handle a result that changes after being emitted. There is no setting called "correct." There is only the question from the Frame, "how stale before someone is harmed," answered honestly, per dataset, and written down where the next engineer will find it. Batch pipelines, note, face the same physics and answer it silently: "we process yesterday's partition at 06:00" is just a watermark of six hours that nobody calls by its name.</p>
+
+<h2 id="shape"><span class="kicker">07 / The Shape</span>ETL, ELT, and the trust gradient</h2>
+
+<p>Data is flowing; now it must be shaped, because raw events answer no business question directly. For decades the shape was <strong>ETL</strong>: extract, transform on a dedicated engine, then load only the polished result into the expensive warehouse. The ordering was economics, not philosophy. Warehouse compute and storage were scarce and coupled, so you refined the ore before shipping it.</p>
+
+<p>Cloud warehouses and object storage broke the coupling: storage became almost free and compute became rentable by the second, and the letters flipped to <strong>ELT</strong>. Load everything raw first, transform inside the warehouse afterward, with transformations written as SQL, versioned in git, tested in CI. This is the ground dbt stands on. The flip matters for one reason above all the others: <strong>when raw data is retained, transformations become reproducible and repairable</strong>. A bug in the transform is no longer a permanent scar on the data; it is a code fix plus a rerun. Hold that thought for section 10, because it is the seed of the whole replay story.</p>
+
+<p>Inside the warehouse or lakehouse, transformations arrange themselves into layers, popularly called medallion: <strong>bronze, silver, gold</strong>. Treat the names as marketing for an old and load-bearing idea, a <strong>trust gradient</strong>. Bronze is raw, exactly as it arrived, immutable, the evidence locker. Silver is cleaned, deduplicated, typed, conformed, the working truth. Gold is modeled for consumption: facts and dimensions, metric definitions, feature tables. Each boundary is a contract: a consumer of silver may assume deduplication happened and need not re-check it. Trust becomes a property of the topology instead of a property of each analyst's diligence, and "is this table safe to use" stops being tribal knowledge.</p>
+
+<pre><code><span class="c">-- silver: one honest row per order, from at-least-once bronze</span>
+<span class="k">select</span> *
+<span class="k">from</span> bronze.order_events
+<span class="k">qualify</span> row_number() <span class="k">over</span> (
+  <span class="k">partition by</span> event_id        <span class="c">-- the idempotency key, again</span>
+  <span class="k">order by</span> ingested_at <span class="k">desc</span>
+) = <span class="n">1</span>
+</code></pre>
+
+<p>Notice what that query is: section 05's idempotency, expressed in SQL. The forces do not change between streaming and batch; only the syntax does. And one discipline binds the whole layer: <strong>a metric defined twice is a metric defined zero times</strong>. The moment "revenue" is computed one way in the gold model and another way in someone's dashboard formula, the Monday meeting becomes an argument about whose number is real. Definitions live in one place, in code, under review. Everything else references them.</p>
+
+<h2 id="lake"><span class="kicker">08 / The Lake</span>Object storage, the small files tax, and tables made of files</h2>
+
+<p>Everything raw and everything historical eventually lands in object storage, S3 and its siblings, because nothing else offers eleven nines of durability at a price that lets you keep everything forever. The lake is the platform's long-term memory, and the memory is what makes replay possible. But object storage is not a database. It is a bag of immutable files, and two consequences of that fact dominate lake engineering.</p>
+
+<p>The first is <strong>layout is the index</strong>. There are no B-trees over a bag of files; the only way a query avoids reading everything is if the files are organized so most of them can be skipped. Columnar formats like Parquet let a query read only the columns it touches, and their internal statistics let engines skip row groups. Directory partitioning, <code>/date=2026-07-12/</code>, lets a query over yesterday touch one directory instead of three years. Every fast lake query is fast because of pruning, and every ruinously expensive one is a full scan someone did not notice they were writing.</p>
+
+<p>The second consequence is quieter and eats streaming pipelines alive: <strong>the small files problem</strong>. A streaming writer flushing every thirty seconds across two hundred partitions produces hundreds of thousands of files a day. Each file costs a listing call, an open, a metadata fetch, a planning entry. The data volume is identical; the file count is the tax.</p>
+
+<div class="widget" id="files-widget">
+  <div class="widget-head">
+    <p class="w-title">The small files tax <span class="w-tag">drag the slider</span></p>
+    <p class="w-sub">One day of data, 1 TB, landing in the lake. Choose the average file size the writer produces and watch what the query planner has to swallow before reading a single byte of actual data.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <div class="w-slider">
+        <span>1 MB</span>
+        <input type="range" id="files-slider" min="0" max="9" step="1" value="0" aria-label="Average file size">
+        <span>512 MB</span>
+      </div>
+      <span class="w-val" id="files-size">1 MB</span>
+    </div>
+    <div class="bar-row"><label>file count</label><div class="bar-track"><div class="bar-fill" id="files-bar"></div></div></div>
+    <div class="w-controls" style="margin: 0.9rem 0 0;">
+      <span class="w-val" style="min-width:auto;" id="files-count">1,048,576 files</span>
+      <span class="w-val" style="min-width:auto; color: var(--cool);" id="files-plan">planning: minutes, before any data is read</span>
+    </div>
+  </div>
+  <div class="widget-cap" id="files-cap">Same terabyte, wildly different query. The cure is compaction: a background job that rewrites many small files into few large ones, targeting roughly 128 MB to 512 MB per file. Streaming writers optimize for freshness, readers for chunk size, and compaction is the treaty between them. Budget for it on day one; it is not optional at streaming ingest rates.</div>
+</div>
+
+<p>Now the harder problem. Files are immutable and there is no transaction manager, so the primitive operations a data platform needs are all unsafe by default. Update a row? Rewrite the file. Delete a user for a GDPR request? Find every file containing them, rewrite each. Have a reader list files while a writer is mid-job? The reader sees half a commit, and this is not hypothetical; it is the default behavior. The raw lake gives you durability and none of the semantics you actually need.</p>
+
+<p><strong>Open table formats</strong>, Iceberg and Delta Lake, close this gap, and they are the most important lake development of the past decade. The idea is small and mighty: keep a transaction log of metadata <em>about</em> the files, and make the log the truth. A table is no longer "whatever files sit in this directory"; it is "the set of files the log's current snapshot points to." A write prepares new files invisibly, then commits by atomically advancing the log one pointer. Readers see the previous complete snapshot or the new complete snapshot, never a torn middle. That one mechanism buys, in a single purchase: ACID commits on object storage, safe concurrent readers and writers, schema evolution tracked in metadata rather than in directory renames, and <strong>time travel</strong>, because old snapshots still exist and can simply be read.</p>
+
+<pre><code><span class="c">-- the lakehouse party trick, and the audit team's favorite query</span>
+<span class="k">select</span> count(*) <span class="k">from</span> orders <span class="k">for timestamp as of</span> <span class="s">'2026-07-01 00:00:00'</span>;
+
+<span class="c">-- what did this table look like before Tuesday's bad deploy?</span>
+<span class="c">-- answered in one line, restored in one more</span>
+</code></pre>
+
+<p>This is why "lakehouse" is not a buzzword but a specific claim: lake storage prices with warehouse semantics. The files are still cheap, still open format, still queryable by any engine. The log on top gives them the guarantees that previously forced you to copy everything into a proprietary warehouse just to get transactions. You will still likely run a warehouse for the hot, modeled, interactive tier. But the lake stopped being a swamp the day tables got a commit log, and it is no coincidence that the mechanism is the same one from section 04. It is logs, all the way down.</p>
+
+<h2 id="trust"><span class="kicker">09 / Trust</span>Quality is checked at two altitudes, and rejects need a graveyard with an alarm</h2>
+
+<p>A pipeline that moves garbage quickly is a garbage cannon. As the platform grows, quality stops being a virtue and becomes a subsystem, and the first thing to understand about it is that checks come in two mathematically different species, and no single tool or stage can host both.</p>
+
+<p><strong>Record checks</strong> are predicates on one row: the schema matches, the amount is non-negative, the currency is a real ISO code, the timestamp parses. They are pure, stateless, and instant, which makes them perfect for the stream. Enforce them at the earliest boundary, right where events enter the log, because the cost of a defect grows roughly an order of magnitude per stage it travels: a rejected write at the source is a log line, the same defect in the warehouse is a backfill, and in a trained model it is a quarter of quietly wrong decisions. Records that fail go to a <strong>dead letter queue</strong> with the reason attached, and here is what the diagrams never say: an unmonitored DLQ is where data goes to die politely. Without an alert on its volume and a named owner for replay, you have not built error handling; you have built a socially acceptable way to delete customer data. Crashing would at least get noticed.</p>
+
+<div class="field-note">
+  <p class="fn-label">Field note :: the polite graveyard</p>
+  <p>The canonical version of this incident runs like so. A producing team adds a field, a downstream parser starts rejecting, and every rejected event routes to the DLQ exactly as designed. No crash, no page, dashboards green. Six weeks later an analyst asks why one segment's numbers dipped, and the answer is sitting in a queue nobody looks at: a few million events, each with a perfectly formed rejection reason attached, patiently explaining a problem to an audience of zero. The DLQ did its job. The system around it did not, because "route the reject somewhere" was treated as the whole task. The whole task is three words longer: route it somewhere <em>alarmed and owned</em>.</p>
+</div>
+
+<p><strong>Population checks</strong> are statistics over many rows: did at least 99.9 percent of expected orders arrive, is today's volume within three sigma of the seasonal baseline, is the null rate on this column drifting, does every order's customer exist in the customers table. No single record can violate these; a feed that silently died delivers zero rows, every one of them schematically perfect. Population checks need a closed window and a baseline, which makes them creatures of scheduled batch against the lake and warehouse, and which means they inherit the watermark problem from section 06: "is the data complete" always secretly means "complete as of when," and pretending otherwise is how teams end up with alerting nobody trusts.</p>
+
+<div class="table-wrap">
+<table class="ledger">
+  <thead><tr><th>Species</th><th>Question shape</th><th>Lives in</th><th>Catches</th></tr></thead>
+  <tbody>
+    <tr><td>Record check</td><td>Predicate on one row</td><td>The stream, at ingest</td><td>Malformed, invalid, contract-breaking events</td></tr>
+    <tr><td>Population check</td><td>Statistic over a window</td><td>Scheduled batch, on the lake</td><td>Missing hours, dead feeds, volume anomalies, drift</td></tr>
+  </tbody>
+</table>
+</div>
+
+<p>And upstream of both sits the fix that prevents rather than detects: the <strong>data contract</strong>. Schema, semantics, freshness and completeness SLAs, and an owner, versioned in git, checked in CI, enforced against producers at the boundary. In practice the enforcement point is a <strong>schema registry</strong> checking compatibility on every publish, with the compatibility mode, backward, forward, or full, chosen per topic and treated as part of the contract rather than as a default nobody read. The uncomfortable truth contracts encode is organizational, not technical: the producing team ships daily and is not thinking about your pipeline, nor should they have to be. The contract is the treaty that lets them move fast without silently breaking you, the same role an API holds between services. When a schema change arrives as a reviewed pull request instead of a 3 a.m. parse error, the platform has grown up. Add <strong>lineage</strong>, the recorded graph of which datasets feed which, and the 3 a.m. question changes from "who do I even page" to "this gold table is wrong, its silver parent changed at 02:14, here is the commit."</p>
+
+<h2 id="replay"><span class="kicker">10 / Replay</span>Backfills are the real test of a pipeline</h2>
+
+<p>Here is the question that separates a demo from a platform, and it is the question to ask of any pipeline design, including your own: <strong>the transform had a bug for three weeks; walk me through the fix.</strong> Not the code fix. The data fix. Three weeks of silver and gold tables, dashboards, exports, and model features are wrong, and they must become right without taking the platform down or double-counting a single event.</p>
+
+<p>Everything built so far was secretly preparing for this moment. The lake retained raw history (07, 08), so the correct inputs still exist. The log keeps events replayable by offset and the table format can time-travel to any snapshot (04, 08), so both the stream and the batch worlds can be rewound. And every transform was written idempotently (05), so running it again produces the same result instead of a duplicate. Replayability is not a feature you add. It is a property that emerges if, and only if, three disciplines were kept: <strong>retain the raw, key every write, make every run idempotent</strong>. Miss any one and the backfill becomes archaeology with a deadline.</p>
+
+<p>The mechanical pattern that makes backfills routine instead of terrifying is <strong>partition-scoped, deterministic runs</strong>. Each run of a transform owns exactly one partition of output, usually a day, computes it entirely from inputs, and overwrites it atomically. The run for July 3 produces July 3's rows, all of them, every time, no matter how many times it runs. A three-week backfill is then just twenty-one ordinary runs executed with old parameters, indistinguishable from the nightly runs except for the date they are handed. Contrast the anti-pattern, the append-only transform that adds "new" rows each run: it cannot be re-run without duplicating, cannot be repaired without manual surgery, and every backfill against it is a small novel written in DELETE statements.</p>
+
+<div class="pull">Design every pipeline so that running it twice is boring. Boring reruns are what backfills, retries, disaster recovery, and Tuesday all have in common.</div>
+
+<p>One honest architectural note. The old answer to "streaming for freshness, batch for correctness" was the <strong>lambda architecture</strong>: run both, a speed layer and a batch layer, and merge at query time. It works and it doubles everything: two codebases computing each metric, which section 07 already told you is how a metric gets defined zero times. The <strong>kappa</strong> answer keeps one path, the stream, and handles reprocessing by replaying the log from an earlier offset through the same code. Modern platforms mostly land pragmatically in between: one set of <em>definitions</em>, executed by engines in both modes, with the lake as the shared replayable substrate. The principle to keep is not a Greek letter. It is single definition, replayable inputs, idempotent outputs.</p>
+
+<h2 id="conduct"><span class="kicker">11 / The Conductor</span>Orchestration, retries, and the day the consumer falls behind</h2>
+
+<p>Dozens of transforms now depend on each other: silver waits on bronze, gold on silver, the ML features on three golds and an external feed. Something must know the graph, run things in order, retry the failures, and page a human when retrying stops helping. That something is the orchestrator, Airflow and Dagster being the usual names, and the essential thing it manages is not schedules but <strong>dependencies</strong>: the DAG, run the thing when its inputs are ready, not when the clock says so. The modern refinement is to make the orchestrator think in datasets rather than tasks, "materialize gold.revenue when silver.orders lands," which is the same shift the whole field keeps making: from imperative steps to declared outcomes.</p>
+
+<p>Two of the conductor's habits do most of the protecting. <strong>Retries with exponential backoff and jitter</strong>, because most failures are transient and the worst response to a struggling dependency is a thousand synchronized retry hammers arriving in lockstep; the jitter is not decoration, it is what prevents your own recovery from being a self-inflicted stampede. And <strong>idempotent tasks</strong>, section 05 for the third time, because a retry is by definition a rerun, and reruns are only safe if running twice is boring. An orchestrator wrapped around non-idempotent tasks is an incident generator with a nice UI.</p>
+
+<p>The streaming side has its own version of falling behind, and it deserves its own instrument. <strong>Consumer lag</strong>, how far behind the log's head each consumer sits, is the single most honest health metric a streaming platform has, because it is the integral of every other problem: slow code, undersized fleet, hot partition, downstream database groaning. Lag has a brutal arithmetic that the widget below makes visceral: if consumers process even slightly slower than producers produce, lag does not stabilize, it grows without bound, and freshness quietly transforms from seconds into hours while every individual component reports green.</p>
+
+<div class="widget" id="lag-widget">
+  <div class="widget-head">
+    <p class="w-title">The lag equation <span class="w-tag">two sliders, one truth</span></p>
+    <p class="w-sub">Producers write at one rate, your consumer group processes at another. The difference integrates. Watch what a small, permanent deficit does, and what headroom buys you after an outage.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <div class="w-slider"><span>produce</span><input type="range" id="lag-prod" min="500" max="8000" step="250" value="5000" aria-label="Produce rate"><span class="w-val" id="lag-pval">5000/s</span></div>
+      <div class="w-slider"><span>consume</span><input type="range" id="lag-cons" min="500" max="8000" step="250" value="4500" aria-label="Consume rate"><span class="w-val" id="lag-cval">4500/s</span></div>
+    </div>
+    <div class="bar-row"><label>backlog</label><div class="bar-track"><div class="bar-fill" id="lag-bar"></div></div></div>
+    <div class="w-controls" style="margin: 0.9rem 0 0;">
+      <span class="w-val" style="min-width:auto;" id="lag-num">lag: 0 events</span>
+      <span class="w-val" style="min-width:auto; color: var(--cool);" id="lag-eta"></span>
+      <button class="w-btn" id="lag-outage">Simulate 10 min consumer outage</button>
+      <button class="w-btn" id="lag-reset">Reset</button>
+    </div>
+  </div>
+  <div class="widget-cap" id="lag-cap">A 10 percent deficit never hurts today. It hurts as a freshness SLA breach in six hours, discovered by a customer. The rule of thumb worth carrying: provision consumers for peak produce rate plus recovery headroom, because after any outage you must drain the backlog while new traffic still arrives. Sized exactly to steady state, you can never catch up from anything.</div>
+</div>
+
+<div class="field-note">
+  <p class="fn-label">Field note :: alert on seconds, not on events</p>
+  <p>A lag alert set to "page above 100,000 events" is a number with no meaning attached. At 10,000 events per second that backlog is ten seconds of work; at 50 per second it is half a day. The honest unit is time: how many seconds behind the head is this consumer, and is that number trending up. Alert on time-lag and on its derivative, page on the trend rather than the threshold, and the alert starts firing when the deficit begins instead of six hours later when the SLA is already gone. It is a one-line change to the alert definition and it is the difference between an early warning and an autopsy.</p>
+</div>
+
+<p>When lag grows and consumers cannot be scaled past the partition ceiling from section 04, the remaining lever is <strong>backpressure</strong>: slow the producers, shed load explicitly, or degrade freshness deliberately for the datasets that tolerate it. The immature platform discovers backpressure as an outage. The mature one designed the choice in advance, per dataset, using the same freshness dial from section 01, because the forces never changed. They just arrived wearing operational clothes.</p>
+
+<h2 id="capstone"><span class="kicker">12 / The Capstone</span>We build the clickstream platform, and every force shows up</h2>
+
+<p>Now we run the frame end to end on a real and famous problem: the data platform for a large e-commerce product. Clickstream, orders, catalog. Analytics wants dashboards, the ML team wants features for a real-time recommender, finance wants numbers that survive an audit. This is the payoff: no new tricks, just the forces we named arriving exactly when the pressures appear.</p>
+
+<p><strong>Requirements.</strong> Functional is short: capture user activity and order events, serve modeled analytics, and serve fresh features to the recommender. Then we ask the Frame's questions and get honest numbers to design against.</p>
+
+<div class="stat-grid">
+  <div class="stat"><b>100M</b><span>events per day</span></div>
+  <div class="stat"><b>~5,000/s</b><span>design rate at peak</span></div>
+  <div class="stat"><b>&lt; 1 min</b><span>freshness, recommender features</span></div>
+  <div class="stat"><b>daily</b><span>freshness, finance and BI</span></div>
+</div>
+
+<p>Notice the very first decision is the freshness dial from section 01, and it is set <em>twice</em>. The recommender is harmed by staleness measured in minutes, so its path earns streaming. Finance is harmed by incorrectness, not staleness, so its path earns nightly batch with population checks and an audit trail. One platform, two notches, each justified by a named harm. Anyone proposing a single global answer has not asked who consumes the data.</p>
+
+<p><strong>Core entities.</strong> A user, a session, an event, an order, a product. The events split immediately into two species that want different treatment: the clickstream, enormous, append-only, tolerant of tiny loss, and the order events, small, sacred, tolerating nothing. We keep them on separate topics with separate contracts from the first sketch, because pretending they are one stream is the mistake that haunts the rest of the design.</p>
+
+<p><strong>High level design, then the deep dives break it.</strong> Naive first, exactly as the method demands: apps write events to the log, one job loads the warehouse, dashboards read it. Correct, and fragile in every way this manual has named. Walk the path below and watch each earlier section arrive to relieve its pressure.</p>
+
+<div class="widget" id="cap-widget">
+  <div class="widget-head">
+    <p class="w-title">The platform, assembled from forces <span class="w-tag">animated walkthrough</span></p>
+    <p class="w-sub">Step through the build. Each stage lights up with the section that justified it. By the last step you are looking at the picture from the top of the page, earned.</p>
+  </div>
+  <div class="widget-body">
+    <div class="w-controls">
+      <button class="w-btn" id="cap-next">Next stage</button>
+      <button class="w-btn" id="cap-replay">Restart</button>
+      <span class="w-val" id="cap-stage" style="min-width:auto; text-align:left;">stage 0 of 6</span>
+    </div>
+    <svg id="cap-svg" viewBox="0 0 720 300" role="img" aria-label="Clickstream platform assembling stage by stage">
+      <g class="capn" data-cs="0">
+        <rect class="svg-node hot" x="12" y="60" width="86" height="44" rx="6"/>
+        <text class="svg-label" x="55" y="79" text-anchor="middle">WEB/APP</text>
+        <text class="svg-small" x="55" y="94" text-anchor="middle">clicks</text>
+        <rect class="svg-node hot" x="12" y="150" width="86" height="44" rx="6"/>
+        <text class="svg-label" x="55" y="169" text-anchor="middle">ORDERS DB</text>
+        <text class="svg-small" x="55" y="184" text-anchor="middle">OLTP</text>
+      </g>
+      <g class="capn" data-cs="1">
+        <path class="svg-wire" d="M98 172 L142 172"/>
+        <rect class="svg-node" x="142" y="150" width="80" height="44" rx="6"/>
+        <text class="svg-label" x="182" y="169" text-anchor="middle">CDC</text>
+        <text class="svg-small" x="182" y="184" text-anchor="middle">outbox tap</text>
+        <text class="svg-force" x="182" y="212" text-anchor="middle">s03: no dual writes</text>
+      </g>
+      <g class="capn" data-cs="2">
+        <path class="svg-wire" d="M98 82 L262 82"/>
+        <path class="svg-wire" d="M222 172 L262 130"/>
+        <rect class="svg-node" x="262" y="60" width="84" height="110" rx="6"/>
+        <text class="svg-label" x="304" y="100" text-anchor="middle">LOG</text>
+        <text class="svg-small" x="304" y="118" text-anchor="middle">clicks: 64p</text>
+        <text class="svg-small" x="304" y="134" text-anchor="middle">orders: 16p</text>
+        <text class="svg-force" x="304" y="46" text-anchor="middle">s04: keyed by user</text>
+      </g>
+      <g class="capn" data-cs="3">
+        <path class="svg-wire" d="M346 115 L392 115"/>
+        <rect class="svg-node" x="392" y="93" width="88" height="44" rx="6"/>
+        <text class="svg-label" x="436" y="112" text-anchor="middle">STREAM</text>
+        <text class="svg-small" x="436" y="127" text-anchor="middle">validate, dedup</text>
+        <text class="svg-force" x="436" y="79" text-anchor="middle">s05, s06, s09</text>
+        <path class="svg-wire" d="M480 100 L520 78"/>
+        <rect class="svg-node" x="520" y="56" width="70" height="40" rx="6"/>
+        <text class="svg-label" x="555" y="73" text-anchor="middle">DLQ</text>
+        <text class="svg-small" x="555" y="88" text-anchor="middle">alarmed</text>
+      </g>
+      <g class="capn" data-cs="4">
+        <path class="svg-wire" d="M436 137 L436 190 L470 210"/>
+        <rect class="svg-node" x="470" y="196" width="92" height="44" rx="6"/>
+        <text class="svg-label" x="516" y="215" text-anchor="middle">LAKEHOUSE</text>
+        <text class="svg-small" x="516" y="230" text-anchor="middle">Iceberg, compacted</text>
+        <text class="svg-force" x="516" y="256" text-anchor="middle">s08, s10: replayable</text>
+      </g>
+      <g class="capn" data-cs="5">
+        <path class="svg-wire" d="M562 218 L608 218"/>
+        <rect class="svg-node" x="608" y="196" width="100" height="44" rx="6"/>
+        <text class="svg-label" x="658" y="215" text-anchor="middle">WAREHOUSE</text>
+        <text class="svg-small" x="658" y="230" text-anchor="middle">bronze/silver/gold</text>
+        <text class="svg-force" x="658" y="256" text-anchor="middle">s07, s11: one definition</text>
+      </g>
+      <g class="capn" data-cs="6">
+        <path class="svg-wire hot" d="M480 122 L608 122"/>
+        <rect class="svg-node" x="608" y="100" width="100" height="44" rx="6"/>
+        <text class="svg-label" x="658" y="119" text-anchor="middle">RT FEATURES</text>
+        <text class="svg-small" x="658" y="134" text-anchor="middle">&lt; 1 min fresh</text>
+        <text class="svg-force" x="658" y="86" text-anchor="middle">s01: earned streaming</text>
+      </g>
+    </svg>
+    <p style="font-family: var(--font-mono); font-size: 0.76rem; color: var(--ink-dim); margin-top: 0.9rem; min-height: 3.2em;" id="cap-note">Stage 0: the sources. Clicks come from the apps; orders live in an OLTP database. Two species of event, two different physics.</p>
+  </div>
+  <div class="widget-cap">The recommender path (top) runs at the streaming notch of the freshness dial. The finance path (bottom) runs nightly through the trust gradient with population checks. Same platform, two deliberate settings, every box traceable to a section of this manual.</div>
+</div>
+
+<p>Now the deep dives, each one a callback. <strong>Ingestion:</strong> clicks are fired at the log directly with client-generated event IDs, because at-least-once retries from flaky mobile networks are a certainty and dedup needs a key (05). Orders leave the OLTP database through an outbox relayed by CDC, never through dual writes (03). The two topics get different partition counts sized from the arithmetic in the Frame: 5,000 events per second peak across 64 partitions is a comfortable 80 per second per partition, with parallelism headroom for the consumers (00, 04), keyed by user so per-user ordering holds where sessionization needs it.</p>
+
+<p><strong>The streaming tier</strong> validates every record against the contracts at the boundary and routes rejects to an alarmed, owned DLQ (09). It deduplicates on event ID, sessionizes clicks with event-time windows and a 90-second lateness budget chosen by measuring real arrival skew rather than by guessing (06), and maintains the recommender's features, "views in last 30 minutes," "category affinity," in a store the model reads at inference. The features are fresh within a minute, which is what the harm analysis demanded, and no fresher, because fresher costs more and helps nobody.</p>
+
+<p><strong>The lake and warehouse tier</strong> sinks every validated event to Iceberg tables, compacted on schedule because a 64-partition streaming writer is a small-files factory (08). Nightly, the orchestrator materializes the trust gradient, bronze to silver to gold, every transform partition-scoped and idempotent so any day can be recomputed by rerunning it (07, 10, 11). Population checks close each day's partition: volume against seasonal baseline, completeness against the order counts CDC reported, referential integrity between orders and products (09). Finance reads gold, and when the audit asks what the revenue table said on July 1, time travel answers in one query (08).</p>
+
+<p><strong>And the test that matters:</strong> three weeks from now, someone finds a sessionization bug. The fix is a code change, a replay of the affected offsets through the corrected job into a shadow table, twenty-one partition-scoped reruns of the downstream models, and an atomic swap. No archaeology, no DELETE novels, no double counting, because raw was retained, writes were keyed, and reruns were boring by construction (10). That sentence, more than any diagram, is what a production-grade pipeline means.</p>
+
+<p>The level ladder, said out loud because it is what the room actually measures: a mid-level engineer reaches the log and the warehouse with some prompting. A senior separates the two freshness paths unprompted, insists on the outbox, and sizes partitions from arithmetic. A staff engineer designs the backfill story <em>first</em>, gets contracts and DLQ ownership into the first sketch, and can tell you which datasets are allowed to be wrong, for how long, and who is harmed when they are. The difference was never the tool list. It is how early, and how independently, the right guarantee surfaces.</p>
+
+<h2 id="meta"><span class="kicker">13 / The Meta Lesson</span>What you actually carry out of here</h2>
+
+<p>You will not be asked to recite Kafka configuration, on the job or in the interview room. You will be handed a pressure, a lagging consumer, a wrong dashboard, a three-week-old bug, a new team that wants "real-time," and asked which valve relieves it, and why. Three habits separate the people who can from the people who memorized a logo wall.</p>
+
+<p>First, <strong>they set the dials per dataset, not per platform</strong>. Freshness is chosen one consumer at a time. Delivery semantics are chosen per topic. Lateness budgets are chosen per window, from measured skew. The lazy answer picks one global setting and applies it everywhere; the strong answer says "this dataset needs seconds and here is the harm, this one needs correctness and here is the audit," and means both halves.</p>
+
+<p>Second, <strong>they trace every component back to the force that justifies it</strong>. If you cannot say what pressure a box relieves, the box should not be on the board. CDC answers "the copy misses deletes and melts the source." The log answers "many readers, many speeds, decoupled in time." The watermark answers "the window must close while events still straggle." Compaction answers "streaming writers and batch readers want opposite file sizes." When you can narrate the why for every node, the design defends itself.</p>
+
+<p>Third, <strong>they respect boring solutions</strong>, which is the rarest habit of the three. A cron job with incremental extraction serves an astonishing share of real businesses honestly. A single Postgres, well fed and well indexed, carries more companies than Kafka does. The instinct to reach for the streaming stack before a named freshness harm exists is the same instinct that builds a platform nobody can operate at 3 a.m., and every box you add is a box that can page someone. Add complexity when a pressure forces it, and not one component sooner.</p>
+
+<div class="pull">Start with the smallest pipeline that works. Push until it breaks. Name the force. Apply the smallest move that relieves it. Repeat, honestly, and the diagram at the top of this page becomes something you could have derived yourself.</div>
+
+<h3>The whole manual as a lookup table</h3>
+<p>Every force in this piece, paired with the smallest move that relieves it. If you keep nothing else, keep the shape: a pressure on the left, a deliberate move on the right, and a reason connecting them.</p>
+
+<div class="lookup">
+  <span class="force">every run re-reads all of history</span><span class="arrow">&#8594;</span><span class="move">incremental extraction</span>
+  <span class="force">snapshots miss deletes and history</span><span class="arrow">&#8594;</span><span class="move">CDC: tap the WAL</span>
+  <span class="force">db and stream disagree after a crash</span><span class="arrow">&#8594;</span><span class="move">transactional outbox</span>
+  <span class="force">many consumers, many speeds</span><span class="arrow">&#8594;</span><span class="move">the durable log</span>
+  <span class="force">one machine cannot hold the firehose</span><span class="arrow">&#8594;</span><span class="move">partitions, keyed</span>
+  <span class="force">one key dominates the traffic</span><span class="arrow">&#8594;</span><span class="move">rethink the key, not the cluster</span>
+  <span class="force">crash between work and bookmark</span><span class="arrow">&#8594;</span><span class="move">idempotent handlers</span>
+  <span class="force">sink is a transactional database</span><span class="arrow">&#8594;</span><span class="move">offsets stored in the sink, one commit</span>
+  <span class="force">events arrive out of order</span><span class="arrow">&#8594;</span><span class="move">event time + watermarks</span>
+  <span class="force">truth arrives after the answer</span><span class="arrow">&#8594;</span><span class="move">lateness budget, chosen out loud</span>
+  <span class="force">transform bugs scar the data</span><span class="arrow">&#8594;</span><span class="move">ELT: retain the raw</span>
+  <span class="force">is this table safe to use?</span><span class="arrow">&#8594;</span><span class="move">bronze / silver / gold boundaries</span>
+  <span class="force">metric defined twice</span><span class="arrow">&#8594;</span><span class="move">one definition, in code, reviewed</span>
+  <span class="force">millions of tiny files</span><span class="arrow">&#8594;</span><span class="move">compaction, 128 to 512 MB targets</span>
+  <span class="force">no transactions on object storage</span><span class="arrow">&#8594;</span><span class="move">table formats: a log over files</span>
+  <span class="force">what did the table say last week?</span><span class="arrow">&#8594;</span><span class="move">snapshots, time travel</span>
+  <span class="force">valid rows, broken dataset</span><span class="arrow">&#8594;</span><span class="move">population checks on a schedule</span>
+  <span class="force">producers break consumers silently</span><span class="arrow">&#8594;</span><span class="move">contracts + schema registry in CI</span>
+  <span class="force">rejects vanish politely</span><span class="arrow">&#8594;</span><span class="move">DLQ with an alarm and an owner</span>
+  <span class="force">three weeks of wrong data</span><span class="arrow">&#8594;</span><span class="move">partition-scoped, boring reruns</span>
+  <span class="force">two codebases per metric</span><span class="arrow">&#8594;</span><span class="move">one definition, replayable inputs</span>
+  <span class="force">tasks depend on tasks</span><span class="arrow">&#8594;</span><span class="move">DAGs on datasets, not clocks</span>
+  <span class="force">consumers slightly slower than producers</span><span class="arrow">&#8594;</span><span class="move">headroom, time-lag alerts, backpressure</span>
+</div>
+
+<p>Good pipeline design is choosing the right guarantee for the dataset in front of you. Not reciting the catalog. Naming what the data actually needs, freshness, completeness, replayability, and then deciding deliberately, out loud, with the harm analysis attached. The vendors will rotate. The forces will not.</p>
+
+<p>See you in the trenches.</p>
+
+</article>
+</main>
+
+<footer class="colophon">
+  <p>THE <span>TRENCHES</span> :: hundredsunited.com :: field manual series</p>
+  <p>Written for engineers who would rather understand the forces than memorize the tools. The method is the message: start with the smallest pipeline that works, push until it breaks, name the force that broke it, apply the smallest move that fixes it, and repeat.</p>
+</footer>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  var NS = "http://www.w3.org/2000/svg";
+
+  /* ---------- theme: follow the system, then the reader ---------- */
+  var root = document.documentElement;
+  if (window.matchMedia("(prefers-color-scheme: light)").matches) {
+    root.setAttribute("data-theme", "light");
+  }
+  $("theme-toggle").addEventListener("click", function () {
+    root.setAttribute("data-theme", root.getAttribute("data-theme") === "dark" ? "light" : "dark");
+  });
+
+  /* ---------- reading progress ---------- */
+  var bar = $("progress"), ticking = false;
+  function prog() {
+    var h = document.documentElement, max = h.scrollHeight - h.clientHeight;
+    bar.style.width = (max > 0 ? (h.scrollTop / max) * 100 : 0) + "%";
+    ticking = false;
+  }
+  window.addEventListener("scroll", function () { if (!ticking) { ticking = true; requestAnimationFrame(prog); } }, { passive: true });
+  prog();
+
+  /* ---------- scroll reveal ---------- */
+  if (!reduced && "IntersectionObserver" in window) {
+    var revTargets = document.querySelectorAll("article h2, article h3, .widget, .field-note, .pull, .table-wrap, .stat-grid, .lookup, article pre");
+    var revObs = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add("rev-in"); revObs.unobserve(e.target); }
+      });
+    }, { threshold: 0.08, rootMargin: "0px 0px -6% 0px" });
+    revTargets.forEach(function (t) {
+      var r = t.getBoundingClientRect();
+      if (r.top < window.innerHeight) return; // already visible: never hide it
+      t.classList.add("will-rev");
+      revObs.observe(t);
+    });
+  }
+
+  /* ---------- scroll spy on the route strip ---------- */
+  var pillLinks = document.querySelectorAll("nav.pills a");
+  var pillMap = {};
+  pillLinks.forEach(function (a) { pillMap[a.getAttribute("href").slice(1)] = a; });
+  if ("IntersectionObserver" in window) {
+    var current = null;
+    var spy = new IntersectionObserver(function (es) {
+      es.forEach(function (e) {
+        if (e.isIntersecting) {
+          if (current) current.removeAttribute("aria-current");
+          var a = pillMap[e.target.id];
+          if (a) {
+            a.setAttribute("aria-current", "true");
+            current = a;
+            if (a.scrollIntoView) a.scrollIntoView({ block: "nearest", inline: "center", behavior: reduced ? "auto" : "smooth" });
+          }
+        }
+      });
+    }, { rootMargin: "-15% 0px -70% 0px" });
+    document.querySelectorAll("article h2[id]").forEach(function (h) { spy.observe(h); });
+  }
+
+  /* ---------- hero arc ---------- */
+  var arcStages = [
+    "one cron job, copying rows",
+    "CDC taps the write-ahead log",
+    "the log decouples readers in time",
+    "streams validate and window",
+    "the lake remembers everything",
+    "real-time serving earns its notch",
+    "the warehouse holds one definition"
+  ];
+  var arcNodes = document.querySelectorAll(".arcn"), arcWires = document.querySelectorAll(".arcw");
+  var arcStageEl = $("arc-stage"), arcTimer = null;
+  function arcSet(step, on) {
+    arcNodes.forEach(function (n) {
+      var s = +n.getAttribute("data-step");
+      n.style.transition = "opacity 0.5s ease, transform 0.5s ease";
+      n.style.opacity = (on && s <= step) ? 1 : (s === 0 ? 1 : 0.06);
+      n.style.transform = (on && s <= step) || s === 0 ? "translateY(0)" : "translateY(6px)";
+    });
+    arcWires.forEach(function (w) {
+      var s = +w.getAttribute("data-step");
+      w.style.transition = "opacity 0.5s ease";
+      w.style.opacity = (on && s <= step) ? 0.85 : 0.05;
+    });
+    if (step >= 0 && step < arcStages.length) arcStageEl.textContent = arcStages[step];
+  }
+  function arcPlay() {
+    if (arcTimer) clearInterval(arcTimer);
+    var step = 0;
+    arcSet(0, true);
+    if (reduced) { arcSet(6, true); arcStageEl.textContent = arcStages[6]; return; }
+    arcTimer = setInterval(function () {
+      step++;
+      if (step > 6) { clearInterval(arcTimer); arcTimer = null; return; }
+      arcSet(step, true);
+    }, 850);
+  }
+  arcSet(0, true);
+  $("arc-replay").addEventListener("click", arcPlay);
+  var arcSeen = false;
+  new IntersectionObserver(function (es) {
+    es.forEach(function (e) { if (e.isIntersecting && !arcSeen) { arcSeen = true; arcPlay(); } });
+  }, { threshold: 0.4 }).observe($("arc-widget"));
+
+  /* ---------- freshness dial ---------- */
+  var freshLevels = [
+    { name: "nightly batch", lat: 100, cost: 12, ops: 10,
+      cap: "<b>Nightly batch.</b> Up to 24 hours stale, nearly free, and debuggable by rerunning one job with yesterday's date. This is the correct notch for finance marts, BI, and most reporting. Choosing it on purpose is engineering; ending up here by neglect is luck." },
+    { name: "hourly batch", lat: 62, cost: 25, ops: 22,
+      cap: "<b>Hourly batch.</b> Same mental model as nightly, 24 times fresher. The dashboards feel live to most humans. The main new cost is that failures now page you during the day instead of waiting politely for morning." },
+    { name: "micro-batch", lat: 34, cost: 48, ops: 45,
+      cap: "<b>Micro-batch, minutes.</b> Small frequent runs over a log or landing zone. You now care about late data, incremental state, and overlapping runs. Respectable engineering that buys most of streaming's freshness at a fraction of its operational weight." },
+    { name: "streaming", lat: 12, cost: 72, ops: 74,
+      cap: "<b>Streaming, seconds.</b> Brokers, consumer groups, offsets, watermarks, stateful processing that must survive restarts. Powerful, and a permanent line item on the on-call rota. Earned only by datasets where staleness has a named, costed harm." },
+    { name: "real-time", lat: 3, cost: 95, ops: 95,
+      cap: "<b>Real-time, sub-second.</b> Fraud scoring, trading, live pricing. Every component is now latency-budgeted, backpressure is a design input, and the team operating it is a specialist team. Almost nothing genuinely needs this notch. The things that do, really do." }
+  ];
+  function freshRender() {
+    var l = freshLevels[+$("fresh-slider").value];
+    $("fresh-name").textContent = l.name;
+    $("fb-lat").style.width = l.lat + "%";
+    $("fb-cost").style.width = l.cost + "%";
+    $("fb-ops").style.width = l.ops + "%";
+    $("fresh-cap").innerHTML = l.cap;
+  }
+  $("fresh-slider").addEventListener("input", freshRender);
+  freshRender();
+
+  /* ---------- sync strategies ---------- */
+  var syncModes = {
+    full: { read: "read: 11 rows", moved: "moved: 11 rows", missed: "missed: nothing", wire: "the whole table crosses, every night, forever",
+      cap: "<b>Full reload.</b> Correct, and note it even carries the delete, because replacing everything cannot miss anything. The price is that cost grows with history instead of change. Eleven rows are fine. The 2 billion rows this table becomes are an eleven-hour job that saturates the source. Right answer for small tables; a time bomb for growing ones.",
+      rows: function (i) { return "move"; } },
+    incr: { read: "read: 3 rows", moved: "moved: 3 rows", missed: "missed: 1 DELETE", wire: "only rows above the high-water mark cross",
+      cap: "<b>Incremental.</b> Cost now tracks change, the biggest efficiency win available. But the deleted row has no updated_at, because it has no anything. It silently survives in the target, and the warehouse now disagrees with reality with no error anywhere. Deletes are invisible to diff queries.",
+      rows: function (i, r) { return r.changed ? "move" : (r.deleted ? "miss" : "stay"); } },
+    cdc: { read: "read: 4 change events", moved: "moved: 4 events", missed: "missed: nothing", wire: "inserts, updates, and the delete, from the WAL",
+      cap: "<b>CDC.</b> The write-ahead log recorded every insert, update, and delete in order, because that is how the database itself survives crashes. Tap the log and you move exactly what changed, including the delete, at negligible cost to the source. The record of change, not an inference about it.",
+      rows: function (i, r) { return (r.changed || r.deleted || r.inserted) ? "move" : "stay"; } }
+  };
+  var syncRowData = [];
+  for (var i = 0; i < 12; i++) syncRowData.push({ changed: i === 2 || i === 7, inserted: i === 11, deleted: i === 4 });
+  function syncRender(mode) {
+    var g = $("sync-rows"), t = $("sync-target");
+    g.innerHTML = ""; t.innerHTML = "";
+    var m = syncModes[mode];
+    syncRowData.forEach(function (r, i) {
+      var y = 30 + (i % 6) * 24, x = 40 + Math.floor(i / 6) * 60;
+      var rect = document.createElementNS(NS, "rect");
+      rect.setAttribute("x", x); rect.setAttribute("y", y);
+      rect.setAttribute("width", 48); rect.setAttribute("height", 16); rect.setAttribute("rx", 3);
+      var kind = m.rows(i, r);
+      rect.setAttribute("fill", r.deleted ? "none" : "var(--surface-2)");
+      rect.setAttribute("stroke", r.deleted ? "var(--accent-2)" : (kind === "move" ? "var(--accent)" : "var(--cool-2)"));
+      rect.setAttribute("stroke-dasharray", r.deleted ? "3 3" : "none");
+      rect.setAttribute("stroke-width", kind === "move" ? 1.8 : 1);
+      g.appendChild(rect);
+      if (kind === "move" && !r.deleted || (mode === "cdc" && r.deleted)) {
+        var tr = document.createElementNS(NS, "rect");
+        tr.setAttribute("x", 570); tr.setAttribute("y", 30 + t.childElementCount * 13);
+        tr.setAttribute("width", 80); tr.setAttribute("height", 9); tr.setAttribute("rx", 2);
+        tr.setAttribute("fill", r.deleted ? "none" : "var(--accent)");
+        tr.setAttribute("stroke", "var(--accent)");
+        tr.setAttribute("stroke-dasharray", r.deleted ? "3 3" : "none");
+        tr.setAttribute("opacity", "0");
+        t.appendChild(tr);
+        (function (el, d, isDel) {
+          setTimeout(function () { el.style.transition = "opacity 0.4s ease"; el.setAttribute("opacity", isDel ? 0.9 : 0.85); }, reduced ? 0 : 120 * d);
+        })(tr, t.childElementCount, r.deleted);
+      }
+    });
+    $("sync-read").textContent = m.read;
+    $("sync-moved").textContent = m.moved;
+    $("sync-missed").textContent = m.missed;
+    $("sync-missed").style.color = mode === "incr" ? "var(--accent)" : "var(--cool)";
+    $("sync-wirelabel").textContent = m.wire;
+    $("sync-cap").innerHTML = m.cap;
+  }
+  document.querySelectorAll(".sync-btn").forEach(function (b) {
+    b.addEventListener("click", function () {
+      document.querySelectorAll(".sync-btn").forEach(function (x) { x.classList.remove("active"); });
+      b.classList.add("active");
+      syncRender(b.getAttribute("data-mode"));
+    });
+  });
+  syncRender("full");
+
+  /* ---------- partitions ---------- */
+  var keys = ["A", "B", "C", "D", "E", "F"];
+  var keyColors = ["#e0813a", "#7fb0c4", "#c9ae6a", "#a44b1a", "#9cc3d2", "#e3b184"];
+  var partCounts = [[], [], []];
+  function hashKey(k) { return k.charCodeAt(0) % 3; }
+  function partRender() {
+    var svg = $("part-svg");
+    svg.innerHTML = "";
+    var consumers = +$("part-consumers").value;
+    $("part-cval").textContent = consumers;
+    for (var p = 0; p < 3; p++) {
+      var y = 30 + p * 60;
+      var lane = document.createElementNS(NS, "rect");
+      lane.setAttribute("x", 90); lane.setAttribute("y", y);
+      lane.setAttribute("width", 420); lane.setAttribute("height", 34); lane.setAttribute("rx", 6);
+      lane.setAttribute("fill", "var(--surface-2)"); lane.setAttribute("stroke", "var(--hairline)");
+      svg.appendChild(lane);
+      var lab = document.createElementNS(NS, "text");
+      lab.setAttribute("x", 78); lab.setAttribute("y", y + 22); lab.setAttribute("text-anchor", "end");
+      lab.setAttribute("class", "svg-label"); lab.textContent = "P" + p;
+      svg.appendChild(lab);
+      partCounts[p].forEach(function (k, i) {
+        if (i > 22) return;
+        var c = document.createElementNS(NS, "circle");
+        c.setAttribute("cx", 104 + i * 18); c.setAttribute("cy", y + 17); c.setAttribute("r", 6.5);
+        c.setAttribute("fill", keyColors[keys.indexOf(k)]);
+        svg.appendChild(c);
+        var kt = document.createElementNS(NS, "text");
+        kt.setAttribute("x", 104 + i * 18); kt.setAttribute("y", y + 20.5); kt.setAttribute("text-anchor", "middle");
+        kt.setAttribute("style", "font-family: var(--font-mono); font-size: 7px; fill: #16100a; font-weight: 700;");
+        kt.textContent = k;
+        svg.appendChild(kt);
+      });
+      var owner = p % Math.min(consumers, 3);
+      var ct = document.createElementNS(NS, "text");
+      ct.setAttribute("x", 530); ct.setAttribute("y", y + 22); ct.setAttribute("class", "svg-small");
+      ct.textContent = "consumer " + (owner + 1);
+      svg.appendChild(ct);
+      var wire = document.createElementNS(NS, "path");
+      wire.setAttribute("d", "M510 " + (y + 17) + " L526 " + (y + 17));
+      wire.setAttribute("class", "svg-wire");
+      svg.appendChild(wire);
+    }
+    var note = document.createElementNS(NS, "text");
+    note.setAttribute("x", 350); note.setAttribute("y", 212); note.setAttribute("text-anchor", "middle");
+    note.setAttribute("class", consumers > 3 ? "svg-force" : "svg-small");
+    note.textContent = consumers > 3
+      ? "consumer 4 is idle: 3 partitions cap the group at 3 workers"
+      : (consumers === 1 ? "one consumer owns all 3 partitions" : consumers + " consumers split 3 partitions");
+    svg.appendChild(note);
+    var caps = {
+      1: "One consumer drains all three partitions. It works, and its throughput is the ceiling. Scaling reads means adding group members, up to the partition count.",
+      2: "Two consumers: one owns two partitions, one owns one. The split is automatic, and it rebalances the same way when a member dies.",
+      3: "Three consumers, one partition each: the sweet spot. Full parallelism, per-key ordering intact, and a member's death triggers a rehearsed rebalance, not an outage.",
+      4: "Four consumers, three partitions: the fourth stands idle. Partition count, chosen at topic creation, is the hard ceiling on consumer parallelism. This is why you size partitions with headroom from the arithmetic in the Frame."
+    };
+    $("part-cap").textContent = caps[consumers];
+  }
+  function partSend(n) {
+    for (var i = 0; i < n; i++) {
+      var k = keys[Math.floor(Math.random() * keys.length)];
+      partCounts[hashKey(k)].push(k);
+    }
+    partRender();
+  }
+  $("part-send").addEventListener("click", function () { partSend(1); });
+  $("part-send10").addEventListener("click", function () { partSend(10); });
+  $("part-reset").addEventListener("click", function () { partCounts = [[], [], []]; partRender(); });
+  $("part-consumers").addEventListener("input", partRender);
+  partRender();
+
+  /* ---------- delivery semantics ---------- */
+  var delState = { offset: 0, charged: 0, settled: {}, busy: false };
+  function delRender(msg) {
+    $("del-offset").textContent = "offset: " + delState.offset;
+    $("del-balance").textContent = "charged: " + delState.charged + " EUR";
+    $("del-balance").style.fill = delState.charged > 50 ? "var(--accent)" : "";
+    if (msg) $("del-log").textContent = msg;
+  }
+  $("del-send").addEventListener("click", function () {
+    if (delState.busy) return;
+    delState.busy = true;
+    var crash = $("del-crash").checked, idem = $("del-idem").checked;
+    var dot = $("del-dot");
+    var already = !!delState.settled["4711"];
+    var apply = !(idem && already);
+    $("del-consstate").textContent = "processing";
+    dot.setAttribute("opacity", 1);
+    var steps = [
+      [150, "event leaves the broker (offset not yet committed)"],
+      [350, apply ? "consumer writes: charge 50 EUR for #4711" : "idempotent handler: #4711 already settled, skipping write"],
+      [610, apply ? "account charged" : "no-op, account untouched"]
+    ];
+    var si = 0;
+    function step() {
+      if (si < steps.length) {
+        dot.setAttribute("cx", steps[si][0]);
+        $("del-log").textContent = steps[si][1];
+        if (si === 2) {
+          if (apply) { delState.charged += 50; delState.settled["4711"] = true; }
+          delRender();
+        }
+        si++;
+        setTimeout(step, reduced ? 0 : 650);
+      } else {
+        dot.setAttribute("opacity", 0);
+        dot.setAttribute("cx", 150);
+        if (crash) {
+          $("del-consstate").textContent = "CRASHED";
+          $("del-log").textContent = "consumer died before committing the offset. Broker will re-deliver from offset " + delState.offset + ". Deliver again and watch the balance.";
+          $("del-cap").innerHTML = delState.charged > 50
+            ? "<b>There it is: 100 EUR charged for one 50 EUR order.</b> The broker did nothing wrong; re-delivery after an unacknowledged crash is exactly its promise. The defect is a handler that treats every delivery as new. Arm idempotency and repeat."
+            : (idem ? "<b>Crash, re-delivery, and the balance holds at 50.</b> The idempotency key made the duplicate a no-op. At-least-once delivery plus idempotent handlers equals effectively-once outcomes, and that is the whole promise on offer." : "The crash happened before the offset commit. The next delivery is a duplicate. What the balance does depends entirely on the handler.");
+        } else {
+          delState.offset++;
+          $("del-consstate").textContent = "idle";
+          delRender("offset committed. Clean run: work done once, bookmark advanced.");
+        }
+        delState.busy = false;
+      }
+    }
+    step();
+  });
+  $("del-reset").addEventListener("click", function () {
+    delState = { offset: 0, charged: 0, settled: {}, busy: false };
+    $("del-consstate").textContent = "idle";
+    delRender("Ready. The event sits in the broker at offset 0.");
+    $("del-cap").innerHTML = "\"Charge 50\" is not idempotent: run twice, charge 100. \"Charge 50 for order #4711 unless #4711 is already settled\" is idempotent: the retry sees the settled order and does nothing. The mechanism is an idempotency key plus an upsert, and it converts at-least-once delivery into effectively-once outcomes.";
+  });
+
+  /* ---------- watermark ---------- */
+  var wmEvents = [1, 2, 4, 3, 7, 5, 9, 12, 6]; // event times in arrival order; t=6 arrives after the watermark (max - 2) has passed 10
+  var wmIdx = 0, wmTimer = null, wmClosed = false, wmCount = 0;
+  function wmX(t) { return 60 + t * 40; }
+  function wmDraw() {
+    var svg = $("wm-svg");
+    svg.innerHTML = "";
+    // axis
+    var ax = document.createElementNS(NS, "line");
+    ax.setAttribute("x1", 60); ax.setAttribute("y1", 210); ax.setAttribute("x2", 660); ax.setAttribute("y2", 210);
+    ax.setAttribute("stroke", "var(--hairline)"); ax.setAttribute("stroke-width", 1.5);
+    svg.appendChild(ax);
+    for (var t = 0; t <= 14; t += 2) {
+      var tick = document.createElementNS(NS, "text");
+      tick.setAttribute("x", wmX(t)); tick.setAttribute("y", 228); tick.setAttribute("text-anchor", "middle");
+      tick.setAttribute("class", "svg-small"); tick.textContent = t + "s";
+      svg.appendChild(tick);
+    }
+    var axl = document.createElementNS(NS, "text");
+    axl.setAttribute("x", 660); axl.setAttribute("y", 244); axl.setAttribute("text-anchor", "end");
+    axl.setAttribute("class", "svg-small"); axl.textContent = "event time (when it happened)";
+    svg.appendChild(axl);
+    // window band 0-10
+    var band = document.createElementNS(NS, "rect");
+    band.setAttribute("x", wmX(0)); band.setAttribute("y", 24);
+    band.setAttribute("width", wmX(10) - wmX(0)); band.setAttribute("height", 186);
+    band.setAttribute("fill", wmClosed ? "var(--accent)" : "var(--cool-2)");
+    band.setAttribute("opacity", wmClosed ? 0.10 : 0.08);
+    svg.appendChild(band);
+    var bl = document.createElementNS(NS, "text");
+    bl.setAttribute("x", wmX(5)); bl.setAttribute("y", 40); bl.setAttribute("text-anchor", "middle");
+    bl.setAttribute("class", wmClosed ? "svg-force" : "svg-small");
+    bl.textContent = wmClosed ? ("window [0,10s) CLOSED :: emitted count = " + wmCount) : "window [0s, 10s) :: open, counting";
+    svg.appendChild(bl);
+    // events
+    var maxT = -Infinity;
+    for (var i = 0; i < wmIdx; i++) {
+      var et = wmEvents[i];
+      maxT = Math.max(maxT, et);
+      // recompute closure historically
+      var m = -Infinity;
+      for (var j = 0; j < i; j++) m = Math.max(m, wmEvents[j]);
+      var late = ((m - 2) >= 10) && et < 10;
+      var c = document.createElementNS(NS, "circle");
+      c.setAttribute("cx", wmX(et)); c.setAttribute("cy", 60 + i * 16); c.setAttribute("r", 7);
+      c.setAttribute("fill", late ? "none" : "var(--cool)");
+      c.setAttribute("stroke", late ? "var(--accent)" : "none");
+      c.setAttribute("stroke-width", 2);
+      svg.appendChild(c);
+      var lt = document.createElementNS(NS, "text");
+      lt.setAttribute("x", wmX(et) + 12); lt.setAttribute("y", 64 + i * 16);
+      lt.setAttribute("class", late ? "svg-force" : "svg-small");
+      lt.textContent = "t=" + et + (late ? "s :: LATE, window already closed" : "s");
+      svg.appendChild(lt);
+    }
+    // watermark
+    if (wmIdx > 0) {
+      var wm = Math.max(maxT - 2, 0);
+      var wl = document.createElementNS(NS, "line");
+      wl.setAttribute("x1", wmX(wm)); wl.setAttribute("y1", 24); wl.setAttribute("x2", wmX(wm)); wl.setAttribute("y2", 210);
+      wl.setAttribute("stroke", "var(--accent)"); wl.setAttribute("stroke-width", 2); wl.setAttribute("stroke-dasharray", "5 4");
+      svg.appendChild(wl);
+      var wt = document.createElementNS(NS, "text");
+      wt.setAttribute("x", wmX(wm) + 6); wt.setAttribute("y", 34);
+      wt.setAttribute("class", "svg-force");
+      wt.textContent = "watermark = " + wm + "s";
+      svg.appendChild(wt);
+    }
+  }
+  function wmStep() {
+    if (wmIdx >= wmEvents.length) return false;
+    wmIdx++;
+    var seen = wmEvents.slice(0, wmIdx);
+    var maxT = Math.max.apply(null, seen);
+    var wm = maxT - 2;
+    var et = wmEvents[wmIdx - 1];
+    var wasClosed = wmClosed;
+    if (!wmClosed && et < 10) wmCount++;
+    if (!wmClosed && wm >= 10) {
+      wmClosed = true;
+      $("wm-cap").innerHTML = "<b>Watermark reached 10s: the window closes and emits count = " + wmCount + ".</b> The bet has been placed. One more click arrives, and it happened at t=6s, inside the window that just closed.";
+    } else if (wasClosed && et < 10) {
+      var accept = $("wm-late").checked;
+      if (accept) {
+        wmCount++;
+        $("wm-cap").innerHTML = "<b>The late click arrived, and lateness is accepted: a correction fires, count = " + wmCount + ".</b> Fast answer first, amended answer after. Every downstream consumer must now handle results that change after being emitted. That burden is the price of this setting, and it must be a conscious purchase.";
+      } else {
+        $("wm-cap").innerHTML = "<b>The late click arrived and was dropped.</b> The emitted count stays at " + wmCount + ", forever slightly wrong, and forever stable. No corrections downstream, no changed answers. That is also a legitimate purchase, if the harm analysis said a lost straggler costs less than a moving number. Toggle the checkbox and replay to buy the other option.";
+      }
+    } else if (wmIdx === wmEvents.length) {
+      // nothing special
+    } else {
+      $("wm-cap").innerHTML = "Event at t=" + et + "s arrived (arrival #" + wmIdx + "). Watermark trails the newest event time by 2s, now at " + Math.max(wm, 0) + "s. The window closes when the watermark passes 10s. Notice arrivals are not in event-time order: t=3 arrived after t=4, t=5 after t=7.";
+    }
+    wmDraw();
+    return wmIdx < wmEvents.length;
+  }
+  function wmReset() {
+    if (wmTimer) { clearInterval(wmTimer); wmTimer = null; }
+    wmIdx = 0; wmClosed = false; wmCount = 0;
+    $("wm-cap").innerHTML = "Press play. The window wants to close, the watermark decides when it may, and the last event tests what your pipeline does with the truth that arrives after the answer.";
+    wmDraw();
+  }
+  $("wm-play").addEventListener("click", function () {
+    wmReset();
+    if (reduced) { while (wmStep()) {} return; }
+    wmTimer = setInterval(function () { if (!wmStep()) { clearInterval(wmTimer); wmTimer = null; } }, 950);
+  });
+  $("wm-step").addEventListener("click", function () { if (wmTimer) { clearInterval(wmTimer); wmTimer = null; } wmStep(); });
+  $("wm-reset").addEventListener("click", wmReset);
+  wmDraw();
+
+  /* ---------- small files ---------- */
+  var sizesMB = [1, 2, 4, 8, 16, 32, 64, 128, 256, 512];
+  function filesRender() {
+    var mb = sizesMB[+$("files-slider").value];
+    var count = Math.round(1048576 / mb);
+    $("files-size").textContent = mb + " MB";
+    $("files-count").textContent = count.toLocaleString("en-US") + " files";
+    var frac = Math.log(count) / Math.log(1048576);
+    $("files-bar").style.width = Math.max(frac * 100, 2) + "%";
+    var plan, cap;
+    if (count > 200000) { plan = "planning: minutes, before any data is read";
+      cap = "<b>" + count.toLocaleString("en-US") + " files for one day.</b> Before reading a single byte, the engine must list, open, and plan across all of them, and metadata operations, not I/O, dominate the query. This is what a 30-second streaming flush across many partitions produces by default."; }
+    else if (count > 10000) { plan = "planning: tens of seconds of pure metadata";
+      cap = "<b>" + count.toLocaleString("en-US") + " files.</b> Better, still heavy. Table format manifests help the listing, but per-file overhead is per-file overhead. Compaction is doing some work here and needs to do more."; }
+    else { plan = "planning: negligible, I/O dominates";
+      cap = "<b>" + count.toLocaleString("en-US") + " files at " + mb + " MB each: the healthy zone.</b> Files in the 128 to 512 MB range let the planner prune with statistics and the readers stream long sequential scans. Same terabyte as the left end of the slider, a completely different query. Compaction is the background job that buys this."; }
+    $("files-plan").textContent = plan;
+    $("files-cap").innerHTML = cap;
+  }
+  $("files-slider").addEventListener("input", filesRender);
+  filesRender();
+
+  /* ---------- lag ---------- */
+  var lag = 0, lagTimer = null, outageLeft = 0;
+  function lagTick() {
+    var p = +$("lag-prod").value, c = +$("lag-cons").value;
+    var eff = outageLeft > 0 ? 0 : c;
+    if (outageLeft > 0) outageLeft--;
+    lag = Math.max(0, lag + (p - eff) * 5); // 5 simulated seconds per tick
+    $("lag-num").textContent = "lag: " + Math.round(lag).toLocaleString("en-US") + " events";
+    $("lag-bar").style.width = Math.min(lag / 3000000 * 100, 100) + "%";
+    var deficit = p - c;
+    var eta;
+    if (outageLeft > 0) eta = "consumer outage: " + (outageLeft * 5) + "s remaining";
+    else if (deficit > 0) eta = "deficit " + deficit + "/s :: lag grows forever, freshness decays";
+    else if (deficit < 0 && lag > 0) eta = "headroom " + (-deficit) + "/s :: drains in ~" + Math.ceil(lag / -deficit / 60) + " min";
+    else if (lag > 0) eta = "exactly matched :: backlog never drains";
+    else eta = "healthy :: consuming at the head";
+    $("lag-eta").textContent = eta;
+    $("lag-cap").innerHTML = deficit > 0
+      ? "<b>Producers outpace consumers by " + deficit + " events/s.</b> Nothing is down, every component is green, and lag integrates without bound. This is the failure mode that never pages until the freshness SLA does. The fixes, in order: faster handler, more consumers up to the partition ceiling, then backpressure."
+      : (lag > 0
+        ? "<b>Consumers have " + (-deficit) + "/s of headroom.</b> That headroom is the recovery budget: it is what drains the backlog while new traffic keeps arriving. Sized exactly to steady state, you can never catch up from anything, which is why peak-plus-headroom is the provisioning rule."
+        : "A 10 percent deficit never hurts today. It hurts as a freshness SLA breach in six hours, discovered by a customer. Provision consumers for peak produce rate plus recovery headroom, because after any outage you must drain the backlog while new traffic still arrives.");
+  }
+  function lagFmt() {
+    $("lag-pval").textContent = $("lag-prod").value + "/s";
+    $("lag-cval").textContent = $("lag-cons").value + "/s";
+  }
+  $("lag-prod").addEventListener("input", lagFmt);
+  $("lag-cons").addEventListener("input", lagFmt);
+  $("lag-outage").addEventListener("click", function () { outageLeft = 120; }); // 120 ticks * 5s = 10 min
+  $("lag-reset").addEventListener("click", function () { lag = 0; outageLeft = 0; });
+  lagFmt();
+  new IntersectionObserver(function (es) {
+    es.forEach(function (e) {
+      if (e.isIntersecting && !lagTimer) lagTimer = setInterval(lagTick, reduced ? 400 : 200);
+      else if (!e.isIntersecting && lagTimer) { clearInterval(lagTimer); lagTimer = null; }
+    });
+  }, { threshold: 0.2 }).observe($("lag-widget"));
+
+  /* ---------- capstone stepper ---------- */
+  var capNotes = [
+    "Stage 0: the sources. Clicks come from the apps; orders live in an OLTP database. Two species of event, two different physics.",
+    "Stage 1: orders leave through a transactional outbox tapped by CDC (s03). No dual writes, deletes included, the source barely notices.",
+    "Stage 2: both feeds land in the log (s04). Clicks get 64 partitions keyed by user; sacred, smaller orders get 16. Sized from the Frame's arithmetic: 5,000/s peak over 64 partitions is a comfortable 80/s each.",
+    "Stage 3: the stream validates against contracts, dedups on event ID, sessionizes on event time with a measured 90s lateness budget (s05, s06, s09). Rejects go to a DLQ with an alarm and an owner.",
+    "Stage 4: everything validated sinks to Iceberg, compacted on schedule because 64 streaming writers are a small-files factory (s08). The lake is the replayable substrate every backfill will lean on (s10).",
+    "Stage 5: nightly, the orchestrator materializes bronze to silver to gold, partition-scoped and idempotent, with population checks closing each day (s07, s09, s11). Finance reads gold; audits time-travel.",
+    "Stage 6: the recommender's features flow straight off the validated stream, fresh within a minute, because that path, and only that path, earned the streaming notch (s01). The build is complete."
+  ];
+  var capIdx = 0;
+  function capRender() {
+    document.querySelectorAll(".capn").forEach(function (n) {
+      var s = +n.getAttribute("data-cs");
+      n.style.transition = "opacity 0.5s ease";
+      n.style.opacity = s <= capIdx ? 1 : 0.07;
+    });
+    $("cap-stage").textContent = "stage " + capIdx + " of 6";
+    $("cap-note").textContent = capNotes[capIdx];
+    $("cap-next").disabled = capIdx >= 6;
+  }
+  $("cap-next").addEventListener("click", function () { if (capIdx < 6) { capIdx++; capRender(); } });
+  $("cap-replay").addEventListener("click", function () { capIdx = 0; capRender(); });
+  capRender();
+})();
+</script>
+</body>
+</html>
