@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>jediway, Refuse To Improvise &middot; One Way of Working for Coding Agents &middot; The Trenches</title>
+<meta name="description" content="A taste document is advice nobody follows. An orchestration prompt is a process with no opinions. jediway binds them: a ten-rule Creed, one Spec a shell script can judge, four disposable roles, and a composer that pastes it all byte for byte into every child prompt. No paraphrase, no drift, no magic.">
+<link rel="canonical" href="https://hundredsunited.com/blog/story/jediway.html">
+
+<!-- Open Graph / Facebook -->
+<meta property="og:type" content="article">
+<meta property="og:url" content="https://hundredsunited.com/blog/story/jediway.html">
+<meta property="og:title" content="jediway, Refuse To Improvise &middot; One Way of Working for Coding Agents">
+<meta property="og:description" content="Taste as a Creed, one Spec a script can judge, four disposable roles, and a composer that assembles every child prompt byte for byte. If a rule must survive contact with a model, do not ask the model to carry it. Make a script paste it.">
+<meta property="og:image" content="https://hundredsunited.com/images/story/jediway.png">
+<meta property="og:image:secure_url" content="https://hundredsunited.com/images/story/jediway.png">
+<meta property="og:image:width" content="1536">
+<meta property="og:image:height" content="1024">
+<meta property="og:image:alt" content="Robed figures with lit sabers stand in a bright council chamber above the clouds, holding one shared way.">
+<meta property="og:site_name" content="The Trenches">
+
+<!-- Twitter -->
+<meta property="twitter:card" content="summary_large_image">
+<meta property="twitter:url" content="https://hundredsunited.com/blog/story/jediway.html">
+<meta property="twitter:title" content="jediway, Refuse To Improvise &middot; One Way of Working for Coding Agents">
+<meta property="twitter:description" content="Taste as a Creed, one Spec a script can judge, four disposable roles, and a composer that assembles every child prompt byte for byte. No paraphrase, no drift, no magic.">
+<meta property="twitter:image" content="https://hundredsunited.com/images/story/jediway.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400;1,500;1,600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE TRENCHES :: token system (jediway edition)
+   The duality is the plugin's own: serif is judgement, mono is
+   the machine. COOL = saber blue, the script, the fixed thing.
+   HEAT = ice white-gold, the judgement, the human hand.
+   Black and blue-white. No third color.
+   ============================================================ */
+:root{
+  --serif:"Spectral", Georgia, serif;
+  --mono:"IBM Plex Mono", ui-monospace, monospace;
+  --maxprose:42rem;
+  --maxwide:64rem;
+  --ease:cubic-bezier(.22,.7,.28,1);
+}
+
+/* DARK (default) :: black with a blue bias, saber blue -------- */
+html[data-theme="dark"]{
+  --bg:        oklch(0.158 0.016 262);
+  --bg-grad:   oklch(0.240 0.058 262 / 0.50);
+  --surface-1: oklch(0.198 0.018 262);
+  --surface-2: oklch(0.242 0.022 262);
+  --surface-3: oklch(0.288 0.026 262);
+  --fg:        oklch(0.950 0.008 250);
+  --fg-dim:    oklch(0.790 0.015 252);
+  --fg-faint:  oklch(0.600 0.020 254);
+  --line:      oklch(0.352 0.026 260);
+  --line-soft: oklch(0.288 0.021 260);
+  --cool:      oklch(0.680 0.170 262);
+  --cool-deep: oklch(0.590 0.170 262);
+  --cool-glow: oklch(0.680 0.170 262 / 0.18);
+  --heat:      oklch(0.900 0.045 240);
+  --heat-deep: oklch(0.800 0.055 245);
+  --heat-glow: oklch(0.900 0.045 240 / 0.10);
+  --grid:      oklch(0.680 0.100 260 / 0.045);
+  --shadow:    0 18px 50px -22px oklch(0.05 0.03 262 / 0.92);
+}
+/* LIGHT :: blue-white paper, deep jedi blue ------------------- */
+html[data-theme="light"]{
+  --bg:        oklch(0.976 0.006 245);
+  --bg-grad:   oklch(0.940 0.028 252 / 0.60);
+  --surface-1: oklch(0.994 0.004 245);
+  --surface-2: oklch(0.956 0.012 246);
+  --surface-3: oklch(0.930 0.017 248);
+  --fg:        oklch(0.235 0.024 258);
+  --fg-dim:    oklch(0.400 0.024 256);
+  --fg-faint:  oklch(0.560 0.022 254);
+  --line:      oklch(0.852 0.022 248);
+  --line-soft: oklch(0.904 0.014 246);
+  --cool:      oklch(0.500 0.180 260);
+  --cool-deep: oklch(0.440 0.175 262);
+  --cool-glow: oklch(0.500 0.180 260 / 0.12);
+  --heat:      oklch(0.470 0.070 250);
+  --heat-deep: oklch(0.400 0.075 252);
+  --heat-glow: oklch(0.470 0.070 250 / 0.08);
+  --grid:      oklch(0.500 0.120 258 / 0.05);
+  --shadow:    0 18px 44px -26px oklch(0.45 0.05 255 / 0.42);
+}
+
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media (prefers-reduced-motion: reduce){html{scroll-behavior:auto}}
+body{
+  margin:0;background:var(--bg);color:var(--fg);
+  font-family:var(--serif);font-weight:400;
+  font-size:clamp(1.06rem,0.62rem + 0.9vw,1.22rem);
+  line-height:1.68;letter-spacing:.002em;
+  -webkit-font-smoothing:antialiased;text-rendering:optimizeLegibility;
+  transition:background .4s var(--ease), color .4s var(--ease);
+  overflow-x:hidden;
+}
+body::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:
+    linear-gradient(var(--grid) 1px, transparent 1px),
+    linear-gradient(90deg, var(--grid) 1px, transparent 1px),
+    radial-gradient(120% 75% at 50% -12%, var(--bg-grad), transparent 58%),
+    radial-gradient(80% 50% at 100% 100%, var(--cool-glow), transparent 55%);
+  background-size:72px 72px, 72px 72px, auto, auto;
+}
+.wrap{position:relative;z-index:1}
+
+::selection{background:var(--cool-glow);color:var(--fg)}
+a{color:var(--cool);text-underline-offset:3px;text-decoration-thickness:1px}
+:focus-visible{outline:2px solid var(--cool);outline-offset:3px;border-radius:3px}
+
+/* progress ------------------------------------------------------ */
+.progress{position:fixed;top:0;left:0;height:2px;width:0;
+  background:linear-gradient(90deg,var(--cool),var(--heat));z-index:60;transition:width .08s linear}
+
+/* header -------------------------------------------------------- */
+header.site{
+  position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;
+  gap:1rem;padding:.85rem clamp(1rem,4vw,2.4rem);
+  background:color-mix(in oklab, var(--bg) 80%, transparent);
+  backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft);
+}
+.brand{display:flex;align-items:center;gap:.55rem;font-size:1.12rem;letter-spacing:.01em;white-space:nowrap;text-decoration:none;color:inherit;cursor:pointer}
+a.brand:hover .b2{color:var(--cool-deep)}
+.brand .glyph{width:1.05rem;height:1.05rem;display:inline-block;flex:0 0 auto}
+.brand .b1{font-weight:500;color:var(--fg)}
+.brand .b2{font-style:italic;font-weight:600;color:var(--cool)}
+nav.spy{display:flex;gap:.2rem;flex:1;justify-content:center;overflow:hidden}
+nav.spy a{
+  font-family:var(--mono);font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--fg-faint);text-decoration:none;padding:.4rem .55rem;border-radius:6px;
+  transition:color .15s var(--ease), background .15s var(--ease);white-space:nowrap;
+}
+nav.spy a:hover{color:var(--fg)}
+nav.spy a.active{color:var(--cool);background:var(--surface-2)}
+.hbtns{display:flex;gap:.5rem;align-items:center}
+.tgl{
+  width:2.2rem;height:2.2rem;border-radius:50%;border:1px solid var(--line);
+  background:var(--surface-1);color:var(--fg-dim);cursor:pointer;display:grid;place-items:center;
+  transition:border-color .15s var(--ease), color .15s var(--ease), transform .15s var(--ease);
+}
+.tgl:hover{color:var(--cool);border-color:var(--cool-deep);transform:rotate(18deg)}
+.tgl svg{width:1.05rem;height:1.05rem}
+@media (max-width:880px){ nav.spy{display:none} }
+
+/* layout -------------------------------------------------------- */
+main{padding:0 clamp(1rem,5vw,2rem) 7rem}
+.prose{max-width:var(--maxprose);margin-inline:auto}
+.wide{max-width:var(--maxwide);margin-inline:auto}
+section{margin-top:clamp(3.5rem,7vw,6rem);scroll-margin-top:5rem}
+
+/* hero ---------------------------------------------------------- */
+.hero{max-width:var(--maxwide);margin:0 auto;padding:clamp(3rem,9vw,6.5rem) 0 1rem;text-align:center}
+.hero .eyebrow{justify-content:center}
+.hero .dek{margin-inline:auto}
+.hero .byline{justify-content:center}
+.eyebrow{font-family:var(--mono);font-size:.72rem;letter-spacing:.22em;text-transform:uppercase;color:var(--cool);margin-bottom:1.3rem;display:flex;align-items:center;gap:.7rem}
+.eyebrow::before{content:"";width:1.6rem;height:1px;background:var(--cool-deep)}
+h1{font-family:var(--serif);font-weight:300;font-size:clamp(2.5rem,8.5vw,5rem);line-height:1.02;letter-spacing:-.012em;margin:0 0 1.2rem;color:var(--fg)}
+h1 em{font-style:italic;font-weight:500;color:var(--cool)}
+.dek{max-width:40rem;font-size:clamp(1.15rem,0.8rem + 1vw,1.42rem);line-height:1.52;color:var(--fg-dim)}
+.byline{margin-top:2.2rem;display:flex;align-items:center;gap:1rem;flex-wrap:wrap;font-family:var(--mono);font-size:.74rem;letter-spacing:.05em;color:var(--fg-faint)}
+.byline .av{width:2.3rem;height:2.3rem;border-radius:50%;background:var(--surface-2);border:1px solid var(--line);display:grid;place-items:center;color:var(--cool);font-weight:600;font-family:var(--serif);font-size:1rem;overflow:hidden}
+.byline .av img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block}
+.byline b{color:var(--fg-dim);font-weight:500}
+.byline span{display:inline-flex;gap:.45rem;align-items:center}
+.dotsep{width:3px;height:3px;border-radius:50%;background:var(--fg-faint);display:inline-block}
+
+/* smuggled link to the source ---------------------------------- */
+.skill-link{
+  color:var(--cool);font-weight:600;font-style:italic;
+  text-decoration:none;
+  background-image:linear-gradient(var(--cool),var(--cool));
+  background-size:100% 1px;background-repeat:no-repeat;background-position:0 1.08em;
+  transition:color .25s var(--ease), filter .25s var(--ease);
+}
+.skill-link::after{
+  content:"\2197";font-family:var(--mono);font-style:normal;
+  font-size:.62em;vertical-align:.42em;margin-left:.12em;opacity:.7;
+}
+.skill-link:hover{filter:brightness(1.12)}
+.skill-link:hover::after{opacity:1}
+
+/* headings ------------------------------------------------------ */
+h2{font-family:var(--serif);font-weight:700;font-size:clamp(1.75rem,4.5vw,2.7rem);line-height:1.1;letter-spacing:-.01em;margin:0 0 .2rem;color:var(--fg)}
+h2 .num{font-family:var(--mono);font-size:.78rem;font-weight:500;color:var(--heat-deep);letter-spacing:.16em;display:flex;align-items:center;gap:.6rem;margin-bottom:.9rem;text-transform:uppercase}
+h2 .num::after{content:"";flex:1;height:1px;background:var(--line-soft);max-width:7rem}
+h3{font-family:var(--serif);font-weight:600;font-size:clamp(1.3rem,2.5vw,1.55rem);line-height:1.25;margin:2.6rem 0 .2rem;color:var(--fg)}
+.lede{font-size:clamp(1.16rem,0.9rem + .7vw,1.34rem);line-height:1.5;color:var(--fg-dim);margin:1.3rem 0 0}
+p{margin:1.35rem 0}
+.prose p:first-of-type{margin-top:1.5rem}
+strong{font-weight:600;color:var(--fg)}
+em{font-style:italic}
+.prose ul{margin:1.35rem 0;padding-left:0;list-style:none}
+.prose ul li{position:relative;padding-left:1.6rem;margin:.7rem 0;color:var(--fg-dim)}
+.prose ul li::before{content:"";position:absolute;left:.15rem;top:.7em;width:.42rem;height:.42rem;background:var(--cool-deep);border-radius:1px;transform:rotate(45deg)}
+.prose ul li strong{color:var(--fg)}
+.prose ul.heat li::before{background:var(--heat-deep)}
+
+/* chips --------------------------------------------------------- */
+.chip{font-family:var(--mono);font-size:.82em;font-weight:500;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:5px;padding:.06em .42em;color:var(--fg);white-space:nowrap}
+.chip.get{color:var(--cool)}
+
+/* pull quote ---------------------------------------------------- */
+.pull{margin:clamp(2.4rem,5vw,3.4rem) auto;max-width:var(--maxprose);border-left:2px solid var(--cool);padding:.2rem 0 .2rem 1.6rem}
+.pull p{font-size:clamp(1.35rem,1rem + 1.1vw,1.6rem);line-height:1.38;font-weight:400;color:var(--fg);font-style:italic;margin:0}
+.pull.heat{border-left-color:var(--heat)}
+
+/* spec row ------------------------------------------------------ */
+.specrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:0;border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0;background:var(--surface-1)}
+.specrow .cell{padding:1.25rem 1.35rem;border-right:1px solid var(--line-soft)}
+.specrow .cell:last-child{border-right:none}
+.specrow .lab{font-family:var(--mono);font-size:.66rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool-deep);margin-bottom:.65rem}
+.specrow .val{font-size:1.02rem;line-height:1.35;color:var(--fg)}
+@media(max-width:620px){.specrow{grid-template-columns:1fr 1fr}.specrow .cell:nth-child(2n){border-right:none}}
+
+/* figure / panel ----------------------------------------------- */
+figure{margin:clamp(2rem,4vw,2.8rem) 0;padding:0}
+.panel{border:1px solid var(--line-soft);border-radius:16px;background:var(--surface-1);padding:clamp(1.1rem,3vw,1.8rem);box-shadow:var(--shadow)}
+.panel-title{font-family:var(--mono);font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--cool);margin-bottom:.4rem;display:flex;align-items:center;gap:.5rem;flex-wrap:wrap}
+.panel-title .tag{margin-left:auto;color:var(--heat-deep);font-size:.62rem}
+.panel-sub{font-size:.98rem;color:var(--fg-faint);margin-bottom:1.3rem;line-height:1.45}
+figcaption{font-size:.92rem;color:var(--fg-faint);margin-top:.9rem;line-height:1.5}
+figcaption b{color:var(--fg-dim);font-weight:500}
+
+/* controls ------------------------------------------------------ */
+.pill{display:inline-flex;border:1px solid var(--line-soft);border-radius:999px;overflow:hidden;margin-bottom:1.3rem;flex-wrap:wrap}
+.pill button{font-family:var(--mono);font-size:.74rem;padding:.45rem .95rem;background:transparent;color:var(--fg-dim);border:none;cursor:pointer;transition:all .12s var(--ease)}
+.pill button[aria-pressed="true"]{background:var(--surface-2);color:var(--cool)}
+button.ghost{font-family:var(--mono);font-size:.78rem;background:transparent;color:var(--fg-dim);border:1px solid var(--line-soft);border-radius:8px;padding:.5rem 1rem;cursor:pointer;transition:all .12s var(--ease)}
+button.ghost:hover{color:var(--fg);border-color:var(--line)}
+.readout{font-family:var(--mono);font-size:.82rem;color:var(--fg-dim);line-height:1.55;min-height:2.4rem;margin-top:1.2rem;border-top:1px solid var(--line-soft);padding-top:1rem}
+.readout b{color:var(--cool)}
+.readout .o{color:var(--heat)}
+
+/* takeaway ------------------------------------------------------ */
+.takeaway{border:1px solid var(--line-soft);border-left:2px solid var(--heat);border-radius:0 14px 14px 0;background:var(--surface-1);padding:1.2rem 1.45rem;margin:2.2rem auto;max-width:var(--maxprose)}
+.takeaway .tk{font-family:var(--mono);font-size:.68rem;letter-spacing:.18em;text-transform:uppercase;color:var(--heat);margin-bottom:.55rem}
+.takeaway p{margin:0;font-size:1.1rem;line-height:1.5;color:var(--fg)}
+
+/* plate image --------------------------------------------------- */
+.plate{margin:clamp(2.4rem,5vw,3.5rem) auto;max-width:var(--maxwide);border-radius:18px;overflow:hidden;border:1px solid var(--line-soft);position:relative;box-shadow:var(--shadow)}
+.plate img{display:block;width:100%;height:auto}
+.plate .cap{position:absolute;left:0;right:0;bottom:0;padding:1.4rem clamp(1rem,3vw,1.8rem) 1.1rem;background:linear-gradient(to top, oklch(0.08 0.02 262 / 0.88), transparent);font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:oklch(0.94 0.01 250);text-transform:uppercase}
+/* graceful slot until the art is dropped in */
+.plate.missing img{display:none}
+.plate.missing{background:var(--surface-1)}
+.plate.missing::before{
+  content:"field plate \00b7 drop " attr(data-src) " (1536\00d71024)";
+  display:grid;place-items:center;min-height:clamp(12rem,30vw,20rem);
+  font-family:var(--mono);font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;
+  color:var(--fg-faint);
+  background:
+    radial-gradient(60% 80% at 50% 10%, var(--cool-glow), transparent 70%),
+    repeating-linear-gradient(-45deg, transparent 0 14px, var(--grid) 14px 15px);
+}
+.plate.missing .cap{background:none;position:static;color:var(--fg-faint);border-top:1px solid var(--line-soft)}
+
+/* creed list ---------------------------------------------------- */
+.creed{list-style:none;margin:2rem 0 1rem;padding:0;counter-reset:creed}
+.creed li{
+  counter-increment:creed;position:relative;padding:1.05rem 0 1.05rem 3.2rem;
+  border-top:1px solid var(--line-soft);font-size:1.02rem;line-height:1.6;color:var(--fg-dim);margin:0;
+}
+.creed li:last-child{border-bottom:1px solid var(--line-soft)}
+.creed li::before{
+  content:counter(creed,decimal-leading-zero);
+  position:absolute;left:0;top:1.25rem;
+  font-family:var(--mono);font-size:.74rem;letter-spacing:.06em;color:var(--cool);
+}
+.creed li b{color:var(--fg);font-weight:600;font-style:italic}
+
+/* compose console ----------------------------------------------- */
+.stream{display:flex;flex-direction:column;gap:.7rem}
+.tline{font-family:var(--mono);font-size:.76rem;line-height:1.65;color:var(--fg-faint);white-space:pre-wrap;overflow-wrap:anywhere}
+.tline .hl{color:var(--fg-dim)}
+.slot{border:1px dashed var(--line);border-radius:12px;background:var(--surface-2);transition:border-color .3s var(--ease)}
+.slot.role-slot{border-style:solid;border-color:var(--cool-deep);box-shadow:0 0 0 1px var(--cool-glow), 0 10px 30px -18px var(--cool-glow)}
+.slot-head{display:flex;align-items:baseline;gap:.7rem;flex-wrap:wrap;padding:.7rem 1rem .1rem;
+  font-family:var(--mono);font-size:.64rem;letter-spacing:.07em;text-transform:uppercase;line-height:1.5}
+.slot-head .name{color:var(--cool);font-weight:600}
+.slot-head .src{color:var(--fg-faint);text-transform:none;letter-spacing:.02em}
+.slot-head .same{margin-left:auto;color:var(--heat-deep);border:1px solid var(--line-soft);border-radius:999px;padding:.12rem .55rem;text-transform:none;letter-spacing:.03em}
+.slot-body{position:relative;margin:.35rem 0 0;padding:0 1rem .85rem;
+  font-family:var(--mono);font-size:.76rem;line-height:1.7;color:var(--fg-dim);
+  white-space:pre-wrap;overflow-wrap:anywhere;max-height:12.5rem;overflow:hidden;
+  transition:max-height .5s var(--ease)}
+.slot.open .slot-body{max-height:220rem}
+.slot-body::after{content:"";position:absolute;left:0;right:0;bottom:0;height:3.2rem;pointer-events:none;
+  background:linear-gradient(180deg, transparent, var(--surface-2));opacity:1;transition:opacity .3s}
+.slot.open .slot-body::after,.slot.short .slot-body::after{opacity:0}
+.slot.short .slot-body{max-height:none}
+.slot-more{appearance:none;background:transparent;border:0;cursor:pointer;display:block;width:100%;text-align:left;
+  padding:.5rem 1rem .7rem;border-top:1px solid var(--line-soft);
+  font-family:var(--mono);font-size:.66rem;letter-spacing:.05em;color:var(--cool);transition:color .2s}
+.slot-more:hover{color:var(--fg)}
+.swap{animation:swap .45s var(--ease)}
+@keyframes swap{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion: reduce){.swap{animation:none}}
+
+/* pipeline ------------------------------------------------------ */
+.pipe-track{overflow-x:auto;padding-bottom:.4rem}
+.pipe{display:flex;align-items:stretch;min-width:max-content}
+.stage{display:flex;align-items:stretch}
+.stage-card{width:9.8rem;flex:none;border:1px solid var(--line);border-radius:12px;background:var(--surface-2);padding:.8rem .9rem;
+  transition:opacity .45s var(--ease), border-color .45s, box-shadow .45s, transform .45s var(--ease)}
+.stage-card .sname{font-family:var(--mono);font-size:.74rem;font-weight:600;letter-spacing:.04em;color:var(--fg);display:block;margin-bottom:.35rem}
+.stage-card .snote{font-family:var(--mono);font-size:.62rem;line-height:1.55;color:var(--fg-faint);display:block}
+.stage-card .sbadge{display:inline-block;margin-top:.5rem;font-family:var(--mono);font-size:.56rem;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--heat-deep);border:1px solid var(--line-soft);border-radius:999px;padding:.1rem .5rem}
+.stage-card .sbadge.child{color:var(--cool)}
+.stage.optional .stage-card{border-style:dashed}
+.stage .link{width:2rem;flex:none;align-self:center;position:relative;height:1px;background:var(--line);transition:opacity .45s}
+.stage .link::after{content:"";position:absolute;right:0;top:-3px;border-left:5px solid var(--line);
+  border-top:3.5px solid transparent;border-bottom:3.5px solid transparent}
+.stage.off .stage-card{opacity:.22;transform:scale(.97)}
+.stage.off .link{opacity:.22}
+.stage.lit .stage-card{border-color:var(--cool-deep);box-shadow:0 0 0 1px var(--cool-glow), 0 12px 32px -20px var(--cool-glow)}
+
+/* spec anatomy -------------------------------------------------- */
+.spec-code{font-family:var(--mono);font-size:.76rem;line-height:1.75;color:var(--fg-dim);
+  white-space:pre-wrap;overflow-wrap:anywhere;border:1px dashed var(--line);border-radius:12px;
+  background:var(--surface-2);padding:1rem 1.1rem;margin:0 0 1rem}
+.spec-code .h{color:var(--cool);font-weight:600}
+.spec-why{border-left:2px solid var(--heat);padding:.15rem 0 .15rem 1.1rem;
+  font-family:var(--serif);font-size:1rem;line-height:1.6;color:var(--fg-dim)}
+.spec-why b{color:var(--fg);font-weight:600}
+
+/* number ribbon ------------------------------------------------- */
+.ribbon{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:14px;overflow:hidden;margin:2rem 0}
+.ribbon .r{background:var(--surface-1);padding:1.2rem 1.2rem}
+.ribbon .rn{font-family:var(--serif);font-weight:700;font-size:clamp(1.5rem,3vw,2rem);color:var(--cool);line-height:1}
+.ribbon .rl{font-family:var(--mono);font-size:.66rem;letter-spacing:.1em;text-transform:uppercase;color:var(--fg-faint);margin-top:.5rem;line-height:1.4}
+
+/* terminal / install ------------------------------------------- */
+.term{font-family:var(--mono);font-size:.76rem;line-height:1.8;color:var(--fg-dim);white-space:pre;overflow-x:auto;margin:0;padding:1rem 1.15rem;background:var(--surface-2);border:1px solid var(--line-soft);border-radius:10px}
+.term .c{color:var(--fg-faint)}
+.term .a{color:var(--cool)}
+.cmdrow{display:flex;align-items:center;gap:1rem;padding:.8rem 0;border-top:1px solid var(--line-soft)}
+.cmdrow:first-of-type{border-top:0}
+.cmdrow .cmd{font-family:var(--mono);font-size:.76rem;color:var(--fg);overflow-x:auto;white-space:nowrap;flex:1;padding:.1rem 0}
+.cmdrow .cmd .p{color:var(--fg-faint);user-select:none}
+.copy{appearance:none;cursor:pointer;flex:none;font-family:var(--mono);font-size:.64rem;letter-spacing:.04em;
+  color:var(--fg-dim);background:transparent;border:1px solid var(--line);border-radius:999px;padding:.35rem .8rem;
+  transition:color .2s, border-color .2s}
+.copy:hover{color:var(--fg);border-color:var(--cool)}
+.copy.done{color:var(--cool);border-color:var(--cool)}
+
+/* reveal -------------------------------------------------------- */
+.reveal{opacity:0;transform:translateY(16px)}
+.reveal.in{opacity:1;transform:none;transition:opacity .6s var(--ease),transform .6s var(--ease)}
+@media (prefers-reduced-motion: reduce){.reveal{opacity:1!important;transform:none!important}}
+
+hr.rule{max-width:var(--maxwide);margin:clamp(3.5rem,7vw,5rem) auto;border:none;border-top:1px solid var(--line-soft)}
+.note{font-size:1.02rem;color:var(--fg-faint);font-style:italic}
+
+footer{max-width:var(--maxprose);margin:5rem auto 0;padding-top:2rem;border-top:1px solid var(--line-soft);color:var(--fg-faint);font-size:.96rem}
+footer .brand{margin-bottom:1rem}
+</style>
+</head>
+<body>
+<div class="progress" id="progress"></div>
+<div class="wrap">
+
+<header class="site">
+  <a class="brand" href="/" aria-label="The Trenches home">
+    <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+      <path d="M3 6h18M6 12h12M9 18h6" stroke="var(--cool)" stroke-width="2.4" stroke-linecap="round"/>
+    </svg>
+    <span class="b1">The</span><span class="b2">Trenches</span>
+  </a>
+  <nav class="spy" id="spy" aria-label="Sections">
+    <a href="#paraphrase">Drift</a>
+    <a href="#creed">Creed</a>
+    <a href="#spec">Spec</a>
+    <a href="#compose">Compose</a>
+    <a href="#chain">Chain</a>
+    <a href="#judge">Judge</a>
+    <a href="#honest">Honest</a>
+    <a href="#verdict">Verdict</a>
+  </nav>
+  <div class="hbtns">
+    <button class="tgl" id="themeBtn" aria-label="Toggle light and dark theme" title="Toggle theme">
+      <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <circle cx="12" cy="12" r="4"></circle>
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>
+      </svg>
+    </button>
+  </div>
+</header>
+
+<main>
+
+  <!-- HERO -->
+  <div class="hero reveal" id="top">
+    <div class="eyebrow">One Way of Working &middot; The Long Read</div>
+    <h1><em>jediway</em><br>Refuse To Improvise</h1>
+    <p class="dek">Every team keeps two documents that never meet: a taste document nobody follows and an orchestration prompt with no opinions. An agent given both will paraphrase the first and drift from the second, because a model asked to remember a rule eventually rewords it, and a reworded rule is a different rule. <a class="skill-link" href="https://github.com/balevdev/jediway" target="_blank" rel="noopener">jediway</a> binds them the only way that survives contact with a model: a ten-rule Creed, one Spec a shell script can judge, four disposable roles, and a composer that pastes all of it, byte for byte, into every child prompt. No paraphrase, no drift, no magic.</p>
+    <div class="byline">
+      <span class="av"><img src="/images/author/boyan-balev.jpg" alt="Boyan Balev" loading="lazy" width="37" height="37"></span>
+      <span><b>Boyan Balev</b></span>
+      <span class="dotsep"></span>
+      <span>8 min read</span>
+      <span class="dotsep"></span>
+      <span>First principles</span>
+      <span class="dotsep"></span>
+      <span>The Trenches Field Manual</span>
+    </div>
+  </div>
+
+  <!-- the image plate (drop /images/story/jediway.png, 1630x965) -->
+  <div class="plate reveal" data-src="/images/story/jediway.png">
+    <img src="/images/story/jediway.png" alt="Robed figures with lit sabers stand in a bright council chamber above the clouds, one order holding one shared way" loading="eager" width="1536" height="1024" onerror="this.closest('.plate').classList.add('missing')">
+    <div class="cap">Field manual &middot; jediway &middot; Refuse To Improvise</div>
+  </div>
+
+  <!-- THESIS -->
+  <section class="prose reveal">
+    <p>Watch a coding agent long enough and you will see the same failure in two costumes. The first is the taste document: deep modules, thin interfaces, do not abstract too early. Everyone nods at it, nothing enforces it, and the agent quotes it back to you while doing the opposite. The second is the orchestration prompt: spawn a worker, collect a report, ship. It has a process and no opinions at all, so the work is coordinated and mediocre. Separated, both fail the same way. The taste never reaches the code, and the process never asks whether the code is any good.</p>
+    <p>The failure has one root. Every time a model relays an instruction, it paraphrases, and paraphrase is where drift enters. Ask an orchestrator to "pass the guidelines along" and by the third child the guidelines are a friendly summary. The fix is small and unglamorous, and it is the entire plugin: <strong>if a rule must survive contact with a model, do not ask the model to carry it. Make a script paste it.</strong></p>
+  </section>
+
+  <div class="pull reveal"><p>"Paste verbatim" is where a model's paraphrase enters. A script has no opinion.</p></div>
+
+  <hr class="rule reveal">
+
+  <!-- 01 DRIFT -->
+  <section class="prose reveal" id="paraphrase">
+    <h2><span class="num">01 &middot; The pressure</span></h2>
+    <h2>Paraphrase is the enemy</h2>
+    <p class="lede">Before the machinery, feel the failure it answers. Nothing here is about models being dumb. It is about what happens to meaning when it is retyped.</p>
+    <p>An agent under pressure does not defy your standards; it reworders them. "Enforce each invariant once at the write path" becomes "keep validation consistent." "Abstract on the third occurrence" becomes "avoid duplication," which is the opposite advice. Each rewording is defensible on its own. The sum is a team of children each following a slightly different constitution, and an orchestrator confident it passed everything along.</p>
+    <p>So jediway is built on a division of labor that sounds almost too plain to matter. Judgement lives in Markdown a human wrote. Transport is a 37-line shell script. The model is allowed to exercise judgement exactly where judgement is wanted, and is never trusted with delivery. Four skills carry the opinions: <span class="chip">taste</span> holds the universal judgement and its ten-rule Creed, <span class="chip">frontend</span> and <span class="chip">backend</span> add only what is specific to each side, and <span class="chip">way</span> is the workflow that composes them. Roles are skills too. Nothing is a persona; everything is a file.</p>
+    <div class="takeaway"><div class="tk">The pressure</div><p>Meaning that is retyped decays. Meaning that is copied does not. Everything in jediway follows from choosing copy over retype at every hop.</p></div>
+  </section>
+
+  <!-- 02 CREED -->
+  <section class="prose reveal" id="creed">
+    <h2><span class="num">02 &middot; The part that travels</span></h2>
+    <h2>Ten rules, pasted, never paraphrased</h2>
+    <p class="lede">The taste skill is a full document on module depth, invariants, and when an abstraction earns its keep. Most of it stays home with the Master. What travels is the Creed.</p>
+    <ol class="creed reveal">
+      <li><b>Judgement over activity.</b> "No change needed" and "this must change now" are both successful outcomes. Report real problems at their true severity; do not invent work.</li>
+      <li><b>Deep modules, thin interfaces.</b> Pass-through layers, wrappers that only rename, and abstractions with one caller are shallow: inline or remove them.</li>
+      <li><b>Encapsulation is scope.</b> Private by default, at the narrowest scope that uses it. Promote on the second real consumer, never speculatively.</li>
+      <li><b>Invariants are the design.</b> Enforce each in exactly one place at the write path, trust it everywhere else. Make illegal states unrepresentable.</li>
+      <li><b>Validate at the boundary, trust inside.</b> Re-validation mid-flow means a boundary is in the wrong place.</li>
+      <li><b>Duplication is cheaper than the wrong abstraction.</b> Abstract only what changes together, for the same reason, on the third occurrence.</li>
+      <li><b>Dependencies point one way,</b> inward or downward, never in cycles.</li>
+      <li><b>A dependency clears three bars at once.</b> Removing one is a feature.</li>
+      <li><b>Read before you write, then conform.</b> The repo's convention outranks your preference. Make the smallest diff that fully solves the task.</li>
+      <li><b>Never claim a check passed unless you ran it.</b> If you could not run it, say so.</li>
+    </ol>
+    <p>Ten rules is deliberate. The Creed rides in every prompt, so its stability is what makes child behavior predictable; the deep material stays in the sections behind it, where the Master reads it once. And the document names no libraries, on principle. Tools rotate; judgement does not.</p>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 03 SPEC -->
+  <section class="prose reveal" id="spec">
+    <h2><span class="num">03 &middot; The contract</span></h2>
+    <h2>One artifact a script can judge</h2>
+    <p class="lede">Before any child is spawned, the Master grounds the repo in facts: real gate commands confirmed against CI, baseline results, verbatim snippets with <span class="chip">path:line</span>, blast radius, invariants with their enforcement points. Then it writes one file, and everything downstream lives off it.</p>
+    <p>Two acceptance criteria are always present. <strong>Proof of effect</strong>: one check that is red before the change and green after, with the baseline recorded so nobody has to revert anything to prove the transition. <strong>Scope</strong>: <span class="chip">git diff --name-only</span> lists only allowed paths. The Spec is the one artifact a model writes freely, so it is the one artifact a script judges: <span class="chip">lint-spec.sh</span> checks the shape before compose, and then the Master argues the strongest case that the criteria miss the Mission, and fixes what survives. Walk the real example that ships with the plugin.</p>
+
+    <figure class="wide reveal">
+      <div class="panel">
+        <div class="panel-title">.jediway/spec.md &middot; the shipped example, annotated <span class="tag">tap a section</span></div>
+        <div class="panel-sub">A real Spec for a small task: reject cart lines with quantity zero. Every section is verbatim from the repository; the annotation under it is why the section exists.</div>
+        <div class="pill" id="spec-tabs" role="tablist" aria-label="Spec sections"></div>
+        <pre class="spec-code" id="spec-code"></pre>
+        <div class="spec-why" id="spec-why"></div>
+      </div>
+      <figcaption>The baseline on the last criterion is the fairness clause: a failure that predates the task is not the task's fault, and no child is sent to fix it. <b>Done means something a command can check.</b></figcaption>
+    </figure>
+
+    <div class="pull reveal"><p>A change that turns nothing red to green is a no-op, however clean the diff.</p></div>
+  </section>
+
+  <!-- 04 COMPOSE -->
+  <section class="prose reveal" id="compose">
+    <h2><span class="num">04 &middot; The mechanism</span></h2>
+    <h2>Composition is a script, not an instruction</h2>
+    <p class="lede">This is the load-bearing decision. Every child prompt is assembled by 37 lines of shell from four sources: the Creed, the Spec file, the previous round's handoff, and the role's fenced block. No model retypes anything.</p>
+    <p>The consequence is worth sitting with. Every child working a task receives a <strong>byte-identical</strong> Creed and Spec, and only its own role. There is no second instruction source for children, so there is nothing to drift from. If the Spec is defective, a child reports BLOCKED and does not repair it. If compose fails, the Master fixes the Spec or the skill it names, and never hand-writes the prompt. Switch roles below and watch what moves and what refuses to.</p>
+
+    <figure class="wide reveal">
+      <div class="panel compose">
+        <div class="panel-title" id="compose-cmd">$ compose.sh implementer .jediway/spec.md <span class="tag">stdout is the dispatch message</span></div>
+        <div class="pill" id="role-tabs" role="tablist" aria-label="Roles"></div>
+        <div class="stream" id="compose-stream"></div>
+      </div>
+      <figcaption>Retries are always fresh children with the corrected Spec and the failing evidence in the handoff. <b>Never hand a mistake back to the child that made it; its context already holds the wrong reasoning.</b></figcaption>
+    </figure>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 05 CHAIN -->
+  <section class="prose reveal" id="chain">
+    <h2><span class="num">05 &middot; The pipeline</span></h2>
+    <h2>One chain, cut at different points</h2>
+    <p class="lede">The Master is the only role in the main session. It grounds, specs, plans, composes, dispatches, and judges. It never writes code. Children are created from one template with one role block swapped in, then discarded.</p>
+    <p>Build, review, and audit are not three workflows. They are one chain entered at different points, and the chain never shrinks: a small task shrinks the Spec, never the ceremony around it. Isolation is spent deliberately too. Verification is isolated and implementation is isolated, because a fresh context buys fresh eyes and those two roles are where fresh eyes pay. Planning is not isolated: the Master already read the files in Ground, and a Planner child would re-read them and lose the context.</p>
+
+    <figure class="wide reveal">
+      <div class="panel">
+        <div class="panel-title">skills/way &middot; the chain, by mode <span class="tag">pick a mode</span></div>
+        <div class="pill" id="pipe-modes" role="tablist" aria-label="Modes"></div>
+        <div class="pipe-track"><div class="pipe" id="pipe"></div></div>
+        <div class="readout" id="pipe-cap"></div>
+      </div>
+      <figcaption>The Scout is dashed because it is conditional: it grounds and plans only when the repo is too large for the Master to read in one pass. <b>Everything else is the same spine.</b></figcaption>
+    </figure>
+  </section>
+
+  <!-- second plate (drop /images/story/jediway-chain.png, 1630x965) -->
+  <div class="plate reveal" data-src="/images/story/jediway-chain.png">
+    <img src="/images/story/jediway-chain.png" alt="Hooded figures ring a dark round table whose surface glows with a blue circuit blueprint, sabers grounded" loading="lazy" width="1545" height="1018" onerror="this.closest('.plate').classList.add('missing')">
+    <div class="cap">Field manual &middot; jediway &middot; One chain, three cuts</div>
+  </div>
+
+  <!-- 06 JUDGE -->
+  <section class="prose reveal" id="judge">
+    <h2><span class="num">06 &middot; The judgement</span></h2>
+    <h2>A report is a claim until reproduced</h2>
+    <p class="lede">Reports come back in one fixed shape: a result, per-criterion evidence with exact commands and exit codes, an invariants table, deviations, and a handoff of at most five lines. The Master takes none of it on faith, and re-runs none of it blindly either.</p>
+    <p>Reproduction is targeted. The Master re-runs the two criteria that decide the task, Scope and proof of effect, reads the diff rather than the summary, and re-runs the full gates only when the Implementer and the Verifier disagree. Three full gate runs per round was cost without information. The judgement also cuts both ways: existing tests and lockfiles are read-only for children, a weakened assertion is a High finding regardless of what else passes, and the Verifier must argue against each of its own findings before reporting them; the ones where the counter-argument wins ship under Rejected, with the argument attached.</p>
+
+    <div class="specrow reveal">
+      <div class="cell"><div class="lab">Accept</div><div class="val">criteria green or no worse than baseline, diff read, Match and Invariants confirmed.</div></div>
+      <div class="cell"><div class="lab">Re-brief</div><div class="val">the Master missed a fact. Fix the Spec, fresh child.</div></div>
+      <div class="cell"><div class="lab">Re-plan</div><div class="val">the approach or a criterion was wrong. Back to the Spec.</div></div>
+      <div class="cell"><div class="lab">Escalate</div><div class="val">needs the user. One question, one recommended default.</div></div>
+    </div>
+
+    <p>Three rounds maximum, then escalate with the evidence so far. And the whole task's state is two files, <span class="chip">.jediway/spec.md</span> and <span class="chip">.jediway/handoff.md</span>: a fresh session resumes from them and nothing else, because no transcript ever carries forward.</p>
+
+    <div class="pull heat reveal"><p>"Nothing to change" is a complete result.</p></div>
+  </section>
+
+  <hr class="rule reveal">
+
+  <!-- 07 HONEST -->
+  <section class="prose reveal" id="honest">
+    <h2><span class="num">07 &middot; The honest part</span></h2>
+    <h2>What it refuses to promise</h2>
+    <p class="lede">A tool sold as more than it is gets abandoned the first time the ceremony costs more than the task. So here is the fair read, straight from the README.</p>
+    <p>In Claude Code, read-only roles are genuinely locked out of edit tools by the plugin's agent wrappers. In Codex there is no equivalent, so read-only there is convention, and when the guarantee matters you run those roles in a read-only sandbox. That limit is printed in the README rather than discovered in production, because pretending otherwise is the kind of lie the Creed forbids.</p>
+    <ul class="heat reveal">
+      <li><strong>It is ceremony for small edits, and it says so.</strong> For a one-line fix the chain is overhead; the workflow's own advice is to say "inline" and skip it.</li>
+      <li><strong>It does not make a model smarter.</strong> It makes failure legible. A drifted child cannot hide behind a paraphrase, because there is none; a false "it passes" cannot survive a Judge that re-runs the command.</li>
+      <li><strong>Nothing enforces the discipline but the harness and the text.</strong> The whole plugin is Markdown and a few small shell scripts. That is a boast and a confession at once.</li>
+      <li><strong>The Spec is only as good as the Ground.</strong> A Master that grounds carelessly writes confident Specs about a repo that does not exist. The lint checks shape, not truth.</li>
+    </ul>
+    <div class="takeaway"><div class="tk">The honest part</div><p>jediway holds itself to its own bar: <span class="chip">lint.sh</span> is the plugin's acceptance criteria, run before every commit. Exactly one Creed, one Role block per role, compose must succeed for every role against the example Spec, and read-only agents must not edit. The tool is judged the way it judges.</p></div>
+  </section>
+
+  <!-- 08 VERDICT -->
+  <section class="prose reveal" id="verdict">
+    <h2><span class="num">08 &middot; The verdict</span></h2>
+    <h2>Markdown, shell, and one idea held all the way down</h2>
+    <p>Strip the vocabulary away and jediway is one idea applied without exception: judgement is authored once by a human, and everything that must not drift is moved out of the model's hands and into a script's. The Creed travels by copy. The Spec is judged by a linter. The prompts are assembled by shell. The reports are reproduced by command. At every hop where a paraphrase could enter, the design replaces the model with something that cannot have an opinion, and at every hop where judgement is wanted, it hands the model a fixed contract and full freedom inside it.</p>
+    <p>That is a bounded promise, and it is enough. It will not make an agent brilliant. It makes an agent's work <em>arguable</em>: every claim has a command, every command has a baseline, and every finding carries the strongest case against itself. On a long enough run of agent work, that is most of the battle.</p>
+
+    <div class="ribbon reveal">
+      <div class="r"><div class="rn">10</div><div class="rl">rules in the Creed, pasted verbatim</div></div>
+      <div class="r"><div class="rn">4</div><div class="rl">roles, all disposable</div></div>
+      <div class="r"><div class="rn">3</div><div class="rl">modes, one pipeline</div></div>
+      <div class="r"><div class="rn">0</div><div class="rl">runtime, servers, hooks</div></div>
+    </div>
+
+    <h3>Take it for a run</h3>
+    <figure class="wide reveal">
+      <div class="panel">
+        <div class="panel-title">Install &middot; Claude Code and Codex <span class="tag">copy a command</span></div>
+        <div class="cmdrow"><span class="cmd"><span class="p">$ </span>claude plugin marketplace add balevdev/jediway</span><button class="copy" type="button" data-copy="claude plugin marketplace add balevdev/jediway">copy</button></div>
+        <div class="cmdrow"><span class="cmd"><span class="p">$ </span>claude plugin install jediway@jediway</span><button class="copy" type="button" data-copy="claude plugin install jediway@jediway">copy</button></div>
+        <div class="cmdrow"><span class="cmd"><span class="p">$ </span>codex plugin marketplace add balevdev/jediway</span><button class="copy" type="button" data-copy="codex plugin marketplace add balevdev/jediway">copy</button></div>
+      </div>
+      <figcaption>Then ask for work the way you already do: <b>/jediway:build</b> add rate limiting to POST /login &middot; <b>/jediway:review</b> the diff on feat/rate-limit against main &middot; <b>/jediway:audit</b> src/billing. Source and README at <a href="https://github.com/balevdev/jediway" target="_blank" rel="noopener">github.com/balevdev/jediway</a>.</figcaption>
+    </figure>
+
+    <div class="pull reveal"><p>Where judgement is wanted, hand the model a contract and full freedom inside it. Where drift is possible, hand the job to a script. Choose, at every hop, and never confuse the two.</p></div>
+  </section>
+
+  <footer class="reveal">
+    <a class="brand" href="/" style="display:inline-flex">
+      <svg class="glyph" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M3 6h18M6 12h12M9 18h6" stroke="var(--cool)" stroke-width="2.4" stroke-linecap="round"/></svg>
+      <span class="b1">The</span><span class="b2">Trenches</span>
+    </a>
+    <p>A field manual for building under pressure. One way of working; nothing retyped.</p>
+  </footer>
+
+</main>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var $ = function(id){ return document.getElementById(id); };
+
+  /* ---------- THEME (session only, matches the other stories) ---------- */
+  (function(){
+    var root = document.documentElement, btn = $('themeBtn'), icon = $('themeIcon');
+    var moon = '<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"></path>';
+    var sun = '<circle cx="12" cy="12" r="4"></circle><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"></path>';
+    var prefersLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+    function apply(t){ root.setAttribute('data-theme', t); if(icon) icon.innerHTML = (t === 'dark') ? sun : moon; }
+    apply(prefersLight ? 'light' : 'dark');
+    if(btn) btn.addEventListener('click', function(){ apply(root.getAttribute('data-theme') === 'dark' ? 'light' : 'dark'); });
+  })();
+
+  /* ---------- PROGRESS BAR ---------- */
+  (function(){
+    var bar = $('progress'); if(!bar) return;
+    function on(){ var h = document.documentElement, max = h.scrollHeight - h.clientHeight; bar.style.width = (max > 0 ? (h.scrollTop / max * 100) : 0) + '%'; }
+    document.addEventListener('scroll', on, {passive:true}); window.addEventListener('resize', on); on();
+  })();
+
+  /* ---------- REVEALS ---------- */
+  (function(){
+    var els = Array.prototype.slice.call(document.querySelectorAll('.reveal'));
+    if(reduce || !('IntersectionObserver' in window)){ els.forEach(function(e){ e.classList.add('in'); }); return; }
+    var io = new IntersectionObserver(function(es){ es.forEach(function(e){ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target); } }); }, {threshold:0.1, rootMargin:'0px 0px -8% 0px'});
+    els.forEach(function(el){ io.observe(el); });
+  })();
+
+  /* ---------- SCROLL SPY ---------- */
+  (function(){
+    var nav = $('spy'); if(!nav) return;
+    var links = Array.prototype.slice.call(nav.querySelectorAll('a'));
+    var targets = links.map(function(a){ return document.querySelector(a.getAttribute('href')); });
+    function on(){
+      var y = window.scrollY + 140, best = -1;
+      targets.forEach(function(t, i){ if(t && t.offsetTop <= y) best = i; });
+      links.forEach(function(a, i){ a.classList.toggle('active', i === best); });
+    }
+    document.addEventListener('scroll', on, {passive:true}); on();
+  })();
+
+  /* ---------- COPY BUTTONS ---------- */
+  (function(){
+    function copyText(text, btn){
+      function done(){ btn.classList.add('done'); btn.textContent = 'copied'; setTimeout(function(){ btn.classList.remove('done'); btn.textContent = 'copy'; }, 1600); }
+      function fallback(){
+        var ta = document.createElement('textarea');
+        ta.value = text; ta.setAttribute('readonly',''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch(e){}
+        document.body.removeChild(ta);
+      }
+      if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(text).then(done, fallback); } else { fallback(); }
+    }
+    Array.prototype.forEach.call(document.querySelectorAll('.copy'), function(btn){
+      btn.addEventListener('click', function(){ copyText(btn.getAttribute('data-copy'), btn); });
+    });
+  })();
+
+  /* ================= Data: verbatim from the repository (v0.3.0) ================= */
+
+  var CREED =
+'1. Judgement over activity. "No change needed" and "this must change now" are both successful outcomes. Report real problems at their true severity; do not invent work.\n' +
+'2. Deep modules, thin interfaces. A module earns its place when a small, stable interface hides a lot of implementation. Pass-through layers, wrappers that only rename, and abstractions with one caller are shallow: inline or remove them.\n' +
+'3. Encapsulation is scope. Private by default, at the narrowest scope that uses it. Promote on the second real consumer, never speculatively. What is not exported may change freely; that freedom is the payoff.\n' +
+'4. Invariants are the design. Name what must always be true, enforce each invariant in exactly one place at the write path, trust it everywhere else. Make illegal states unrepresentable instead of checking for them repeatedly.\n' +
+'5. Validate at the boundary, trust inside. External input is validated once at the edge. Re-validation mid-flow means a boundary is in the wrong place; casting past the type system means the model is lying.\n' +
+'6. Duplication is cheaper than the wrong abstraction. Similar shape is not the same concept. Abstract only what changes together, for the same reason, on the third occurrence.\n' +
+'7. Dependencies point one way, inward or downward, never in cycles. Interfaces, wire formats, and persistence contracts cost more than implementations and need stronger evidence to touch.\n' +
+'8. A dependency clears three bars at once: the problem is genuinely hard, the candidate is the converged answer with a maintenance record, and the hand-rolled version would be worse in a way that matters. Prefer what the repo already has. Removing one is a feature.\n' +
+'9. Read before you write, then conform. The repo’s convention outranks your preference and this document. Introduce a new pattern only when the current one demonstrably fails the task, and say so. Make the smallest diff that fully solves the task; note problems outside it in prose, never fix them silently.\n' +
+'10. Never claim a check passed unless you ran it. If you could not run it, say so.';
+
+  var SPEC_SECTIONS = [
+    { id: 'mission', label: 'Mission', body:
+'## Mission\nAdding a cart line with quantity <= 0 must fail at the write path with a domain error, so that no cart can ever persist a non-positive quantity. Done means the existing add-line flow rejects the value before persistence and the rest of the cart behaves as today.',
+      why: '<b>One outcome, phrased so a command can check it.</b> "Done means" is part of the format: if done cannot be verified by running something, the Mission is not finished being written.' },
+    { id: 'nongoals', label: 'Non-goals', body:
+'## Non-goals\n- Do not touch quantity updates on existing lines.\n- Do not change the HTTP status mapping module.\n- Do not reformat cart/service.ts.',
+      why: '<b>The cheapest guard against scope creep is writing down what not to do.</b> A child that "improves" a file outside these lines has failed the Spec, however good the improvement.' },
+    { id: 'domain', label: 'Domain', body:
+'## Domain\n- Invariants that concern data go in the database first; the domain type mirrors the constraint so the application fails fast, but the constraint is what makes the invariant true.',
+      why: '<b>One to three verbatim lines from the matching domain skill</b>, chosen by the Master in Ground. The whole skill never travels; only the lines that bear on this task do.' },
+    { id: 'invariants', label: 'Invariants', body:
+'## Invariants\n- cart_lines.quantity > 0 for every persisted row (enforced at db/migrations/0012_cart_lines.sql CHECK constraint; this change mirrors it at src/cart/line.ts createLine so the constraint is never the first line of defense).\n- CartService.addLine keeps its signature (src/cart/service.ts:41).',
+      why: '<b>Every invariant names its enforcement point.</b> Enforced once, at the write path, trusted everywhere else. A change that silently weakens one is the most expensive bug there is.' },
+    { id: 'criteria', label: 'Criteria', body:
+'## Acceptance criteria\n- AC1 (proof of effect): npm test -- line.test, test "rejects quantity 0" passes. Baseline: exit 1, test does not exist yet; Plan step 1 adds it.\n- AC2 (scope): git diff --name-only, every path is in Scope.\n- AC3: npm run typecheck, exit 0. Baseline: exit 0.\n- AC4: npm run lint, exit 0. Baseline: exit 0.\n- AC5: npm test, no worse than baseline. Baseline: exit 1, 1 pre-existing failure in payments/refund.test.ts.',
+      why: '<b>Each criterion is a command, a pass condition, and a baseline.</b> AC1 and AC2 are mandatory in every build. The baseline on AC5 is the fairness clause: a failure that predates the task is not the task’s fault.' },
+    { id: 'match', label: 'Match', body:
+'## Match\n- src/cart/line.ts:12\n  export function createLine(input: LineInput): Line {\n    if (!input.sku) throw new DomainError("line.sku.required");\n- src/cart/errors.ts:4\n  export class DomainError extends Error { constructor(readonly code: string) { super(code); } }',
+      why: '<b>Verbatim snippets the diff must conform to:</b> same error type, same naming, same structure as the surrounding file, even where it differs from the child’s taste. The repo’s convention outranks everyone’s preference.' },
+    { id: 'scope', label: 'Scope', body:
+'## Scope\n- src/cart/line.ts\n- src/cart/line.test.ts\n- read-only: existing tests, package-lock.json',
+      why: '<b>An allow-list, checked by AC2 in one second.</b> Existing tests and lockfiles are read-only for children: adding a test that encodes a criterion is expected, weakening one to make a gate pass is a High finding.' },
+    { id: 'plan', label: 'Plan', body:
+'## Plan\n1. [src/cart/line.test.ts:1] Add test "rejects quantity 0" calling createLine with quantity 0 and expecting DomainError code "line.quantity.positive"; run it and confirm it fails.\n2. [src/cart/line.ts:12] In createLine, after the sku guard, throw DomainError("line.quantity.positive") when input.quantity <= 0, matching the existing guard style.',
+      why: '<b>At most eight steps, no code, and every step touching existing code cites a line the Master actually opened in Ground.</b> A step naming a file it did not read is invalid. Step 1 is always the failing proof-of-effect check if it does not exist yet.' }
+  ];
+
+  var ROLES = {
+    scout: {
+      note: 'read-only · only when the repo exceeds one pass',
+      handoff: 'none',
+      block:
+'Ground the repository for the Master and propose a plan. Read-only; do not edit anything.\n\nReturn, inside Evidence, exactly these headings:\n- Gates: build, test, lint, typecheck commands as the repo defines them (package manifest, Makefile, CI). Run each once and give exit code and relevant tail as Baseline.\n- Pattern: where this concern lives today, with two or three verbatim snippets as path:line the change must match.\n- Blast radius: who imports or calls the code in Scope; public signatures, wire formats, and persistence contracts that cannot move.\n- Invariants: what must remain true after the change, each with the line or constraint that enforces it today, or "not enforced".\n- Plan: at most 8 steps in the form "N. [path:line] change in one sentence". Every step touching existing code cites a line you opened. Step 1 adds the failing proof-of-effect check if none exists. An unenforced invariant gets a step adding enforcement at the write path. A shared interface change is its own step, first. No code.\n\nStay inside the Spec’s Scope. If the Mission cannot be satisfied inside it, report BLOCKED naming the path you would need. No opinions beyond the Plan.' },
+    implementer: {
+      note: 'writes inside Scope · build mode',
+      handoff: 'none',
+      block:
+'Execute the Spec’s Plan step by step, in order. Do not redesign it.\n\nRules:\n- Write only inside Scope. If the fix lies outside Scope, stop and report BLOCKED naming the path. Never widen Scope yourself.\n- No new dependencies. No lockfile changes.\n- Existing tests are read-only. Adding a test that encodes an acceptance criterion is expected. Weakening or editing an existing test to make a gate pass is forbidden.\n- Before implementing the fix, run the proof-of-effect check and confirm it is red. A check that is green before the change proves nothing.\n- After each step run the fastest relevant gate (typecheck, then the targeted test) so a mistake is caught in the step that made it.\n- Match the Spec’s Match snippets: same error type, same naming, same structure, same style as the surrounding file even where it differs from your taste.\n- Enforce each Invariant at the single write-path location the Plan names. Add no read-path checks "to be safe".\n- If a Plan step is wrong (the cited line does not exist, the change would break an Invariant, a Match snippet contradicts it), stop and report BLOCKED naming the step. Do not improvise around it.\n- Errors, empty inputs, and partial failure are part of the step. If the Plan omitted one the Mission needs, add the smallest deliberate handling and record it under Deviations.\n- After the last step, run every acceptance criterion in a fresh shell with the repo’s own commands. Record exact command, exit code, last 10 lines.\n- If the same criterion still fails after your second attempt at a fix, stop and report BLOCKED with both attempts.\n- No drive-by renames, reformatting, or import reordering the tooling did not require. The Verifier reads every line; unnecessary lines hide the necessary ones.\n- End the report with the full unified diff. Not a summary, the diff.' },
+    verifier: {
+      note: 'read-only · build and review modes',
+      handoff: '.jediway/handoff.md — the Implementer’s evidence, its full diff, and its Handoff section of at most five lines.',
+      block:
+'Judge the change against the Spec by evidence. Do not fix anything; your output is judgement.\n\nOrder of work:\n1. Run the Scope criterion first: git diff --name-only, every path in Scope. One second, catches the most common failure.\n2. Run the proof-of-effect criterion and compare against the Baseline recorded in the Spec. Never revert, stash, or checkout to compare. If the Baseline says the check did not exist and the diff does not add it, the change is unproven regardless of the other gates.\n3. Read the full diff top to bottom before running the slow gates. Reading first tells you what the gates should show; a gate that passes unexpectedly is a signal, not a relief.\n4. Re-run every remaining criterion with the repo’s own commands. Record command, exit code, tail.\n\nChecks:\n- Match: say where the diff conforms to each Match snippet and where it does not.\n- Invariants: find the single enforcement point, confirm it is on the write path, confirm no read-path duplicates were added. Mark each HOLDS, BROKEN, or UNVERIFIED with the proving line.\n- Tests: for every test file in the diff, ask whether an assertion got weaker. An existing test edited to make a gate pass is a High finding regardless of what else passes.\n- For each finding give the concrete cost (who pays, how often), the smallest fix, and the strongest case for leaving it alone. If that case wins, put the finding under Rejected with the counter-argument.\n- Severity is cost, not feeling. Critical: data loss, broken invariant, security. High: wrong behavior on a real path, or a test weakened. Medium: a boundary in the wrong place. Low: naming, locality, small duplication.\n- Do not report style preferences, hypothetical future needs, or "could be cleaner". Report what is wrong now, with the line.\n\nOutput, in this order, inside Evidence: PASS or FAIL per criterion with evidence; Match conformance; Invariants table; Approved findings; Rejected findings, each with the counter-argument that won.' },
+    auditor: {
+      note: 'read-only · audit mode',
+      handoff: 'none',
+      block:
+'Audit the code inside Scope as a Staff+ engineer. Do not edit anything.\n\nMethod:\n- Read representative implementations and their tests before concluding anything. Never infer architecture from filenames or directory layout.\n- Budget reading by risk: write paths, persistence, the public surface, and shared modules carry most invariants; read those fully, sample the rest.\n- Map before judging: derive dependency direction from imports, not from the README. A cycle found in imports is a fact; a layering violation inferred from folder names is not.\n- Run the gates in the Spec and report results exactly. Never claim a command passed unless you ran it.\n- Label every finding as observed fact or inference.\n\nBar for a recommendation:\n- Name the concrete problem today, the exact files and symbols proving it, who pays and how often, the smallest change that fixes it, and the new complexity that change introduces.\n- Reject anything justified only by fewer lines, familiarity, aesthetic symmetry, theoretical reuse, or speculative future needs.\n- Argue against each surviving recommendation: the strongest case for leaving the code alone. Drop it if that case holds.\n\nOutput, inside Evidence, in this order: executive summary with counts of approved and rejected candidates; architectural map with the file that proves each claim; approved recommendations with severity, evidence, smallest change, risks, validation plan; rejected candidates, mandatory, why each looked good and why it failed; strengths worth preserving; verdict: leave unchanged, perform only the approved changes, or redesign.' }
+  };
+
+  var SPEC_FULL = SPEC_SECTIONS.map(function(s){ return s.body; }).join('\n\n');
+
+  var REPORT =
+'Result: PASS | PARTIAL | BLOCKED\nEvidence: per acceptance criterion, the exact command, exit code, and last 10 lines of output. Full output only for failures.\nInvariants: per invariant, HOLDS | BROKEN | UNVERIFIED, with the line that proves it.\nDeviations: what you did differently from your instructions and why, or "none".\nHandoff: at most 5 lines the next role needs, or "none".';
+
+  /* ================= Spec anatomy ================= */
+  (function(){
+    var tabs = $('spec-tabs'), code = $('spec-code'), why = $('spec-why');
+    if(!tabs) return;
+    SPEC_SECTIONS.forEach(function(s){
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role','tab'); b.textContent = s.label;
+      b.id = 'spec-tab-' + s.id; b.setAttribute('aria-pressed','false');
+      b.addEventListener('click', function(){ select(s.id); });
+      tabs.appendChild(b);
+    });
+    function renderBody(body){
+      code.textContent = '';
+      body.split('\n').forEach(function(line, i, arr){
+        if(line.indexOf('## ') === 0){
+          var span = document.createElement('span'); span.className = 'h'; span.textContent = line; code.appendChild(span);
+        } else { code.appendChild(document.createTextNode(line)); }
+        if(i < arr.length - 1) code.appendChild(document.createTextNode('\n'));
+      });
+    }
+    function select(id){
+      var s = SPEC_SECTIONS.filter(function(x){ return x.id === id; })[0];
+      SPEC_SECTIONS.forEach(function(x){
+        $('spec-tab-' + x.id).setAttribute('aria-pressed', x.id === id ? 'true' : 'false');
+      });
+      renderBody(s.body); why.innerHTML = s.why;
+      if(!reduce){ code.classList.remove('swap'); why.classList.remove('swap'); void code.offsetWidth; code.classList.add('swap'); why.classList.add('swap'); }
+    }
+    select('criteria');
+  })();
+
+  /* ================= Pipeline ================= */
+  (function(){
+    var STAGES = [
+      { id:'ground', name:'Ground', note:'facts only: gates, baselines, snippets, blast radius, invariants', who:'master' },
+      { id:'scout', name:'Scout', note:'grounds and plans, only when the repo exceeds one pass', who:'child', optional:true },
+      { id:'spec', name:'Spec', note:'the single source of truth, linted by a shell before compose', who:'master' },
+      { id:'implementer', name:'Implementer', note:'executes the Plan inside Scope, proves with the criteria', who:'child' },
+      { id:'verifier', name:'Verifier', note:'reproduces every criterion, reads the real diff', who:'child' },
+      { id:'auditor', name:'Auditor', note:'Staff+ architecture audit, approved and rejected findings', who:'child' },
+      { id:'judge', name:'Judge', note:'re-runs the two decisive criteria, adjudicates, decides', who:'master' }
+    ];
+    var MODES = {
+      build: { on:['ground','scout','spec','implementer','verifier','judge'],
+        cap:'<b>build</b>: something must change. Ground, Spec with Plan, Implementer, Verifier, Judge. Proof of effect and Scope are always criteria.',
+        specNote:'Spec + Plan' },
+      review: { on:['ground','scout','spec','verifier','judge'],
+        cap:'<b>review</b>: judge a diff or branch; change nothing. The Verifier asks whether the diff carries a check that would fail without it.',
+        specNote:'Spec' },
+      audit: { on:['ground','scout','spec','auditor','judge'],
+        cap:'<b>audit</b>: judge a repo or subsystem; no diff; change nothing. <span class="o">"Nothing to change" is a complete result.</span> A review with no diff is an audit.',
+        specNote:'Spec' }
+    };
+    var pipe = $('pipe'), cap = $('pipe-cap'), modes = $('pipe-modes');
+    if(!pipe) return;
+    STAGES.forEach(function(s, i){
+      var wrap = document.createElement('div');
+      wrap.className = 'stage' + (s.optional ? ' optional' : '');
+      wrap.id = 'stage-' + s.id;
+      if(i > 0){ var link = document.createElement('div'); link.className = 'link'; wrap.appendChild(link); }
+      var card = document.createElement('div'); card.className = 'stage-card';
+      var n = document.createElement('span'); n.className = 'sname'; n.textContent = s.name; n.id = 'sname-' + s.id;
+      var t = document.createElement('span'); t.className = 'snote'; t.textContent = s.note;
+      var b = document.createElement('span'); b.className = 'sbadge' + (s.who === 'child' ? ' child' : ''); b.textContent = s.who;
+      card.appendChild(n); card.appendChild(t); card.appendChild(b);
+      wrap.appendChild(card); pipe.appendChild(wrap);
+    });
+    Object.keys(MODES).forEach(function(m, i){
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role','tab'); b.textContent = m; b.id = 'mode-' + m;
+      b.setAttribute('aria-pressed', i === 0 ? 'true' : 'false');
+      b.addEventListener('click', function(){ select(m); });
+      modes.appendChild(b);
+    });
+    function select(m){
+      var mode = MODES[m];
+      Object.keys(MODES).forEach(function(k){ $('mode-' + k).setAttribute('aria-pressed', k === m ? 'true' : 'false'); });
+      STAGES.forEach(function(s){
+        var el = $('stage-' + s.id);
+        var active = mode.on.indexOf(s.id) !== -1;
+        el.classList.toggle('off', !active);
+        el.classList.toggle('lit', active && s.who === 'child' && !s.optional);
+      });
+      $('sname-spec').textContent = mode.specNote;
+      cap.innerHTML = mode.cap;
+    }
+    select('build');
+  })();
+
+  /* ================= Compose console ================= */
+  (function(){
+    var stream = $('compose-stream'), cmd = $('compose-cmd'), tabs = $('role-tabs');
+    if(!stream) return;
+    var order = ['scout','implementer','verifier','auditor'];
+    order.forEach(function(r){
+      var b = document.createElement('button');
+      b.type = 'button'; b.setAttribute('role','tab'); b.textContent = r; b.id = 'role-' + r;
+      b.setAttribute('aria-pressed', r === 'implementer' ? 'true' : 'false');
+      b.addEventListener('click', function(){ select(r); });
+      tabs.appendChild(b);
+    });
+    function el(tag, cls, text){
+      var e = document.createElement(tag);
+      if(cls) e.className = cls;
+      if(text != null) e.textContent = text;
+      return e;
+    }
+    function slot(name, src, sameTag, content, short){
+      var s = el('div', 'slot' + (name === '{ROLE_BLOCK}' ? ' role-slot' : '') + (short ? ' short' : ''));
+      var head = el('div', 'slot-head');
+      head.appendChild(el('span', 'name', name));
+      head.appendChild(el('span', 'src', src));
+      if(sameTag) head.appendChild(el('span', 'same', sameTag));
+      s.appendChild(head);
+      s.appendChild(el('div', 'slot-body', content));
+      if(!short){
+        var lines = content.split('\n').length;
+        var more = el('button', 'slot-more', 'show all ' + lines + ' lines ↓');
+        more.type = 'button';
+        more.addEventListener('click', function(){
+          var open = s.classList.toggle('open');
+          more.textContent = open ? 'collapse ↑' : 'show all ' + lines + ' lines ↓';
+        });
+        s.appendChild(more);
+      }
+      return s;
+    }
+    function render(role){
+      var d = ROLES[role];
+      stream.textContent = '';
+      var frag = document.createDocumentFragment();
+      var intro = el('div', 'tline');
+      intro.appendChild(document.createTextNode('You are the '));
+      intro.appendChild(el('span', 'hl', role));
+      intro.appendChild(document.createTextNode(' for one bounded task. This message plus the repository is everything you need. Do not infer intent beyond the Spec and do not look for other roles’ instructions; they are not for you.'));
+      frag.appendChild(intro);
+      frag.appendChild(el('div', 'tline', '## Creed (fixed)'));
+      frag.appendChild(slot('{CREED}', 'skills/taste/SKILL.md § Creed', 'byte-identical for every role', CREED, false));
+      frag.appendChild(el('div', 'tline', '## Spec (fixed: act on it, do not reinterpret it)'));
+      frag.appendChild(slot('{SPEC}', '.jediway/spec.md, verbatim', 'byte-identical for every role', SPEC_FULL, false));
+      frag.appendChild(el('div', 'tline', '## Handoff from the previous round'));
+      frag.appendChild(slot('{HANDOFF}', role === 'verifier' ? 'the previous child’s report' : 'no previous round', null, d.handoff, true));
+      frag.appendChild(el('div', 'tline', '## Your job'));
+      frag.appendChild(slot('{ROLE_BLOCK}', 'skills/' + role + '/SKILL.md § Role block · ' + d.note, 'the only part that changes', d.block, false));
+      frag.appendChild(el('div', 'tline', '## Report (this exact shape, nothing else)\n' + REPORT));
+      stream.appendChild(frag);
+      cmd.innerHTML = '$ compose.sh ' + role + ' .jediway/spec.md' + (role === 'verifier' ? ' .jediway/handoff.md' : '') + ' <span class="tag">stdout is the dispatch message</span>';
+      if(!reduce){ stream.classList.remove('swap'); void stream.offsetWidth; stream.classList.add('swap'); }
+    }
+    function select(r){
+      order.forEach(function(k){ $('role-' + k).setAttribute('aria-pressed', k === r ? 'true' : 'false'); });
+      render(r);
+    }
+    render('implementer');
+  })();
+
+})();
+</script>
+</body>
+</html>

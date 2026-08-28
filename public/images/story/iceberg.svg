@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" role="img" aria-label="An iceberg: a small glassy tip above the waterline, a vast mass below, with a single glowing pointer above the surface.">
+  <defs>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0B3050"/>
+      <stop offset=".32" stop-color="#062038"/>
+      <stop offset=".7" stop-color="#041524"/>
+      <stop offset="1" stop-color="#01060C"/>
+    </linearGradient>
+    <linearGradient id="tip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#EAF5FF" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#7CD6FF" stop-opacity=".55"/>
+    </linearGradient>
+    <linearGradient id="mass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#2E9BD6" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#2E9BD6" stop-opacity=".06"/>
+    </linearGradient>
+    <radialGradient id="glow" cx=".5" cy=".28" r=".5">
+      <stop offset="0" stop-color="#7CD6FF" stop-opacity=".5"/>
+      <stop offset="1" stop-color="#7CD6FF" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="sun" cx=".5" cy="0" r=".9">
+      <stop offset="0" stop-color="#7CD6FF" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#7CD6FF" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="800" height="1000" fill="url(#sea)"/>
+  <rect width="800" height="380" fill="url(#sun)"/>
+
+  <!-- faint grid, fading with depth -->
+  <g stroke="#7CD6FF" stroke-width="1" opacity=".07">
+    <path d="M100 0V430M240 0V430M380 0V430M520 0V430M660 0V430"/>
+    <path d="M0 90H800M0 200H800"/>
+  </g>
+
+  <!-- marine snow -->
+  <g fill="#BEE6FA">
+    <circle cx="120" cy="140" r="2" opacity=".5"/><circle cx="640" cy="90" r="1.6" opacity=".4"/>
+    <circle cx="700" cy="330" r="2" opacity=".35"/><circle cx="90" cy="520" r="1.8" opacity=".25"/>
+    <circle cx="680" cy="620" r="2.2" opacity=".2"/><circle cx="150" cy="760" r="1.6" opacity=".16"/>
+    <circle cx="560" cy="850" r="2" opacity=".12"/><circle cx="300" cy="940" r="1.5" opacity=".1"/>
+    <circle cx="470" cy="70" r="1.5" opacity=".45"/><circle cx="240" cy="300" r="1.4" opacity=".3"/>
+  </g>
+
+  <!-- the pointer: the one mutable thing, above the surface -->
+  <circle cx="400" cy="150" r="7" fill="#7CD6FF"/>
+  <circle cx="400" cy="150" r="18" fill="none" stroke="#7CD6FF" stroke-opacity=".4"/>
+  <circle cx="400" cy="150" r="32" fill="none" stroke="#7CD6FF" stroke-opacity=".15"/>
+  <path d="M400 176V232" stroke="#7CD6FF" stroke-width="1.4" stroke-dasharray="2 6" opacity=".7"/>
+
+  <ellipse cx="400" cy="330" rx="340" ry="220" fill="url(#glow)"/>
+
+  <!-- tip: one tenth -->
+  <polygon points="400,238 462,318 500,360 300,360 340,300" fill="url(#tip)" stroke="#7CD6FF" stroke-width="2"/>
+
+  <!-- waterline -->
+  <line x1="40" y1="360" x2="760" y2="360" stroke="#7CD6FF" stroke-width="1.6" stroke-dasharray="6 9" opacity=".75"/>
+  <rect y="360" width="800" height="640" fill="#2E9BD6" opacity=".08"/>
+
+  <!-- mass: nine tenths -->
+  <polygon points="300,360 500,360 610,470 640,620 520,780 400,900 300,820 210,650 180,480"
+           fill="url(#mass)" stroke="#2E9BD6" stroke-width="1.6" stroke-opacity=".8"/>
+  <path d="M400 360V880" stroke="#7CD6FF" stroke-width="1" stroke-dasharray="2 8" opacity=".35"/>
+  <path d="M300 360L210 650M500 360L640 620" stroke="#7CD6FF" stroke-width="1" opacity=".14"/>
+</svg>

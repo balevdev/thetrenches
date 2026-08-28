@@ -1,0 +1,1441 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Why Apache Iceberg Took the World by Storm (The Trenches)</title>
+<meta name="description" content="A first principles deep dive into Apache Iceberg. One pointer, nine tenths of the table under the waterline, and why every engine on earth surrendered to the same format.">
+<meta name="author" content="Boyan Balev">
+<meta name="theme-color" content="#04121F">
+<link rel="canonical" href="https://www.hundredsunited.com/blog/story/iceberg-took-the-world-by-storm.html">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="The Trenches">
+<meta property="og:title" content="Why Apache Iceberg Took the World by Storm">
+<meta property="og:description" content="One mutable pointer, guarded by compare and swap, in front of an immutable tree. Everything else is a corollary.">
+<meta property="og:url" content="https://www.hundredsunited.com/blog/story/iceberg-took-the-world-by-storm.html">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Why Apache Iceberg Took the World by Storm">
+<meta name="twitter:description" content="One mutable pointer, guarded by compare and swap, in front of an immutable tree. Everything else is a corollary.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"TechArticle","headline":"Why Apache Iceberg Took the World by Storm","author":{"@type":"Person","name":"Boyan Balev","url":"https://github.com/balevdev"},"publisher":{"@type":"Organization","name":"The Trenches"},"datePublished":"2026-08-01","timeRequired":"PT22M","about":["Apache Iceberg","Data engineering","Lakehouse architecture"]}
+</script>
+<!-- theme applied before first paint so a light reader never sees a dark flash -->
+<script>
+(function(){try{var t=localStorage.getItem("trenches-theme");if(t==="light"||t==="dark"){document.documentElement.setAttribute("data-theme",t);}}catch(e){}})();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:ital,wght@0,400..900;1,400..900&family=Instrument+Sans:ital,wght@0,400..700;1,400..700&family=Instrument+Serif:ital@0;1&family=Geist+Mono:wght@400..600&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   THE TRENCHES / why iceberg took the world by storm
+   THE DESCENT — the page is a water column.
+   Surface light at the hero, abyss at the footer.
+   Panels are glass: ice floating in the water.
+   ============================================================ */
+:root{
+  --f-display:"Schibsted Grotesk",-apple-system,system-ui,sans-serif;
+  --f-body:"Instrument Sans",-apple-system,system-ui,sans-serif;
+  --f-serif:"Instrument Serif",Georgia,serif;
+  --f-mono:"Geist Mono",ui-monospace,SFMono-Regular,monospace;
+  --maxw:720px;
+  --wide:1120px;
+  --r:20px;
+  --r-s:12px;
+  --ease:cubic-bezier(.22,.61,.36,1);
+  --blur:blur(24px) saturate(160%);
+}
+html[data-theme="dark"]{
+  color-scheme:dark;
+  --surface-0:#0B3050;                    /* sunlit water, top of page */
+  --surface-1:#062038;
+  --ground:#041524;                       /* mid-column */
+  --abyss:#01060C;                        /* footer depth */
+  --ground-2:rgba(130,200,255,.055);
+  --panel:rgba(9,32,52,.44);
+  --panel-2:rgba(130,200,255,.07);
+  --glass-hi:rgba(220,242,255,.12);
+  --line:rgba(150,212,255,.18);
+  --line-soft:rgba(150,212,255,.10);
+  --text:#EAF5FF;
+  --muted:#A3C4DE;
+  --dim:#6488A4;
+  --accent:#7CD6FF;
+  --accent-deep:#2E9BD6;
+  --accent-wash:rgba(124,214,255,.09);
+  --heat:#FFC07A;
+  --heat-wash:rgba(255,192,122,.09);
+  --stall:#FF8D85;
+  --stall-wash:rgba(255,141,133,.08);
+  --water:rgba(46,155,214,.15);
+  --grid:rgba(124,214,255,.05);
+  --h1-a:#FFFFFF; --h1-b:#8FCBEF;
+  --shadow:0 30px 80px -32px rgba(0,0,0,.75),inset 0 1px 0 var(--glass-hi);
+  --bar-bg:rgba(6,26,44,.55);
+}
+html[data-theme="light"]{
+  color-scheme:light;
+  --surface-0:#F2F9FE;                    /* above the surface: air */
+  --surface-1:#E3F0FA;
+  --ground:#D5E7F4;
+  --abyss:#BCD8EC;                        /* even the shallows get deeper */
+  --ground-2:rgba(24,104,156,.05);
+  --panel:rgba(255,255,255,.6);
+  --panel-2:rgba(24,104,156,.06);
+  --glass-hi:rgba(255,255,255,.9);
+  --line:rgba(18,74,112,.18);
+  --line-soft:rgba(18,74,112,.10);
+  --text:#0A2436;
+  --muted:#42667F;
+  --dim:#7495AB;
+  --accent:#0879B8;
+  --accent-deep:#065E90;
+  --accent-wash:rgba(8,121,184,.08);
+  --heat:#A96612;
+  --heat-wash:rgba(169,102,18,.09);
+  --stall:#B23C33;
+  --stall-wash:rgba(178,60,51,.07);
+  --water:rgba(8,121,184,.09);
+  --grid:rgba(8,121,184,.05);
+  --h1-a:#0A2436; --h1-b:#0879B8;
+  --shadow:0 24px 60px -34px rgba(18,52,74,.28),inset 0 1px 0 var(--glass-hi);
+  --bar-bg:rgba(255,255,255,.55);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth;scroll-padding-top:96px}
+body{
+  margin:0;
+  color:var(--text);
+  font-family:var(--f-body);
+  font-size:18px;
+  line-height:1.72;
+  font-weight:400;
+  -webkit-font-smoothing:antialiased;
+  background-color:var(--abyss);
+  /* the descent: one gradient spanning the whole document */
+  background-image:
+    radial-gradient(1100px 560px at 50% -120px,rgba(124,214,255,.14),transparent 70%),
+    linear-gradient(180deg,var(--surface-0) 0%,var(--surface-1) 16%,var(--ground) 44%,var(--abyss) 100%);
+  transition:color .4s var(--ease);
+}
+::selection{background:var(--accent-deep);color:#fff}
+
+/* ---------- layout ---------- */
+.wrap{max-width:var(--maxw);margin:0 auto;padding:0 24px}
+.wrap-wide{max-width:var(--wide);margin:0 auto;padding:0 24px}
+.block{padding:96px 0}
+.rule{
+  height:1px;border:0;margin:0;
+  background:linear-gradient(90deg,transparent,var(--line) 30%,var(--line) 70%,transparent);
+  opacity:.7;
+}
+
+/* ---------- type ---------- */
+h1,h2,h3{font-family:var(--f-display);font-weight:640;letter-spacing:-.03em;line-height:1.06;margin:0}
+h2{font-size:clamp(30px,4.4vw,44px);margin-bottom:18px}
+h2 em,h3 em{font-family:var(--f-serif);font-style:italic;font-weight:400;letter-spacing:-.01em}
+h3{font-size:clamp(21px,2.6vw,27px);margin:48px 0 12px;font-weight:600;letter-spacing:-.02em}
+h4{font-family:var(--f-display);font-size:16px;font-weight:600;letter-spacing:-.005em;margin:28px 0 6px}
+p{margin:0 0 22px}
+a{color:var(--accent);text-decoration:none;border-bottom:1px solid var(--accent-wash);transition:border-color .2s}
+a:hover{border-bottom-color:var(--accent)}
+strong{font-weight:600;color:var(--text)}
+em{font-style:italic}
+.lede{font-size:clamp(20px,2.4vw,23px);line-height:1.58;font-weight:400;letter-spacing:-.008em}
+.eyebrow{
+  font-family:var(--f-mono);font-size:11px;font-weight:500;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 16px;display:block;
+}
+.eyebrow .n{color:var(--dim)}
+.small{font-size:15px;color:var(--muted);line-height:1.6}
+code{font-family:var(--f-mono);font-size:.84em;background:var(--panel-2);border:1px solid var(--line-soft);padding:2px 7px;border-radius:7px;color:var(--text)}
+.kicker{font-family:var(--f-mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- floe fragments (the serif voice) ---------- */
+.floe{
+  font-family:var(--f-serif);font-style:italic;font-weight:400;
+  font-size:clamp(24px,3.4vw,32px);line-height:1.4;
+  margin:60px 0;max-width:40ch;
+  padding:6px 0 6px 28px;position:relative;
+}
+.floe::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:2px;border-radius:2px;
+  background:linear-gradient(180deg,var(--accent),transparent);
+}
+.floe .sig{
+  display:block;margin-top:16px;font-family:var(--f-mono);font-style:normal;
+  font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--dim);
+}
+
+/* ---------- pull stat ---------- */
+.pull{
+  display:grid;grid-template-columns:auto 1fr;align-items:center;gap:0 28px;
+  margin:52px 0;padding:26px 28px;
+  border:1px solid var(--line-soft);border-radius:var(--r);
+  background:var(--panel-2);
+  box-shadow:inset 0 1px 0 var(--glass-hi);
+}
+.pull .fig{
+  font-family:var(--f-display);font-weight:700;font-size:clamp(46px,8vw,76px);line-height:.9;
+  letter-spacing:-.04em;font-variant-numeric:tabular-nums;
+  background:linear-gradient(180deg,var(--text),var(--accent));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.pull .say{font-size:16px;color:var(--muted);line-height:1.55;max-width:36ch}
+.pull .say b{color:var(--text);font-weight:600;display:block;font-size:13px;
+  font-family:var(--f-mono);letter-spacing:.14em;text-transform:uppercase;margin-bottom:6px}
+@media (max-width:520px){.pull{grid-template-columns:1fr;gap:10px}}
+
+/* ---------- chrome ---------- */
+.progress{position:fixed;top:0;left:0;height:2px;z-index:60;width:0;
+  background:linear-gradient(90deg,var(--accent-deep),var(--accent));
+  box-shadow:0 0 12px var(--accent-wash)}
+.topbar{
+  position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:50;
+  width:min(var(--wide),calc(100% - 28px));
+  display:flex;align-items:center;justify-content:space-between;gap:18px;
+  padding:10px 10px 10px 20px;
+  border-radius:999px;
+  border:1px solid var(--line-soft);
+  background:var(--bar-bg);
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  box-shadow:0 14px 44px -20px rgba(0,0,0,.55),inset 0 1px 0 var(--glass-hi);
+}
+.brand{font-family:var(--f-serif);font-style:italic;font-size:17px;color:var(--text);border:0}
+.brand:hover{border:0;color:var(--accent)}
+.brand b{font-style:normal;font-weight:400}
+.topmeta{display:flex;align-items:center;gap:16px}
+.toggle{
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+  background:var(--panel-2);border:1px solid var(--line-soft);color:var(--muted);
+  padding:8px 14px;border-radius:999px;cursor:pointer;transition:all .2s;
+}
+.toggle:hover{border-color:var(--accent);color:var(--accent)}
+:focus-visible{outline:2px solid var(--accent);outline-offset:3px;border-radius:4px}
+.skip{position:absolute;left:-9999px;top:0}
+.skip:focus{left:16px;top:12px;z-index:70;background:var(--panel);border:1px solid var(--accent);
+  padding:10px 14px;border-radius:8px;font-family:var(--f-mono);font-size:12px}
+
+/* ---------- depth gauge (scrollspy rail) ---------- */
+.rail{
+  position:fixed;right:24px;top:50%;transform:translateY(-50%);z-index:40;
+  display:none;flex-direction:column;gap:2px;align-items:flex-end;
+}
+.gauge-read{
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--dim);margin-bottom:12px;text-align:right;
+}
+.gauge-read b{display:block;font-size:15px;font-weight:500;color:var(--accent);
+  letter-spacing:.04em;font-variant-numeric:tabular-nums;text-transform:none}
+.rail a{
+  display:flex;align-items:center;justify-content:flex-end;gap:10px;
+  border:0;padding:5px 0;color:var(--dim);
+  font-family:var(--f-mono);font-size:10px;letter-spacing:.14em;text-transform:uppercase;
+}
+.rail a .t{opacity:0;transform:translateX(6px);transition:all .25s var(--ease);white-space:nowrap}
+.rail a .d{width:20px;height:1px;background:var(--line);transition:all .25s var(--ease);flex:none}
+.rail a:hover .t{opacity:1;transform:none}
+.rail a:hover .d{background:var(--muted)}
+.rail a.on{color:var(--accent)}
+.rail a.on .d{width:32px;background:var(--accent);box-shadow:0 0 8px var(--accent-wash)}
+.rail a.on .t{opacity:1;transform:none}
+@media (min-width:1360px){.rail{display:flex}}
+
+/* ---------- hero: the waterline ---------- */
+.hero{position:relative;display:flex;flex-direction:column;justify-content:center;padding:168px 0 48px;overflow:hidden}
+.hero-inner{position:relative;z-index:3}
+.hero h1{
+  font-size:clamp(42px,7.2vw,88px);
+  font-weight:700;
+  max-width:14ch;
+  text-wrap:balance;
+  line-height:.98;letter-spacing:-.045em;margin:0 0 10px;
+  background:linear-gradient(180deg,var(--h1-a) 20%,var(--h1-b));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero h1 em{
+  font-family:var(--f-serif);font-style:italic;font-weight:400;letter-spacing:-.015em;
+  background:linear-gradient(120deg,var(--accent),var(--h1-b));
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;
+}
+.hero-sub{max-width:56ch;color:var(--muted);font-size:clamp(17px,2vw,20px);line-height:1.6;margin:24px 0 0}
+.hero-meta{
+  display:flex;flex-wrap:wrap;gap:10px 26px;margin-top:36px;
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);
+}
+.hero-meta span b{color:var(--muted);font-weight:500}
+#snow{position:absolute;inset:0;z-index:1;pointer-events:none}
+.hero-grid{
+  position:absolute;inset:0;z-index:0;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:64px 64px;
+  mask-image:radial-gradient(ellipse 90% 70% at 50% 35%,#000 30%,transparent 100%);
+  -webkit-mask-image:radial-gradient(ellipse 90% 70% at 50% 35%,#000 30%,transparent 100%);
+  pointer-events:none;
+}
+
+/* the berg diagram in the hero */
+.berg{position:relative;z-index:2;margin-top:52px}
+.berg svg{display:block;width:100%;height:auto}
+.berg .lbl{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;fill:var(--dim)}
+.berg .lbl-strong{fill:var(--text)}
+.berg .lbl-accent{fill:var(--accent)}
+.berg .berg-top{fill:var(--glass-hi);stroke:var(--accent);stroke-width:1.4}
+.berg .berg-bottom{fill:var(--panel-2);stroke:var(--accent-deep);stroke-width:1;opacity:.95}
+.berg .waterline{stroke:var(--accent);stroke-width:1;stroke-dasharray:5 7;opacity:.7}
+.berg .water-fill{fill:var(--water)}
+.berg .tick{stroke:var(--line);stroke-width:1}
+.berg .lead{stroke:var(--line);stroke-width:1;opacity:.8}
+.berg .dot{fill:var(--accent)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+.berg .bobber{animation:bob 7s var(--ease) infinite;transform-origin:center}
+@media (prefers-reduced-motion:reduce){.berg .bobber{animation:none}}
+.berg-legend{display:none}
+@media (max-width:700px){
+  .berg svg .lbl{display:none}
+  .berg-legend{display:grid;gap:14px;list-style:none;margin:24px 0 0;padding:0}
+  .berg-legend li{font-size:14.5px;color:var(--muted);line-height:1.5;border-left:2px solid var(--accent-deep);padding-left:14px}
+  .berg-legend b{color:var(--text);font-weight:600;display:block;font-size:12px;font-family:var(--f-mono);
+    letter-spacing:.12em;text-transform:uppercase;margin-bottom:3px}
+}
+
+/* ---------- contents ---------- */
+.toc{border:1px solid var(--line-soft);border-radius:var(--r);background:var(--panel);overflow:hidden;
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow)}
+.toc-head{padding:14px 20px;border-bottom:1px solid var(--line-soft);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap}
+.toc-list{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft)}
+.toc-list a{
+  background:color-mix(in srgb,var(--panel) 60%,transparent);
+  border:0;padding:16px 20px;display:grid;
+  grid-template-columns:auto 1fr;gap:14px;align-items:baseline;color:var(--text);
+  transition:background .2s;
+}
+.toc-list a:hover{background:var(--accent-wash)}
+.toc-list .num{font-family:var(--f-mono);font-size:11px;color:var(--dim);letter-spacing:.1em}
+.toc-list .ttl{font-family:var(--f-display);font-weight:600;letter-spacing:-.015em;font-size:17px;line-height:1.3}
+.toc-list .sub{grid-column:2;font-size:13.5px;color:var(--muted);line-height:1.45;margin-top:3px}
+@media (max-width:640px){.toc-list{grid-template-columns:1fr}}
+
+/* ---------- reveal on scroll ---------- */
+.rv{opacity:0;transform:translateY(18px);transition:opacity .7s var(--ease),transform .7s var(--ease)}
+.rv.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.rv{opacity:1;transform:none;transition:none}}
+
+/* ---------- glass panels ---------- */
+figure{margin:38px 0}
+.panel{
+  border:1px solid var(--line-soft);border-radius:var(--r);
+  background:var(--panel);overflow:hidden;
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);
+  box-shadow:var(--shadow);
+}
+.panel-head{
+  padding:14px 20px;border-bottom:1px solid var(--line-soft);
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--muted);
+  display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.panel-body{padding:24px 20px}
+figcaption{font-size:14px;color:var(--dim);line-height:1.55;margin-top:14px}
+.bleed{max-width:var(--wide);margin-left:auto;margin-right:auto;padding:0 24px}
+
+/* ---------- THE TRICK: signature interactive ---------- */
+.trick{display:grid;grid-template-columns:1fr 260px;gap:0}
+@media (max-width:820px){.trick{grid-template-columns:1fr}}
+.trick-stack{padding:24px 20px;position:relative}
+.trick-side{border-left:1px solid var(--line-soft);padding:24px 20px;background:var(--panel-2)}
+@media (max-width:820px){.trick-side{border-left:0;border-top:1px solid var(--line-soft)}}
+.vers{display:grid;gap:9px;position:relative}
+.ver{
+  display:grid;grid-template-columns:104px 1fr;align-items:center;gap:14px;
+  border:1px solid var(--line-soft);border-radius:var(--r-s);background:var(--ground-2);
+  padding:12px 14px;font-family:var(--f-mono);font-size:12px;color:var(--dim);
+  transition:opacity .45s var(--ease),border-color .45s var(--ease),background .45s var(--ease),transform .45s var(--ease);
+}
+.ver .vid{color:var(--muted);letter-spacing:.06em}
+.ver .files{display:flex;gap:6px;flex-wrap:wrap}
+.ver .f{border:1px solid var(--line-soft);border-radius:6px;padding:4px 8px;font-size:10.5px;color:var(--dim)}
+.ver.staged{opacity:0;transform:translateY(-8px);border-style:dashed}
+.ver.staged.shown{opacity:.55;transform:none}
+.ver.current{border-color:var(--accent);background:var(--accent-wash);box-shadow:0 0 24px -8px var(--accent-wash)}
+.ver.current .vid{color:var(--accent)}
+.ver.current .f{border-color:var(--accent-deep);color:var(--accent)}
+.ver.pinned{border-color:var(--heat)}
+.ver.pinned .vid{color:var(--heat)}
+.ptr{
+  position:absolute;left:-14px;width:8px;height:8px;border-radius:50%;background:var(--accent);
+  box-shadow:0 0 0 4px var(--accent-wash),0 0 14px var(--accent);
+  transition:top .55s var(--ease);top:0;
+}
+.trick-side .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim);margin-bottom:6px}
+.trick-side .v{font-family:var(--f-mono);font-size:12.5px;color:var(--accent);line-height:1.6;word-break:break-word}
+.trick-side .grp{margin-bottom:22px}
+.trick-side .v.warm{color:var(--heat)}
+.trick-note{font-size:13.5px;color:var(--muted);line-height:1.55;margin:0}
+.btnrow{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.btn{
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  border:1px solid var(--line);background:var(--panel-2);color:var(--muted);
+  padding:9px 14px;border-radius:999px;cursor:pointer;transition:all .18s;
+}
+.btn:hover:not(:disabled){color:var(--accent);border-color:var(--accent)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.primary{border-color:var(--accent-deep);color:var(--accent);background:var(--accent-wash)}
+
+/* ---------- anatomy tree ---------- */
+.tree{display:grid;gap:10px;font-family:var(--f-mono);font-size:13px}
+.node{
+  border:1px solid var(--line-soft);border-radius:var(--r-s);background:var(--ground-2);
+  padding:13px 16px;display:grid;grid-template-columns:1fr auto;gap:6px 14px;align-items:baseline;
+  transition:border-color .2s,background .2s;cursor:default;
+}
+.node:hover{border-color:var(--accent-deep);background:var(--accent-wash)}
+.node .nm{color:var(--text);font-weight:500}
+.node .role{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);text-align:right}
+.node .why{grid-column:1/-1;font-family:var(--f-body);font-size:14.5px;color:var(--muted);line-height:1.55}
+.node.lv1{margin-left:0}
+.node.lv2{margin-left:22px}
+.node.lv3{margin-left:44px}
+.node.lv4{margin-left:66px}
+.node.hot{border-color:var(--accent-deep);box-shadow:0 0 28px -10px var(--accent-wash)}
+.node.hot .nm{color:var(--accent)}
+@media (max-width:560px){.node.lv2{margin-left:10px}.node.lv3{margin-left:20px}.node.lv4{margin-left:30px}.node .role{display:none}}
+
+/* ---------- write flow stepper ---------- */
+.steps{display:grid;gap:0}
+.stepbar{display:flex;gap:8px;padding:16px 18px;border-bottom:1px solid var(--line-soft);flex-wrap:wrap}
+.stepbtn{
+  font-family:var(--f-mono);font-size:11px;letter-spacing:.08em;
+  border:1px solid var(--line);background:transparent;color:var(--muted);
+  padding:8px 14px;border-radius:999px;cursor:pointer;transition:all .18s;
+}
+.stepbtn:hover{color:var(--text);border-color:var(--muted)}
+.stepbtn[aria-selected="true"]{border-color:var(--accent);color:var(--accent);background:var(--accent-wash)}
+.stepbtn.branch{border-style:dashed}
+.stepbtn[aria-selected="true"].branch{border-color:var(--heat);color:var(--heat);background:var(--heat-wash)}
+.stepview{padding:22px 18px;display:grid;gap:18px}
+.stepview .desc{font-size:16px;color:var(--muted);line-height:1.65;margin:0}
+.filelane{display:flex;gap:8px;flex-wrap:wrap;align-items:center;font-family:var(--f-mono);font-size:11.5px}
+.fchip{
+  border:1px solid var(--line);border-radius:8px;padding:7px 10px;color:var(--muted);
+  background:var(--ground-2);transition:all .3s var(--ease);letter-spacing:.02em;
+}
+.fchip.new{border-color:var(--accent-deep);color:var(--accent);background:var(--accent-wash)}
+.fchip.ghost{opacity:.34}
+.fchip.gone{opacity:.22;text-decoration:line-through}
+.swapline{
+  font-family:var(--f-mono);font-size:12.5px;padding:11px 14px;border-radius:10px;
+  border:1px dashed var(--line);color:var(--dim);background:var(--ground-2);
+}
+.swapline.live{border-color:var(--accent);color:var(--accent);border-style:solid;background:var(--accent-wash)}
+.swapline.warn{border-color:var(--heat);color:var(--heat);border-style:solid;background:var(--heat-wash)}
+.stepfoot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+  border-top:1px solid var(--line-soft);padding:13px 18px}
+.stepcount{font-family:var(--f-mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+
+/* ---------- time travel ---------- */
+.tt-controls{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin-bottom:6px}
+input[type=range]{flex:1;min-width:180px;accent-color:var(--accent);height:28px}
+.tt-tag{font-family:var(--f-mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.tt-tag b{color:var(--accent);font-weight:500}
+.tt-sql{
+  font-family:var(--f-mono);font-size:12.5px;line-height:1.7;background:var(--ground-2);
+  border:1px solid var(--line-soft);border-radius:var(--r-s);padding:14px 16px;overflow-x:auto;white-space:pre;
+  color:var(--muted);margin-top:14px;
+}
+.tt-sql .kw{color:var(--accent)}
+.tt-state{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:var(--line-soft);border-top:1px solid var(--line-soft);margin-top:18px;border-radius:var(--r-s);overflow:hidden;border:1px solid var(--line-soft)}
+.tt-cell{background:var(--panel-2);padding:13px 16px}
+.tt-cell .k{font-family:var(--f-mono);font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:var(--dim)}
+.tt-cell .v{font-family:var(--f-mono);font-size:19px;font-weight:500;font-variant-numeric:tabular-nums;margin-top:4px;transition:color .3s}
+.tt-cell .v.flash{color:var(--accent)}
+@media (max-width:560px){.tt-state{grid-template-columns:1fr 1fr}.tt-cell:last-child{grid-column:1/-1}}
+
+/* ---------- versus ---------- */
+.versus{display:grid;grid-template-columns:1fr 1fr;gap:1px;background:var(--line-soft)}
+.vcol{background:color-mix(in srgb,var(--panel) 60%,transparent);padding:22px 20px}
+.vcol h4{margin-top:0}
+.vcol ul{margin:0;padding-left:18px;color:var(--muted);font-size:15.5px;line-height:1.7}
+.vcol li{margin-bottom:8px}
+.vcol li::marker{color:var(--dim)}
+.vcol.win li::marker{color:var(--accent)}
+.vcol.lose li::marker{color:var(--stall)}
+.vcol.lose h4{color:var(--stall)}
+.vcol.win h4{color:var(--accent)}
+@media (max-width:640px){.versus{grid-template-columns:1fr}}
+
+/* ---------- timeline ---------- */
+.tl{margin:34px 0;border-left:1px solid var(--line);padding-left:26px;display:grid;gap:26px}
+.tl-item{position:relative}
+.tl-item::before{
+  content:"";position:absolute;left:-31px;top:7px;width:9px;height:9px;border-radius:50%;
+  background:var(--ground);border:2px solid var(--accent-deep);
+}
+.tl-item.big::before{background:var(--accent);border-color:var(--accent);box-shadow:0 0 0 5px var(--accent-wash),0 0 18px var(--accent)}
+.tl-yr{font-family:var(--f-mono);font-size:11px;letter-spacing:.16em;color:var(--accent)}
+.tl-item p{margin:4px 0 0;font-size:16px;color:var(--muted);line-height:1.62}
+.tl-item .ti{font-family:var(--f-display);font-weight:600;letter-spacing:-.015em;font-size:19px;margin-top:2px}
+
+/* ---------- passage plan (adoption sequence) ---------- */
+.plan{counter-reset:leg;display:grid;gap:1px;background:var(--line-soft);border:1px solid var(--line-soft);border-radius:var(--r);overflow:hidden;margin:32px 0;
+  backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:var(--shadow)}
+.leg{background:var(--panel);padding:20px 22px;display:grid;grid-template-columns:auto 1fr;gap:4px 18px}
+.leg::before{
+  counter-increment:leg;content:counter(leg,decimal-leading-zero);
+  font-family:var(--f-mono);font-size:12px;color:var(--accent);letter-spacing:.1em;
+  grid-row:1/span 2;padding-top:4px;
+}
+.leg h4{margin:0;font-size:16.5px;font-family:var(--f-display);font-weight:600;letter-spacing:-.015em}
+.leg p{margin:0;font-size:15.5px;color:var(--muted);line-height:1.6}
+.leg.last{background:var(--accent-wash)}
+
+/* ---------- fair table ---------- */
+.fair{width:100%;border-collapse:collapse;font-size:15.5px;margin:10px 0 0}
+.fair th{font-family:var(--f-mono);font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);font-weight:500}
+.fair td{padding:13px 12px;border-bottom:1px solid var(--line-soft);vertical-align:top;color:var(--muted);line-height:1.55}
+.fair th[scope="row"]{color:var(--text);font-weight:600;font-size:14.5px;white-space:nowrap;
+  font-family:var(--f-body);letter-spacing:0;text-transform:none;border-bottom:1px solid var(--line-soft);vertical-align:top}
+.fair tbody tr:last-child td,.fair tbody tr:last-child th{border-bottom:0}
+.pro{color:var(--accent)}
+.con{color:var(--heat)}
+.tbl-scroll{overflow-x:auto}
+@media (max-width:640px){
+  .fair,.fair tbody,.fair tr,.fair td,.fair th[scope="row"]{display:block;width:100%}
+  .fair thead{display:none}
+  .fair tbody tr{border:1px solid var(--line-soft);border-radius:var(--r-s);margin-bottom:12px;padding:6px 4px;background:var(--panel-2)}
+  .fair th[scope="row"]{white-space:normal;border-bottom:1px solid var(--line-soft);font-size:16px}
+  .fair td{border-bottom:0;padding-top:6px}
+  .fair td::before{content:attr(data-l);display:block;font-family:var(--f-mono);font-size:10px;
+    letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin-bottom:3px}
+  .fair td.gain::before{color:var(--accent)}
+  .fair td.cost::before{color:var(--heat)}
+}
+
+/* ---------- danger zone ---------- */
+.danger{border:1px solid color-mix(in srgb,var(--heat) 45%,transparent);background:var(--heat-wash)}
+.danger .panel-head{border-bottom-color:color-mix(in srgb,var(--heat) 30%,transparent);color:var(--heat)}
+.danger ul{margin:0;padding-left:20px;color:var(--muted);font-size:16px;line-height:1.7}
+.danger li{margin-bottom:10px}
+.danger li::marker{color:var(--heat)}
+.danger li b{color:var(--text)}
+
+/* ---------- stack strip ---------- */
+.strip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--f-mono);font-size:12.5px;margin:14px 0 4px}
+.strip .s{border:1px solid var(--line);border-radius:999px;padding:9px 14px;background:var(--ground-2);color:var(--text)}
+.strip .s.ice{border-color:var(--accent-deep);color:var(--accent);background:var(--accent-wash)}
+.strip .a{color:var(--dim)}
+
+/* ---------- footer ---------- */
+.foot{padding:70px 0 90px;color:var(--muted)}
+.foot .links{display:flex;gap:22px;flex-wrap:wrap;font-family:var(--f-mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;margin-top:18px}
+.byline{display:flex;gap:16px;align-items:baseline;flex-wrap:wrap;margin-top:8px}
+.byline .who{font-family:var(--f-serif);font-style:italic;font-size:22px;color:var(--text)}
+
+@media (max-width:560px){
+  body{font-size:17px}
+  .block{padding:64px 0}
+  .floe{margin:44px 0}
+  .hero{padding-top:140px}
+}
+
+/* no backdrop-filter fallback: solid panels */
+@supports not (backdrop-filter:blur(1px)){
+  .panel,.toc,.plan{background:color-mix(in srgb,var(--ground) 88%,var(--accent) 4%)}
+  .topbar{background:var(--ground)}
+}
+
+/* ---------- print ---------- */
+@media print{
+  html[data-theme]{--ground:#fff;--panel:#fff;--panel-2:#f4f4f4;--ground-2:#fafafa;
+    --text:#111;--muted:#333;--dim:#666;--line:#bbb;--line-soft:#ddd;--accent:#0B5E7E;--heat:#8A5510;--shadow:none}
+  body{background:#fff !important}
+  .hero h1,.pull .fig{background:none;-webkit-text-fill-color:initial;color:#111}
+  .topbar,.rail,.progress,#snow,.hero-grid,.toggle,.btnrow,.stepbar,.stepfoot,.tt-controls,.skip{display:none !important}
+  .rv{opacity:1 !important;transform:none !important}
+  .block{padding:26px 0;break-inside:avoid}
+  .panel,.toc,.plan{box-shadow:none;break-inside:avoid;backdrop-filter:none;-webkit-backdrop-filter:none}
+  .hero{padding-top:0;min-height:0}
+  a{color:inherit;border:0}
+  .ver.staged{opacity:1 !important;transform:none !important}
+}
+</style>
+</head>
+<body>
+<a class="skip" href="#prologue">Skip to the article</a>
+<div class="progress" id="progress"></div>
+<header class="topbar">
+  <a class="brand" href="/blog"><b>The Trenches</b> <span style="color:var(--dim)">/ deep dives</span></a>
+  <div class="topmeta">
+    <span class="kicker">22 min</span>
+    <button class="toggle" id="themeBtn" aria-label="Switch colour theme">Light</button>
+  </div>
+</header>
+
+<nav class="rail" id="rail" aria-label="Section navigation">
+  <div class="gauge-read" aria-hidden="true">depth<b id="depthVal">waterline</b></div>
+  <a href="#prologue"><span class="t">Prologue</span><span class="d"></span></a>
+  <a href="#first-principles"><span class="t">First principles</span><span class="d"></span></a>
+  <a href="#anatomy"><span class="t">Anatomy</span><span class="d"></span></a>
+  <a href="#consequences"><span class="t">Corollaries</span><span class="d"></span></a>
+  <a href="#why-it-won"><span class="t">The storm</span><span class="d"></span></a>
+  <a href="#autopsy"><span class="t">Autopsy</span><span class="d"></span></a>
+  <a href="#use-cases"><span class="t">Field work</span><span class="d"></span></a>
+  <a href="#cost"><span class="t">Where it cracks</span><span class="d"></span></a>
+  <a href="#adoption"><span class="t">Passage plan</span><span class="d"></span></a>
+  <a href="#map"><span class="t">The ledger</span><span class="d"></span></a>
+  <a href="#epilogue"><span class="t">Epilogue</span><span class="d"></span></a>
+</nav>
+
+<!-- ================= HERO ================= -->
+<section class="hero">
+  <div class="hero-grid" aria-hidden="true"></div>
+  <canvas id="snow" aria-hidden="true"></canvas>
+  <div class="wrap hero-inner">
+    <span class="eyebrow">Architecture Trenches <span class="n">/ 2026</span></span>
+    <h1>Why <em>Iceberg</em> Took the World by Storm</h1>
+    <p class="hero-sub">Every query engine on earth just agreed on something, which never happens. This is a first principles walk through Apache Iceberg: the one trick underneath it, what that trick buys you, where it will hurt you, and why the entire industry surrendered to a table format with no company behind it.</p>
+    <div class="hero-meta">
+      <span><b>Boyan Balev</b></span>
+      <span>22 min read</span>
+      <span>No hype, pressure tested</span>
+    </div>
+  </div>
+  <div class="wrap-wide berg">
+    <svg viewBox="0 0 1080 386" preserveAspectRatio="xMidYMid meet" role="img" aria-label="An iceberg diagram. Above the waterline, one tenth: the catalog pointer, the only mutable thing in the system. Below the waterline, nine tenths: metadata, manifests and snapshots, sitting on immutable Parquet files that are never edited in place.">
+      <rect x="0" y="150" width="1080" height="236" class="water-fill"></rect>
+      <line x1="0" y1="150" x2="1080" y2="150" class="waterline"></line>
+
+      <!-- proportion bracket: the thesis, stated as geometry -->
+      <g aria-hidden="true">
+        <path d="M64 62 L52 62 L52 144 L64 144" fill="none" class="tick"></path>
+        <path d="M64 158 L52 158 L52 336 L64 336" fill="none" class="tick"></path>
+      </g>
+      <text x="76" y="98" class="lbl lbl-accent">one tenth</text>
+      <text x="76" y="118" class="lbl">what you see</text>
+      <text x="76" y="240" class="lbl lbl-accent">nine tenths</text>
+      <text x="76" y="260" class="lbl">what is actually there</text>
+
+      <g class="bobber">
+        <polygon class="berg-top" points="540,58 588,116 620,150 460,150 492,110"></polygon>
+        <polygon class="berg-bottom" points="460,150 620,150 700,204 640,268 540,332 430,262 388,198"></polygon>
+        <line x1="540" y1="150" x2="540" y2="330" class="tick" stroke-dasharray="2 6"></line>
+      </g>
+
+      <!-- leaders -->
+      <g aria-hidden="true">
+        <path d="M654 92 L612 92 L596 128" fill="none" class="lead"></path>
+        <circle cx="596" cy="128" r="3" class="dot"></circle>
+        <path d="M734 222 L706 222 L688 212" fill="none" class="lead"></path>
+        <circle cx="688" cy="212" r="3" class="dot"></circle>
+        <path d="M392 300 L420 300 L444 278" fill="none" class="lead"></path>
+        <circle cx="444" cy="278" r="3" class="dot"></circle>
+      </g>
+      <text x="662" y="88" class="lbl lbl-strong">the catalog pointer</text>
+      <text x="662" y="108" class="lbl">one atomic reference. the whole table.</text>
+      <text x="742" y="218" class="lbl lbl-strong">metadata, manifests, snapshots</text>
+      <text x="742" y="238" class="lbl">every version that ever existed</text>
+      <text x="132" y="296" class="lbl lbl-strong">parquet on object storage</text>
+      <text x="132" y="316" class="lbl">immutable. never edited in place.</text>
+    </svg>
+    <ul class="berg-legend" aria-hidden="true">
+      <li><b>Above the waterline, one tenth.</b> The catalog pointer: one atomic reference that defines the whole table.</li>
+      <li><b>Below it, nine tenths.</b> Metadata, manifests and snapshots: every version that ever existed.</li>
+      <li><b>At the bottom, the mass.</b> Parquet on object storage, immutable, never edited in place.</li>
+    </ul>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= CONTENTS ================= -->
+<section class="block" id="contents" style="padding-top:64px;padding-bottom:64px">
+  <div class="bleed rv">
+    <nav class="toc" aria-label="Table of contents">
+      <div class="toc-head"><span>the argument, in order</span><span>eleven parts</span></div>
+      <div class="toc-list">
+        <a href="#prologue"><span class="num">01</span><span class="ttl">The Lie We All Agreed to Tell</span><span class="sub">Why a folder of files was never a table.</span></a>
+        <a href="#first-principles"><span class="num">02</span><span class="ttl">The Constraints of the Terrain</span><span class="sub">Object storage gives you three primitives. Build from those.</span></a>
+        <a href="#anatomy"><span class="num">03</span><span class="ttl">Below the Waterline</span><span class="sub">The metadata tree, and a commit frame by frame.</span></a>
+        <a href="#consequences"><span class="num">04</span><span class="ttl">What the Pointer Buys You</span><span class="sub">Time travel and schema evolution as free corollaries.</span></a>
+        <a href="#why-it-won"><span class="num">05</span><span class="ttl">Why This One Won</span><span class="sub">Three reasons, and only one of them is technical.</span></a>
+        <a href="#autopsy"><span class="num">06</span><span class="ttl">What It Replaced</span><span class="sub">Hive tables, line by line, and why they died.</span></a>
+        <a href="#use-cases"><span class="num">07</span><span class="ttl">Where It Earns Its Keep</span><span class="sub">Five patterns from real deployments.</span></a>
+        <a href="#cost"><span class="num">08</span><span class="ttl">Where the Ice Cracks</span><span class="sub">The costs most articles skip.</span></a>
+        <a href="#adoption"><span class="num">09</span><span class="ttl">Passage Plan</span><span class="sub">Adopting it in the order that avoids regret.</span></a>
+        <a href="#map"><span class="num">10</span><span class="ttl">The Ledger, Balanced</span><span class="sub">Everything above in one honest table.</span></a>
+        <a href="#epilogue"><span class="num">11</span><span class="ttl">Choosing Wisely</span><span class="sub">The pattern worth carrying out of here.</span></a>
+      </div>
+    </nav>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 01 PROLOGUE ================= -->
+<section class="block" id="prologue">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">01</span> Prologue</span>
+    <h2>The Lie We All Agreed to Tell</h2>
+    <p class="lede">It is 03:10. The nightly load died two thirds of the way through, and nobody in the room can answer the only question that matters: what is in the table right now?</p>
+    <p>You cannot roll it back, because there is no transaction to roll back. You cannot re-run it, because you do not know which files landed. You cannot even read it safely, because the morning dashboards are already querying whatever half written mixture is sitting in that bucket. So you do what everyone did: you list a few hundred thousand objects, sort by timestamp, guess at a cutoff, delete what looks new, and re-run the job while quietly hoping nobody pulled a report in the last four hours.</p>
+    <p>That night, in some version of it, happened to everyone who ran a data lake at scale. It happened because for fifteen years the data industry ran on a polite fiction: that a folder full of files is a table.</p>
+    <p>It is not. A table is a contract. When you query it, you see one consistent version of the data. When two jobs write to it, one wins cleanly and nothing tears in half. When you add a column, yesterday's data does not become unreadable. Warehouses spent decades earning that contract, and then we walked away from it, because object storage was cheap and infinite and the warehouse was neither.</p>
+    <p>So we put Parquet files in S3 buckets, arranged them into directory hierarchies, called the arrangement Hive, and told ourselves the contract still held. It did not. Everyone who ran a data lake at scale has the same scars. A pipeline dies halfway through a write and leaves the table torn, half new files and half old ones, with nothing to say which is which. A backfill and a scheduled job write into the same partition and quietly shred each other. Someone renames a column and three dashboards silently start reading nulls. And under all of it, every single query begins with the slowest operation in the cloud: listing files, sometimes millions of them, just to find out what the table even contains.</p>
+    <p>None of these are bugs. They are the physics of pretending a filesystem is a database. Iceberg took the world by storm because it stopped pretending. It went back to first principles and asked the only question that matters: what would it take to give warehouse guarantees to files you can never edit in place?</p>
+    <p>The answer turned out to be one trick. Nearly everything Iceberg does, ACID transactions, time travel, schema evolution, partition evolution, all of it falls out of a single idea. Let me show you the idea first, and then we will watch the rest of the format fall out of it like corollaries from a theorem.</p>
+
+    <div class="floe">
+      Nine tenths of an iceberg sits below the waterline. Nine tenths of this format is metadata. The visible tip is a single pointer.
+      <span class="sig">field note, written from the trenches</span>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 02 FIRST PRINCIPLES ================= -->
+<section class="block" id="first-principles">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">02</span> First Principles</span>
+    <h2>The Constraints of the Terrain</h2>
+    <p>Object storage gives you three primitives and takes away everything else. You can write a whole object. You can read a whole object, or a byte range of one. You can list objects, slowly. That is it. There is no append. There is no rename that is actually atomic across systems. There is no way to edit byte 4,096 of an existing file. Every object you write is, for all practical purposes, immutable.</p>
+    <p>Databases were built on the opposite assumption. A B-tree updates pages in place. A write ahead log appends. Postgres would not survive ten minutes on primitives like these. So the naive conclusion, the one the industry lived with for a decade, is that transactional guarantees on object storage are simply not available, and you compensate with orchestration, conventions, and hope.</p>
+    <p>But look closer at what a transaction actually requires. Atomicity does not require mutating data in place. It requires exactly one thing: <strong>a single moment where the new version becomes visible, entirely or not at all</strong>. Everything before that moment can be as messy, as parallel, and as slow as it likes, provided nobody can observe it.</p>
+    <p>Immutability, the constraint we thought was the problem, turns out to be the gift. If files are never edited, then a file that exists is always internally consistent. Readers never see a half written page, because there is no such thing. The entire problem of transactions collapses into a much smaller one: not "how do I safely change data" but "how do I safely change <em>which data counts</em>."</p>
+    <p>That is a pointer problem. And pointer problems have a famous, boring, forty year old solution: compare and swap. Iceberg's core design move is to notice this, and to have the discipline to build nothing else at the bottom of the stack.</p>
+
+    <div class="pull">
+      <div class="fig">1</div>
+      <div class="say"><b>mutable thing in the system</b>Everything else, every manifest, every snapshot, every byte of Parquet, is written once and never touched again.</div>
+    </div>
+
+    <h3>The One Trick</h3>
+    <p>Here is the whole format in four sentences. A table is defined by a single metadata file, which describes everything: schema, partitioning, and the full list of data files, indirectly, through a tree. Writers never touch existing files; they write new data files and a new metadata tree beside the old one. To commit, a writer asks the catalog to swap the table's pointer from the old metadata file to the new one, atomically, only if nobody else swapped it first. Readers grab the pointer once and see a perfectly frozen version of the table for as long as their query runs.</p>
+    <p>Reading that is one thing. Watching it is another. Commit a few times below and keep your eye on two things: the pointer never touches history, and the reader that arrived at v411 stays at v411 no matter how much lands on top of it.</p>
+  </div>
+
+  <div class="bleed rv">
+    <figure>
+      <div class="panel">
+        <div class="panel-head"><span>the one trick &middot; table: orders</span><span>append only history, one guarded pointer</span></div>
+        <div class="trick">
+          <div class="trick-stack">
+            <div class="vers" id="vers">
+              <div class="ptr" id="ptr" aria-hidden="true"></div>
+              <div class="ver" data-v="409"><span class="vid">v409.json</span><span class="files"><span class="f">p_001</span><span class="f">p_002</span></span></div>
+              <div class="ver" data-v="410"><span class="vid">v410.json</span><span class="files"><span class="f">p_001</span><span class="f">p_002</span><span class="f">p_003</span></span></div>
+              <div class="ver current" data-v="411"><span class="vid">v411.json</span><span class="files"><span class="f">p_001</span><span class="f">p_002</span><span class="f">p_003</span><span class="f">p_004</span></span></div>
+              <div class="ver staged" data-v="412"><span class="vid">v412.json</span><span class="files"><span class="f">p_001</span><span class="f">p_002</span><span class="f">p_003</span><span class="f">p_004</span><span class="f">p_005</span></span></div>
+              <div class="ver staged" data-v="413"><span class="vid">v413.json</span><span class="files"><span class="f">p_001</span><span class="f">p_002</span><span class="f">p_004</span><span class="f">p_005</span><span class="f">p_006</span></span></div>
+              <div class="ver staged" data-v="414"><span class="vid">v414.json</span><span class="files"><span class="f">c_101</span><span class="f">c_102</span><span class="f">p_006</span></span></div>
+            </div>
+          </div>
+          <div class="trick-side">
+            <div class="grp">
+              <div class="k">catalog says</div>
+              <div class="v" id="trickPtr">orders &rarr; v411.json</div>
+            </div>
+            <div class="grp">
+              <div class="k">reader that started at v411</div>
+              <div class="v warm" id="trickRdr">still reading v411.json</div>
+            </div>
+            <p class="trick-note" id="trickNote">Three commits of history, all still on disk, all still queryable. The accent marker is the pointer: the only value in the entire system that ever changes.</p>
+            <div class="btnrow">
+              <button class="btn primary" id="commitBtn">Commit</button>
+              <button class="btn" id="resetBtn">Reset</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Nothing above the pointer is ever rewritten. A commit adds a version and moves one reference; a reader that resolved the pointer earlier keeps its own frozen view of the table until it finishes. Atomicity and snapshot isolation are the same mechanism seen from two sides.</figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap rv">
+    <p>That is it. That is the trick that ate the industry. One mutable pointer, guarded by compare and swap, in front of an immutable tree. Everything you have heard about Iceberg, every feature on every conference slide, is a consequence of this structure. The rest of this article is just pulling on the thread.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 03 ANATOMY ================= -->
+<section class="block" id="anatomy">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">03</span> Anatomy</span>
+    <h2>Below the Waterline</h2>
+    <p>The metadata tree has four levels. Each level exists to answer one question fast, without listing a single directory. Read them top down; each one earns its place.</p>
+  </div>
+  <div class="bleed rv">
+    <figure>
+      <div class="panel">
+        <div class="panel-head"><span>the metadata tree</span><span>top to bottom, pointer to parquet</span></div>
+        <div class="panel-body">
+          <div class="tree">
+            <div class="node lv1 hot">
+              <span class="nm">catalog entry &rarr; s3://lake/orders/metadata/v412.json</span>
+              <span class="role">the tip</span>
+              <span class="why">The only mutable thing in the whole system. One row in a catalog (REST, Glue, Nessie, a JDBC table) saying which metadata file is current. Commit = compare and swap on this value.</span>
+            </div>
+            <div class="node lv2">
+              <span class="nm">metadata.json</span>
+              <span class="role">table root</span>
+              <span class="why">Schema with column IDs, partition spec, sort order, table properties, and the log of snapshots. Answers: what is this table, and which versions of it exist?</span>
+            </div>
+            <div class="node lv3">
+              <span class="nm">manifest list (one per snapshot)</span>
+              <span class="role">the index of indexes</span>
+              <span class="why">One file naming every manifest in the snapshot, with partition ranges per manifest. A query engine reads this one small file and immediately discards whole branches of the table.</span>
+            </div>
+            <div class="node lv4">
+              <span class="nm">manifest files</span>
+              <span class="role">file inventory</span>
+              <span class="why">Each one lists a batch of data files with per column statistics: min, max, null counts, row counts. This is how Iceberg prunes files without opening them. Planning becomes metadata reads, not storage listing.</span>
+            </div>
+            <div class="node lv4">
+              <span class="nm">data files (.parquet) and delete files</span>
+              <span class="role">the mass</span>
+              <span class="why">Immutable Parquet. Deletes and updates arrive as separate delete files that mark rows dead until compaction rewrites things. Nothing here is ever edited, only added and eventually unreferenced.</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <figcaption>Query planning walks this tree top down: pointer, root, manifest list, manifests, then only the data files that survived pruning. On a well partitioned table, a query over one day of data touches kilobytes of metadata to skip terabytes of Parquet.</figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap rv">
+    <div class="pull">
+      <div class="fig">0</div>
+      <div class="say"><b>directory listings per query</b>The single largest source of latency in the Hive era simply stops existing. Planning reads a handful of small metadata files and prunes from statistics.</div>
+    </div>
+
+    <h3>A Commit, Frame by Frame</h3>
+    <p>Abstractions are cheap; sequences are honest. Here is exactly what happens when a writer appends a batch to <code>orders</code>. Step through it, and note where the expensive work sits relative to the moment anything becomes visible.</p>
+  </div>
+  <div class="bleed rv">
+    <figure>
+      <div class="panel steps">
+        <div class="stepbar" id="stepbar" role="tablist" aria-label="Write flow steps">
+          <button class="stepbtn" id="tab0" role="tab" data-step="0" aria-selected="true" aria-controls="steppanel">1 &middot; write data</button>
+          <button class="stepbtn" id="tab1" role="tab" data-step="1" aria-selected="false" aria-controls="steppanel" tabindex="-1">2 &middot; write metadata</button>
+          <button class="stepbtn" id="tab2" role="tab" data-step="2" aria-selected="false" aria-controls="steppanel" tabindex="-1">3 &middot; atomic swap</button>
+          <button class="stepbtn branch" id="tab3" role="tab" data-step="3" aria-selected="false" aria-controls="steppanel" tabindex="-1">4 &middot; conflict path</button>
+        </div>
+        <div class="stepview" id="steppanel" role="tabpanel" aria-live="polite" tabindex="0">
+          <p class="desc" id="stepDesc">The writer lands new Parquet files next to the existing ones. Nothing references them yet, so readers cannot see them. If the job dies right here, the table is untouched; the orphans get cleaned up later. This is why a crashed write can never tear an Iceberg table.</p>
+          <div class="filelane" id="lane"></div>
+          <div class="swapline" id="swap">catalog: orders &rarr; v411.json</div>
+        </div>
+        <div class="stepfoot">
+          <span class="stepcount" id="stepCount">step 1 of 4</span>
+          <span class="btnrow">
+            <button class="btn" id="prevStep">Back</button>
+            <button class="btn" id="nextStep">Next</button>
+          </span>
+        </div>
+      </div>
+      <figcaption>The expensive work, writing gigabytes of Parquet, happens outside the critical section. The commit itself is one tiny conditional update. Contention is on the pointer, never on the data.</figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap rv">
+    <p>Notice what fell out of step 4 without anyone designing it: optimistic concurrency. Two writers race, one swap succeeds, the loser re-reads the new state, checks whether its files actually conflict, and usually just re-commits on top. Its Parquet does not need rewriting; only the cheap metadata does. Snapshot isolation for readers falls out too: a reader resolves the pointer once and holds a frozen tree, so a ten minute query is consistent even while ten commits land underneath it. Nobody bolted these features on. The structure implies them.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 04 CONSEQUENCES ================= -->
+<section class="block" id="consequences">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">04</span> Corollaries</span>
+    <h2>What the Pointer Buys You</h2>
+    <p>Once you accept "table = immutable tree + swappable pointer", features that took warehouse vendors decades become almost embarrassingly free.</p>
+
+    <h3>Time Travel Is Just Not Deleting Things</h3>
+    <p>Every commit produces a new root, but the old roots still exist, still valid, still pointing at files that are still there. Keeping history costs nothing extra; history is the natural state, and expiring old snapshots is the operation you have to do on purpose. Query any point in the retention window as easily as the present. Drag through a table's life:</p>
+  </div>
+  <div class="bleed rv">
+    <figure>
+      <div class="panel">
+        <div class="panel-head"><span>time travel &middot; table: orders</span><span id="ttWhen">snapshot s0 &middot; mon 09:12</span></div>
+        <div class="panel-body">
+          <div class="tt-controls">
+            <span class="tt-tag">s0</span>
+            <input type="range" id="ttRange" min="0" max="4" step="1" value="0" aria-label="Snapshot selector, s0 through s4">
+            <span class="tt-tag">s4 <b>now</b></span>
+          </div>
+          <p class="desc small" id="ttDesc" style="margin:6px 0 0" aria-live="polite">Initial historical load from the warehouse export. Three years of orders, bulk written by Spark.</p>
+          <div class="tt-sql" id="ttSql"></div>
+          <div class="tt-state">
+            <div class="tt-cell"><div class="k">rows</div><div class="v" id="ttRows">58.0M</div></div>
+            <div class="tt-cell"><div class="k">data files</div><div class="v" id="ttFiles">290</div></div>
+            <div class="tt-cell"><div class="k">schema</div><div class="v" id="ttSchema">v1</div></div>
+          </div>
+        </div>
+      </div>
+      <figcaption>The same table at five points in time, each one a complete, queryable version. Watch the file count drop at s2 without the row count moving: that is compaction, changing the shape of the data without changing the data. Debugging "why did Tuesday's numbers change" becomes a diff between two snapshots instead of an archaeology dig through logs.</figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap rv">
+    <h3>Schema Evolution Without Fear</h3>
+    <p>Iceberg tracks columns by <strong>ID</strong>, not by name or position. The name is a label on the ID; the Parquet files store the ID mapping. Rename a column and old files still resolve correctly, because the ID never changed. Add a column and old files simply return null for it. Drop and re-add a column with the same name and it gets a fresh ID, so it can never accidentally resurrect old data. This sounds like a small bookkeeping decision. It is the difference between "rename means migrating nineteen terabytes" and "rename means editing one JSON file". The Hive era treated schema as a property of files. Iceberg treats it as a property of the table, versioned like everything else.</p>
+
+    <h3>Hidden Partitioning, the Quiet Masterpiece</h3>
+    <p>In Hive style tables, partitioning is a leaky abstraction with teeth. The table has a physical <code>event_date</code> partition column, users must know it exists, and the classic failure is a query filtering on <code>event_ts</code> that silently scans the entire table because it did not mention the magic column. I have watched that one mistake produce five figure monthly bills.</p>
+    <p>Iceberg stores the partition <em>transform</em> in metadata: "partition by <code>days(event_ts)</code>". Users query the real column, <code>event_ts</code>, and the engine derives partition pruning automatically. The partitioning scheme becomes invisible, which is exactly what an implementation detail should be. And because it is metadata, you can <strong>change it</strong>. Start daily, grow, switch to hourly; old files keep the old spec, new files use the new one, and queries plan across both. Repartitioning without rewriting data was science fiction in 2019. It falls out of the pointer.</p>
+
+    <div class="floe">
+      Good abstractions do not ask the user to remember anything the system already knows.
+      <span class="sig">the whole case for hidden partitioning</span>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 05 WHY IT WON ================= -->
+<section class="block" id="why-it-won">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">05</span> The Storm</span>
+    <h2>Why This One Won</h2>
+    <p>Being technically right is table stakes. Delta Lake and Hudi solved overlapping problems, both are serious engineering, and both are running in production at companies you respect. So why did the industry converge on Iceberg, to the point where its competitors now ship Iceberg compatibility as a feature?</p>
+    <p>Three reasons, and only one of them is technical.</p>
+    <p><strong>First, it was born neutral.</strong> Iceberg came out of Netflix as an Apache project with a specification, not a product with a company attached. Delta was, for its formative years, structurally tied to Databricks and its runtime; Hudi carried Uber's very specific streaming upsert DNA. When Snowflake, AWS, Google, and Databricks are all deciding what to build native support for, the format none of their competitors owns is the only format they can all agree on. Neutrality is not a feature you can add later. It is a property of birth.</p>
+    <p><strong>Second, the spec came first.</strong> Iceberg is defined as a document, with the Java and Python libraries as implementations of it, not the other way around. That is why a Rust engine, a C++ engine, and a Go tool can all implement Iceberg from the text and interoperate. The REST catalog protocol finished the job: catalog access became an HTTP API rather than a JVM dependency, and suddenly any process on earth could commit to a table safely.</p>
+    <p><strong>Third, the design respects the separation everyone already wanted.</strong> Compute vendors compete on engines. Nobody wins by competing on file layout. Iceberg let every vendor keep their moat and share the substrate, which converted potential enemies into contributors. The tipping point stopped being a question of if around 2024, and the sequence since reads like a surrender ceremony:</p>
+
+    <div class="tl">
+      <div class="tl-item"><span class="tl-yr">2017</span><div class="ti">Netflix starts Iceberg</div><p>Born from concrete pain: petabyte tables on S3 where directory listings and eventual consistency made Hive tables unsafe at scale.</p></div>
+      <div class="tl-item"><span class="tl-yr">2018 to 2020</span><div class="ti">Apache incubation to top level project</div><p>The spec hardens. Spark, Trino, and Flink land first class support, proving the multi engine thesis early.</p></div>
+      <div class="tl-item"><span class="tl-yr">2023</span><div class="ti">The REST catalog protocol</div><p>Catalog interop becomes an open HTTP contract. The last vendor specific bottleneck starts to dissolve.</p></div>
+      <div class="tl-item big"><span class="tl-yr">2024</span><div class="ti">The capitulation year</div><p>Databricks pays over a billion dollars for Tabular, the company founded by Iceberg's creators, while owning the competing format. Snowflake open sources the Polaris catalog. AWS ships S3 Tables, Iceberg as a native storage primitive. When the format's biggest rival buys the format's founders, the war is over.</p></div>
+      <div class="tl-item"><span class="tl-yr">2025 to 2026</span><div class="ti">Default status</div><p>BigQuery, ClickHouse, DuckDB, Redpanda, Confluent, Dremio, StarRocks: reading, and increasingly writing, Iceberg is now simply what a data product does. The format stopped being a choice and became the terrain.</p></div>
+    </div>
+
+    <p>There is a fourth reason, quieter than the others: timing. Iceberg matured at the exact moment AI made every company suddenly care about feeding the same data to five different compute frameworks. When your training pipeline is Spark, your analysts live in a warehouse, and your agents query through DuckDB, "one open table, many engines" went from architectural taste to procurement requirement in about eighteen months.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 06 HIVE AUTOPSY ================= -->
+<section class="block" id="autopsy">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">06</span> Autopsy</span>
+    <h2>What It Replaced, and Why That Died</h2>
+    <p>It is worth being precise about the predecessor, because half of Iceberg's design reads as a point by point rebuttal of Hive tables. The comparison is not a strawman; it is the system most of us actually ran. Read it as six pairs: on the left the failure, on the right the same line rewritten by the pointer.</p>
+  </div>
+  <div class="bleed rv">
+    <figure>
+      <div class="panel">
+        <div class="panel-head"><span>hive tables vs iceberg</span><span>the rebuttal, line by line</span></div>
+        <div class="versus">
+          <div class="vcol lose">
+            <h4>Hive era tables</h4>
+            <ul>
+              <li>A table is whatever files happen to be in the directory right now. State lives in the filesystem.</li>
+              <li>Planning starts with listing paths. Millions of objects, throttled APIs, minutes before byte one.</li>
+              <li>Partition columns are physical and public. Miss one in a WHERE clause, scan everything, pay everything.</li>
+              <li>No atomic multi partition commit. A dead job leaves the table half written, and the table cannot tell you.</li>
+              <li>Schema binds by name or position. Renames break history; reorderings corrupt silently.</li>
+              <li>Concurrent writers coordinate through luck, locks bolted onto a metastore, or a calendar.</li>
+            </ul>
+          </div>
+          <div class="vcol win">
+            <h4>Iceberg tables</h4>
+            <ul>
+              <li>A table is what the current metadata tree says it is. State lives in one versioned place.</li>
+              <li>Planning reads manifests: file paths plus column stats, no listing. Pruning happens before storage is touched.</li>
+              <li>Partitioning is a hidden transform. Query the real column; the engine does the remembering.</li>
+              <li>Commits are all or nothing across the whole table, guarded by compare and swap.</li>
+              <li>Schema binds by column ID. Rename, add, drop, reorder: metadata edits, not data migrations.</li>
+              <li>Optimistic concurrency by construction. Losers retry cheap metadata, not expensive data.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      <figcaption>Every line on the left is a production incident someone actually had. Every line on the right is the pointer trick wearing a different coat.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 07 USE CASES ================= -->
+<section class="block" id="use-cases">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">07</span> Field Work</span>
+    <h2>Where It Earns Its Keep</h2>
+    <p>Formats do not matter in the abstract. Here are the patterns where Iceberg changes the shape of the system, drawn from real deployments, mine and others'.</p>
+
+    <h3>The Multi Engine Lakehouse</h3>
+    <p>The flagship pattern. Spark writes heavy ETL. Trino serves interactive analytics on the same tables, seconds later, no copies. Flink streams into the same tables. DuckDB reads them from a laptop for that one investigation that always comes on a Friday. One storage layer, one security perimeter, one bill, and the engines become interchangeable parts you can upgrade or evict independently. This is the stack I called the Modern Lakehouse in the previous field guide, and Iceberg is the load bearing wall in it: remove it and the whole "engines are replaceable" property collapses back into per engine data silos.</p>
+    <div class="strip" aria-label="Lakehouse stack">
+      <span class="s">Airbyte</span><span class="a">&rarr;</span>
+      <span class="s ice">Iceberg on S3</span><span class="a">&rarr;</span>
+      <span class="s">dbt</span><span class="a">&rarr;</span>
+      <span class="s">Trino</span><span class="a">&rarr;</span>
+      <span class="s">Dagster</span>
+    </div>
+
+    <h3>The CDC Mirror</h3>
+    <p>Debezium tails your Postgres WAL, changes land in Kafka or Redpanda, and a small Flink or Spark job merges them into an Iceberg table every few minutes. What you get is a queryable replica of your operational database that analysts can hammer with zero risk to production, with time travel as a built in audit log. The MERGE semantics that make this correct, upserts and deletes applied atomically, are exactly the thing raw Parquet directories could never give you. This pattern quietly killed a whole category of fragile "sync to warehouse" scripts.</p>
+
+    <h3>Reproducibility as a Primitive</h3>
+    <p>Train a model against <code>snapshot 8812</code> and record that ID next to the model artifact. Six months later, when someone asks why the model behaves as it does, you re-query the exact bytes it saw. Same trick for incident forensics: yesterday's revenue dashboard changed, so you diff today's snapshot against yesterday's and find the late arriving batch in minutes. Before Iceberg, "what did the data look like on Tuesday" was a question you answered with backups and prayer. Now it is a query clause.</p>
+
+    <h3>Regulated Deletion That Actually Deletes</h3>
+    <p>GDPR and friends require deleting specific rows out of billions. On plain Parquet that means rewriting every file that might contain the user, tracked by hand. On Iceberg it is a <code>DELETE</code> statement: delete files mark the rows immediately, compaction physically rewrites the affected data files on schedule, snapshot expiry ages out the versions that still contained the rows. The lifecycle is inspectable at every step, which is the difference between compliance you can demonstrate and compliance you assert.</p>
+
+    <h3>The Warehouse Pressure Valve</h3>
+    <p>The quiet economic pattern of the last two years: keep the warehouse for the last mile of BI, move the ninety percent of raw and intermediate data into Iceberg on object storage, and point external tables at it. Storage drops to S3 prices, transformation compute becomes a market where Spark, Trino, and the warehouse itself bid for the job, and you are no longer paying warehouse rates to store data nobody queries. I have seen this halve platform bills without a single dashboard noticing.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 08 THE COST ================= -->
+<section class="block" id="cost">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">08</span> Fair and Square</span>
+    <h2>Where the Ice Cracks</h2>
+    <p>Now the part most Iceberg articles skip, which is exactly why you should not trust most Iceberg articles. The pointer trick has real costs. You should walk in knowing them, because every one of these has paged someone at 3 AM.</p>
+  </div>
+  <div class="bleed rv">
+    <figure>
+      <div class="panel danger">
+        <div class="panel-head"><span>the danger zone</span><span>read before deploying</span></div>
+        <div class="panel-body">
+          <ul>
+            <li><b>You just became a database maintainer.</b> Compaction, snapshot expiry, orphan file cleanup, manifest rewriting: warehouses do this invisibly, and on Iceberg it is your job. Skip it and the table slowly drowns in small files and dead metadata until planning takes longer than execution. The managed catalogs increasingly automate this, but "increasingly" is doing real work in that sentence.</li>
+            <li><b>Small files are the tax on freshness.</b> Every commit is at least one new file plus metadata. Commit every few seconds from a stream and you manufacture millions of tiny files that murder scan performance. Streaming into Iceberg works, but honest latency is minutes, not seconds, and the gap is fundamental to the design, not a missing feature.</li>
+            <li><b>Merge on read is deferred pain.</b> Row level deletes and updates write delete files that every reader must reconcile at query time. Cheap to write, increasingly expensive to read, until compaction pays the debt. Update heavy tables need a deliberate compaction cadence or read latency degrades in slow motion, which is the worst way to degrade.</li>
+            <li><b>Hot tables contend on the pointer.</b> Optimistic concurrency is graceful under occasional conflict and miserable under constant conflict. Dozens of writers hammering one table means retry storms. The fixes are real (partition aligned writers, buffering through a stream) but they are architecture, not configuration.</li>
+            <li><b>The catalog is a real dependency.</b> The tree is immutable and effectively indestructible; the pointer store is a live service with availability, backup, and access control questions. Choosing between Glue, a REST catalog, Nessie, Polaris and friends is a genuine decision with migration costs if you get it wrong.</li>
+            <li><b>Write support is a spectrum.</b> Reading Iceberg is universal now. Writing well, with clean MERGE semantics, delete file handling, and sane conflict behavior, still varies by engine, and the spec's newer versions take time to propagate. Verify your specific write path against your specific engines before you commit the roadmap. Trust, but benchmark.</li>
+          </ul>
+        </div>
+      </div>
+      <figcaption>None of these are disqualifying. All of them are real. The teams that thrive on Iceberg are the ones that treated table maintenance as a first class pipeline from day one, not a chore to discover later.</figcaption>
+    </figure>
+  </div>
+
+  <div class="wrap rv">
+    <div class="floe">
+      The format gave you the warehouse's guarantees. It did not give you the warehouse's janitor.
+      <span class="sig">the bill nobody reads until it is due</span>
+    </div>
+
+    <h3>When Not to Use It</h3>
+    <p>Honest boundaries, because a format this hyped deserves them. If your workload is point lookups and single row updates, that is OLTP; use Postgres and be happy. If you need sub second analytics on hot data, Iceberg is the archive and system of record, but the serving layer wants ClickHouse or Redis in front of it. If your whole estate is a few hundred gigabytes and one team on one warehouse, the operational surface of a lakehouse buys you nothing; DuckDB or the warehouse alone will feel like a superpower. And if nobody on the team can own maintenance jobs, do not adopt a technology whose failure mode is slow, silent decay. Iceberg pays off in proportion to scale, engine diversity, and operational maturity. Below certain thresholds of all three, it is ceremony.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 09 PASSAGE PLAN ================= -->
+<section class="block" id="adoption">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">09</span> Passage Plan</span>
+    <h2>Adopting It Without Regret</h2>
+    <p>Suppose the case closed and you are doing this next quarter. The order matters more than the tooling, because two of these steps are expensive to reverse and the rest are not. This is the sequence I would run again, and the one I have watched teams skip to their cost.</p>
+
+    <div class="plan">
+      <div class="leg">
+        <h4>Choose the catalog first</h4>
+        <p>The format is portable; the catalog is the commitment. It holds the only mutable state you have, it sits in the availability path of every read, and swapping it later means migrating every table's pointer. Decide on Glue, Polaris, Nessie, Unity or a plain REST catalog before you write a single table, and decide it on operations: who runs it, how it fails over, how access control maps to your existing model.</p>
+      </div>
+      <div class="leg">
+        <h4>Migrate the table that hurts, not the estate</h4>
+        <p>Pick the one table whose pain you can name in a sentence: the one that tears on failed writes, or costs the most in scans, or that three engines already fight over. One table proves the whole chain end to end, gives you a real benchmark, and if the answer turns out to be no, you have lost a week instead of a quarter.</p>
+      </div>
+      <div class="leg">
+        <h4>Ship maintenance in the same change as the first table</h4>
+        <p>Compaction, snapshot expiry and orphan cleanup are not follow up tickets. Write them as scheduled jobs the day the table lands, with alerting on file counts and manifest sizes, because the failure mode is invisible for weeks and then sudden. A table without maintenance is a table with a timer on it.</p>
+      </div>
+      <div class="leg">
+        <h4>Benchmark your write path, not the marketing</h4>
+        <p>Every engine reads Iceberg. Writing is where the variance lives. Run your actual MERGE, your actual concurrent writers, your actual delete volumes against your actual engine versions, and read the file counts afterwards. Half an afternoon here saves a roadmap.</p>
+      </div>
+      <div class="leg">
+        <h4>Set retention on purpose</h4>
+        <p>History is free to keep and expensive to store, which is a trap dressed as a gift. Decide what time travel window the business actually needs, write it down as a table property, and make expiry a routine job rather than an emergency response to a storage bill.</p>
+      </div>
+      <div class="leg last">
+        <h4>Only now, move the second table</h4>
+        <p>By this point the catalog is chosen, maintenance runs itself, and the write path is measured rather than assumed. Everything after this is repetition, which is exactly what you want a migration to become. Teams that regret Iceberg almost always started here and worked backwards.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= 10 THE MAP ================= -->
+<section class="block" id="map">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">10</span> The Map</span>
+    <h2>The Ledger, Balanced</h2>
+    <p>Everything above, compressed into the table I wish someone had handed me three years ago.</p>
+    <div class="tbl-scroll">
+      <table class="fair">
+        <thead>
+          <tr><th scope="col">dimension</th><th scope="col" class="pro">what you gain</th><th scope="col" class="con">what it costs</th></tr>
+        </thead>
+        <tbody>
+          <tr><th scope="row">Correctness</th><td class="gain" data-l="what you gain">ACID on object storage, snapshot isolated reads, safe concurrent writers</td><td class="cost" data-l="what it costs">Optimistic concurrency degrades under heavy single table write contention</td></tr>
+          <tr><th scope="row">History</th><td class="gain" data-l="what you gain">Time travel, rollback, snapshot diffs, reproducible reads by version</td><td class="cost" data-l="what it costs">Snapshot retention is storage you pay for and expiry you must operate</td></tr>
+          <tr><th scope="row">Evolution</th><td class="gain" data-l="what you gain">Rename, add, drop, repartition as metadata edits, no rewrites</td><td class="cost" data-l="what it costs">Column ID discipline varies across older writers; validate the edges</td></tr>
+          <tr><th scope="row">Performance</th><td class="gain" data-l="what you gain">Stats based pruning, no directory listing, planning from kilobytes of metadata</td><td class="cost" data-l="what it costs">Small files and unmerged deletes erode it; compaction is mandatory hygiene</td></tr>
+          <tr><th scope="row">Freedom</th><td class="gain" data-l="what you gain">One table, every engine, no vendor lock, open spec with multiple implementations</td><td class="cost" data-l="what it costs">Write quality is engine dependent; the catalog choice is a real commitment</td></tr>
+          <tr><th scope="row">Latency</th><td class="gain" data-l="what you gain">Minutes level freshness from streams is routine and reliable</td><td class="cost" data-l="what it costs">Sub second freshness is the wrong ask; pair with a serving layer instead</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="rule">
+
+<!-- ================= EPILOGUE ================= -->
+<section class="block" id="epilogue">
+  <div class="wrap rv">
+    <span class="eyebrow"><span class="n">11</span> Epilogue</span>
+    <h2>Choosing Wisely</h2>
+    <p>Strip away the ecosystem, the acquisitions, and the conference keynotes, and Iceberg's story is almost uncomfortably simple. The industry spent a decade fighting object storage's immutability, and one team at Netflix asked whether immutability was actually the foundation. Immutable files, an append only history, and a single guarded pointer: from those three commitments, transactions, time travel, and evolution all follow like water finding its level.</p>
+    <p>That is the pattern worth carrying out of this article, more than any tool name. The best systems of the last decade, Git, Kafka, Iceberg, are the same idea wearing different clothes: stop mutating state, start accumulating immutable facts, and make "current" nothing more than a pointer you move carefully. When you find yourself fighting your storage layer, the answer is rarely a cleverer mutation strategy. It is usually a confession that you needed a log all along.</p>
+    <p>Which brings us back to that 03:10 outage. The reason nobody could answer "what is in the table right now" was not a missing tool or a weak runbook. It was that the system had no place to put the answer. Iceberg's real contribution is not ACID or time travel; it is giving the question somewhere to live.</p>
+    <p>An iceberg the size of a country moves on currents you cannot see from the surface. The formats and engines above the waterline will keep churning; the mass below, the boring commitment to immutability plus one atomic pointer, is what actually steers. Study that part. It will outlive every logo in this article.</p>
+    <p>Start with the problem. Understand the forces. Add complexity only when the pain demands it. And always, always, read the spec before the blog post.</p>
+    <p><strong>See you in the trenches.</strong></p>
+
+    <h3>Notable Omissions</h3>
+    <p class="small"><strong>Delta Lake and Hudi</strong> remain serious, production worthy formats, and Delta's UniForm plus the broader interop work means the formats are converging at the metadata layer anyway. This article is about why the gravity shifted, not a claim that the alternatives are broken.</p>
+    <p class="small"><strong>Apache Paimon</strong> deserves its own piece: a table format designed around streaming upserts first, and the strongest answer today to Iceberg's freshness ceiling.</p>
+    <p class="small"><strong>Catalog wars</strong> (Polaris, Unity, Nessie, Gravitino, Glue) are where the real vendor competition moved once the format question closed. That is a separate article, and a spicier one.</p>
+    <p class="small"><strong>Iceberg spec v3</strong> work, deletion vectors, row lineage, new types, is the format's answer to several costs listed above. Directionally right; adoption across engines is the thing to watch, not the announcements.</p>
+  </div>
+</section>
+
+<hr class="rule">
+
+<footer class="foot">
+  <div class="wrap">
+    <span class="eyebrow">About the Author</span>
+    <div class="byline"><span class="who">Boyan Balev</span><span class="kicker">Senior Full Stack Engineer</span></div>
+    <p class="small" style="margin-top:14px;max-width:60ch">Boyan builds data systems and writes about system design, infrastructure economics, and the pragmatic side of engineering at The Trenches. He currently works on MandateWire, where he recently took query times from seconds to 50ms through architectural refactoring, and he has strong opinions about pointers.</p>
+    <div class="links">
+      <a href="https://medium.com/@balevdev">Medium</a>
+      <a href="https://www.linkedin.com/">LinkedIn</a>
+      <a href="https://github.com/balevdev">GitHub</a>
+      <a href="https://www.hundredsunited.com">The Trenches</a>
+    </div>
+    <p class="small" style="margin-top:34px">&copy; 2026 Boyan Balev. Written from the trenches, with respect for the craft.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  "use strict";
+  var root=document.documentElement;
+  var reduced=window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* ---------- theme ---------- */
+  var btn=document.getElementById("themeBtn");
+  function syncBtn(){if(btn){btn.textContent=(root.getAttribute("data-theme")==="dark")?"Light":"Dark";}}
+  function applyTheme(t){
+    root.setAttribute("data-theme",t);
+    var m=document.querySelector('meta[name="theme-color"]');
+    if(m){m.setAttribute("content",t==="dark"?"#04121F":"#F2F9FE");}
+    syncBtn();
+    try{localStorage.setItem("trenches-theme",t);}catch(e){}
+  }
+  syncBtn();
+  if(btn){
+    btn.addEventListener("click",function(){
+      applyTheme(root.getAttribute("data-theme")==="dark"?"light":"dark");
+    });
+  }
+
+  /* ---------- reading progress ---------- */
+  var prog=document.getElementById("progress");
+  var depthEl=document.getElementById("depthVal");
+  function onProgress(){
+    var h=document.documentElement;
+    var max=h.scrollHeight-h.clientHeight;
+    var p=max>0?(h.scrollTop||document.body.scrollTop)/max:0;
+    if(prog){prog.style.width=(p*100).toFixed(2)+"%";}
+    if(depthEl){depthEl.textContent=p<0.02?"waterline":"\u2212"+Math.round(p*320)+" m";}
+  }
+
+  /* ---------- depth rail scrollspy ---------- */
+  var railLinks=[].slice.call(document.querySelectorAll(".rail a"));
+  var targets=railLinks.map(function(a){return document.querySelector(a.getAttribute("href"));});
+  function onSpy(){
+    var best=0,y=window.pageYOffset+window.innerHeight*0.34;
+    for(var i=0;i<targets.length;i++){
+      if(targets[i]&&targets[i].offsetTop<=y){best=i;}
+    }
+    railLinks.forEach(function(a,i){a.classList.toggle("on",i===best);});
+  }
+
+  var ticking=false;
+  window.addEventListener("scroll",function(){
+    if(ticking){return;}
+    ticking=true;
+    window.requestAnimationFrame(function(){onProgress();onSpy();ticking=false;});
+  },{passive:true});
+  onProgress();onSpy();
+
+  /* ---------- reveal ---------- */
+  var reveals=document.querySelectorAll(".rv");
+  if("IntersectionObserver" in window){
+    var io=new IntersectionObserver(function(entries){
+      entries.forEach(function(en){
+        if(en.isIntersecting){en.target.classList.add("on");io.unobserve(en.target);}
+      });
+    },{rootMargin:"0px 0px -8% 0px",threshold:0.05});
+    reveals.forEach(function(el){io.observe(el);});
+  }else{
+    reveals.forEach(function(el){el.classList.add("on");});
+  }
+
+  /* ---------- hero snow / ice drift ---------- */
+  var canvas=document.getElementById("snow");
+  if(canvas&&canvas.getContext&&!reduced){
+    var ctx=canvas.getContext("2d");
+    var flakes=[],W=0,H=0,raf=null,visible=true,dpr=1;
+    function size(){
+      dpr=Math.min(window.devicePixelRatio||1,2);
+      var r=canvas.parentElement.getBoundingClientRect();
+      W=Math.max(1,Math.floor(r.width));
+      H=Math.max(1,Math.floor(r.height));
+      canvas.width=Math.floor(W*dpr);
+      canvas.height=Math.floor(H*dpr);
+      canvas.style.width=W+"px";
+      canvas.style.height=H+"px";
+      ctx.setTransform(dpr,0,0,dpr,0,0);
+    }
+    function seed(){
+      flakes=[];
+      var n=Math.min(90,Math.floor(W/14));
+      for(var i=0;i<n;i++){
+        flakes.push({
+          x:Math.random()*W,y:Math.random()*H,
+          r:0.6+Math.random()*1.8,
+          vy:0.15+Math.random()*0.45,
+          vx:(Math.random()-0.5)*0.25,
+          o:0.15+Math.random()*0.4,
+          ph:Math.random()*Math.PI*2
+        });
+      }
+    }
+    function tick(){
+      ctx.clearRect(0,0,W,H);
+      var isDark=root.getAttribute("data-theme")==="dark";
+      ctx.fillStyle=isDark?"rgba(190,230,250,1)":"rgba(11,127,171,1)";
+      for(var i=0;i<flakes.length;i++){
+        var f=flakes[i];
+        f.ph+=0.008;
+        f.x+=f.vx+Math.sin(f.ph)*0.18;
+        f.y+=f.vy;
+        if(f.y>H+4){f.y=-4;f.x=Math.random()*W;}
+        if(f.x>W+4){f.x=-4;} if(f.x<-4){f.x=W+4;}
+        ctx.globalAlpha=f.o;
+        ctx.beginPath();
+        ctx.arc(f.x,f.y,f.r,0,Math.PI*2);
+        ctx.fill();
+      }
+      ctx.globalAlpha=1;
+      raf=window.requestAnimationFrame(tick);
+    }
+    function start(){if(!raf&&visible&&!document.hidden){tick();}}
+    function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}}
+    function boot(){size();seed();stop();start();}
+    window.addEventListener("resize",boot);
+    document.addEventListener("visibilitychange",function(){document.hidden?stop():start();});
+    if("IntersectionObserver" in window){
+      new IntersectionObserver(function(e){
+        visible=e[0].isIntersecting;
+        visible?start():stop();
+      },{threshold:0}).observe(canvas.parentElement);
+    }
+    boot();
+  }
+
+  /* ---------- the one trick ---------- */
+  var vers=document.getElementById("vers");
+  if(vers){
+    var rows=[].slice.call(vers.querySelectorAll(".ver"));
+    var ptr=document.getElementById("ptr");
+    var pTxt=document.getElementById("trickPtr");
+    var rTxt=document.getElementById("trickRdr");
+    var note=document.getElementById("trickNote");
+    var commitBtn=document.getElementById("commitBtn");
+    var resetBtn=document.getElementById("resetBtn");
+    var START=2, READER=2, cur=START;
+    var notes=[
+      "Three commits of history, all still on disk, all still queryable. The accent marker is the pointer: the only value in the entire system that ever changes.",
+      "Append. The new tree is written beside the old one, then the catalog swaps the pointer, only if it still reads v411. The reader that already resolved v411 does not move, and does not need to.",
+      "A delete. p_003 is superseded by a new version rather than erased, so v412 still resolves perfectly. History is not a backup here; it is the same data, still addressed.",
+      "Compaction. Small files fold into two larger ones. Identical rows, better shape, and still an append: even rewriting the physical layout cannot damage a version anybody is reading."
+    ];
+    function place(){
+      if(!ptr){return;}
+      var r=rows[cur];
+      ptr.style.top=(r.offsetTop+r.offsetHeight/2-4)+"px";
+    }
+    function render(){
+      rows.forEach(function(r,i){
+        r.classList.toggle("current",i===cur);
+        r.classList.toggle("pinned",i===READER&&cur!==READER);
+        if(i<=cur){r.classList.add("shown");}
+      });
+      var v=rows[cur].getAttribute("data-v");
+      if(pTxt){pTxt.textContent="orders \u2192 v"+v+".json";}
+      if(rTxt){
+        var behind=cur-READER;
+        rTxt.textContent="still reading v411.json"+(behind>0?" ("+behind+" commit"+(behind>1?"s":"")+" behind, still correct)":"");
+      }
+      if(note){note.textContent=notes[cur-START];}
+      if(commitBtn){
+        var done=cur>=rows.length-1;
+        commitBtn.disabled=done;
+        commitBtn.textContent=done?"No more commits":"Commit";
+      }
+      if(resetBtn){resetBtn.disabled=cur===START;}
+      window.requestAnimationFrame(place);
+    }
+    if(commitBtn){commitBtn.addEventListener("click",function(){if(cur<rows.length-1){cur++;render();}});}
+    if(resetBtn){resetBtn.addEventListener("click",function(){
+      cur=START;
+      rows.forEach(function(r,i){if(i>START){r.classList.remove("shown");}});
+      render();
+    });}
+    window.addEventListener("resize",place);
+    render();
+  }
+
+  /* ---------- write flow stepper ---------- */
+  var stepDescs=[
+    "The writer lands new Parquet files next to the existing ones. Nothing references them yet, so readers cannot see them. If the job dies right here, the table is untouched; the orphans get cleaned up later. This is why a crashed write can never tear an Iceberg table.",
+    "The writer builds the new tree: a manifest listing the new files, a manifest list combining old and new manifests, and a fresh metadata.json describing snapshot s412. All of it sits beside the live tree, invisible, complete, and ready.",
+    "The commit: one conditional request to the catalog. Set the pointer to v412.json only if it still reads v411.json. Compare and swap. The instant it lands, every new query sees the new table, whole. There is no in between state to observe, ever.",
+    "The race: another writer committed first, so our swap fails. We reload the fresh metadata, confirm our files do not conflict with what landed, rebuild the cheap metadata on top, and swap again. The expensive Parquet is untouched and reused. Losing a race costs milliseconds, not a rewrite."
+  ];
+  var laneStates=[
+    [ ["p_001.parquet",""],["p_002.parquet",""],["p_003.parquet","new"],["p_004.parquet","new"],["v412 tree","ghost"] ],
+    [ ["p_001.parquet",""],["p_002.parquet",""],["p_003.parquet","new"],["p_004.parquet","new"],["manifest_09.avro","new"],["manifest-list-s412","new"],["v412.json","new"] ],
+    [ ["p_001.parquet",""],["p_002.parquet",""],["p_003.parquet",""],["p_004.parquet",""],["v411.json","gone"],["v412.json","new"] ],
+    [ ["their commit: v412",""],["our v412 attempt","gone"],["rebased: v413.json","new"],["our parquet: reused","new"] ]
+  ];
+  var swapStates=[
+    ["catalog: orders &rarr; v411.json",""],
+    ["catalog: orders &rarr; v411.json &nbsp;(v412 staged, not visible)",""],
+    ["catalog CAS: v411 &rarr; v412 &nbsp;&#10003; committed","live"],
+    ["catalog CAS: v411 &rarr; v412 &nbsp;&#10007; conflict &nbsp;&rarr;&nbsp; retry: v412 &rarr; v413 &nbsp;&#10003;","warn"]
+  ];
+  var stepbar=document.getElementById("stepbar");
+  if(stepbar){
+    var stepDesc=document.getElementById("stepDesc");
+    var lane=document.getElementById("lane");
+    var swap=document.getElementById("swap");
+    var stepCount=document.getElementById("stepCount");
+    var prevStep=document.getElementById("prevStep");
+    var nextStep=document.getElementById("nextStep");
+    var tabs=[].slice.call(stepbar.querySelectorAll(".stepbtn"));
+    var step=0;
+    function renderStep(i,focus){
+      step=Math.max(0,Math.min(stepDescs.length-1,i));
+      if(stepDesc){stepDesc.textContent=stepDescs[step];}
+      if(lane){
+        lane.innerHTML="";
+        laneStates[step].forEach(function(f){
+          var d=document.createElement("span");
+          d.className="fchip"+(f[1]?" "+f[1]:"");
+          d.textContent=f[0];
+          lane.appendChild(d);
+        });
+      }
+      if(swap){
+        swap.innerHTML=swapStates[step][0];
+        swap.className="swapline"+(swapStates[step][1]?" "+swapStates[step][1]:"");
+      }
+      tabs.forEach(function(b,bi){
+        var on=bi===step;
+        b.setAttribute("aria-selected",String(on));
+        b.tabIndex=on?0:-1;
+        if(on&&focus){b.focus();}
+      });
+      if(stepCount){stepCount.textContent=(step===3?"branch \u00b7 conflict path":"step "+(step+1)+" of 4");}
+      if(prevStep){prevStep.disabled=step===0;}
+      if(nextStep){nextStep.disabled=step===stepDescs.length-1;}
+    }
+    stepbar.addEventListener("click",function(ev){
+      var t=ev.target.closest(".stepbtn");
+      if(t){renderStep(parseInt(t.getAttribute("data-step"),10)||0,false);}
+    });
+    stepbar.addEventListener("keydown",function(ev){
+      if(ev.key==="ArrowRight"){ev.preventDefault();renderStep(step+1>3?0:step+1,true);}
+      else if(ev.key==="ArrowLeft"){ev.preventDefault();renderStep(step-1<0?3:step-1,true);}
+      else if(ev.key==="Home"){ev.preventDefault();renderStep(0,true);}
+      else if(ev.key==="End"){ev.preventDefault();renderStep(3,true);}
+    });
+    if(prevStep){prevStep.addEventListener("click",function(){renderStep(step-1,false);});}
+    if(nextStep){nextStep.addEventListener("click",function(){renderStep(step+1,false);});}
+    renderStep(0,false);
+  }
+
+  /* ---------- time travel ---------- */
+  var snaps=[
+    {tag:"snapshot s0 \u00b7 mon 09:12",desc:"Initial historical load from the warehouse export. Three years of orders, bulk written by Spark.",rows:"58.0M",files:"290",schema:"v1",
+     sql:"SELECT *\nFROM orders\nFOR VERSION AS OF 8808  -- s0"},
+    {tag:"snapshot s1 \u00b7 mon 14:30",desc:"First CDC merge lands. Debezium batch applied with MERGE: new orders appended, mutated rows superseded.",rows:"58.4M",files:"301",schema:"v1",
+     sql:"SELECT *\nFROM orders\nFOR VERSION AS OF 8809  -- s1"},
+    {tag:"snapshot s2 \u00b7 tue 02:00",desc:"Nightly compaction. Row count identical, file count drops, scans get faster. Same data, better shape.",rows:"58.4M",files:"212",schema:"v1",
+     sql:"SELECT *\nFROM orders\nFOR VERSION AS OF 8810  -- s2"},
+    {tag:"snapshot s3 \u00b7 tue 09:45",desc:"Schema evolves: discount_pct added by ID. Zero files rewritten. Old snapshots still read perfectly.",rows:"58.4M",files:"212",schema:"v2",
+     sql:"ALTER TABLE orders ADD COLUMN discount_pct FLOAT;\n\nSELECT *\nFROM orders\nFOR VERSION AS OF 8811  -- s3"},
+    {tag:"snapshot s4 \u00b7 current",desc:"Current state. Day of new merges plus GDPR deletes for two users, applied as delete files then compacted.",rows:"61.7M",files:"312",schema:"v3",
+     sql:"SELECT *\nFROM orders;  -- reads the pointer, sees s4\n\n-- and yesterday is still one clause away:\nSELECT *\nFROM orders\nFOR TIMESTAMP AS OF TIMESTAMP '2026-07-30 09:00:00'"}
+  ];
+  var ttRange=document.getElementById("ttRange");
+  if(ttRange){
+    var lastTT=-1;
+    function setCell(id,val){
+      var el=document.getElementById(id);
+      if(!el){return;}
+      var changed=el.textContent!==val;
+      el.textContent=val;
+      if(changed&&!reduced){
+        el.classList.add("flash");
+        window.setTimeout(function(){el.classList.remove("flash");},420);
+      }
+    }
+    function renderTT(i){
+      if(i===lastTT){return;}
+      lastTT=i;
+      var s=snaps[i],el;
+      el=document.getElementById("ttWhen"); if(el){el.textContent=s.tag;}
+      el=document.getElementById("ttDesc"); if(el){el.textContent=s.desc;}
+      setCell("ttRows",s.rows);
+      setCell("ttFiles",s.files);
+      setCell("ttSchema",s.schema);
+      el=document.getElementById("ttSql");
+      if(el){
+        el.textContent=s.sql;
+        el.innerHTML=el.innerHTML.replace(
+          /\b(SELECT|FROM|FOR VERSION AS OF|FOR TIMESTAMP AS OF|ALTER TABLE|ADD COLUMN|TIMESTAMP)\b/g,
+          '<span class="kw">$1</span>');
+      }
+    }
+    ttRange.addEventListener("input",function(){renderTT(parseInt(ttRange.value,10)||0);});
+    renderTT(0);
+  }
+})();
+</script>
+</body>
+</html>
